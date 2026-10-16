@@ -32,6 +32,7 @@
     .btn.small { padding: 9px 14px; font-size: 14px; border-radius: 12px; }
     .tag { display: inline-block; background: #f4ece3; color: #b06237; border-radius: 20px; padding: 5px 10px; font-size: 13px; margin: 3px; }
     .tag.green { background: #eaf6ec; color: #2b703b; }
+    .tag.orange { background: #fff1e6; color: #c46838; }
 
     .date-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 6px 0 14px; }
     .date-item { min-width: 80px; padding: 12px 8px; border-radius: 16px; text-align: center; background: #fff; border: 1px solid #e8e2d6; cursor: pointer; flex-shrink: 0; font-size: 15px; }
@@ -70,7 +71,7 @@
     .member-status-badge { font-size: 13px; padding: 4px 10px; border-radius: 12px; background: #f1ede4; color: #666; }
     .status-work { background: #eaf6ec; color: #2b703b; }
     .status-rest { background: #fff1e6; color: #c46838; }
-    .menu-person-tag { font-size: 12px; padding: 2px 6px; border-radius: 6px; background: #eee; color: #555; margin-left: 6px; }
+    .meal-label { display: inline-block; padding: 3px 8px; border-radius: 8px; background: #eaf6ec; color: #2b703b; font-size: 12px; margin-left: 4px; font-weight: 600;}
   </style>
 </head>
 <body>
@@ -85,17 +86,22 @@
           <input type="date" v-model="homeDate" style="width:auto;padding:10px 12px;font-size:14px"/>
         </div>
         <div class="card-subtitle">今日就餐人员及状态</div>
-        <div class="list-row" v-for="m in todayMembers" :key="m.key">
-          <div>{{m.icon}} {{m.name}} <span class="member-status-badge" :class="m.statusClass">{{m.status}}</span></div>
-          <div class="tag green" v-if="m.dinner">晚餐在家</div>
-          <div class="tag" v-else>三餐在外/自备</div>
+        <div v-for="m in todayMembers" :key="m.key" class="list-row">
+          <div style="display: flex; align-items: center;">
+            <span style="margin-right: 8px;">{{m.icon}} {{m.name}}</span>
+            <span class="member-status-badge" :class="m.statusClass">{{m.status}}</span>
+          </div>
+          <div style="display: flex; gap: 2px;">
+            <span v-for="meal in m.meals" :key="meal" class="meal-label">{{meal}}</span>
+            <span v-if="m.meals.length === 0" class="tag" style="background:#eee; color:#999;">无</span>
+          </div>
         </div>
         <div style="margin-top:14px">
           <span class="tag green">加餐：原味坚果+应季水果（下午上学/上班前）</span>
         </div>
       </div>
 
-      <!-- 菜单预览（区分不同人的菜谱） -->
+      <!-- 菜单预览 -->
       <div class="card">
         <h2>🍽️ 菜单预览</h2>
         <p style="margin:8px 0;line-height:1.7"><b>【全家共享早餐】</b><br/>蒸红薯、水煮蛋、温牛奶、原味坚果</p>
@@ -110,7 +116,7 @@
       </div>
     </div>
 
-    <!-- 周菜谱（保持原样，略作调整） -->
+    <!-- 周菜谱 -->
     <div v-if="view === 'weekMenu'">
       <h2 style="margin-bottom:14px">每周菜谱</h2>
       <div class="date-scroll">
@@ -196,7 +202,6 @@
 
     <!-- 我的页面（重构版） -->
     <div v-if="view === 'setting'">
-      <!-- 人员管理：列表式点击进入，不再全部展开 -->
       <div class="card">
         <h2>👨‍👩‍👧‍👦 人员管理</h2>
         <p class="card-subtitle">点击成员可单独设置其排班与身体状况</p>
@@ -323,7 +328,7 @@
     <div class="tab-item" :class="{active:view==='setting'}" @click="view='setting'">我的</div>
   </div>
 
-  <!-- 【修改：单独的成员编辑弹窗】 -->
+  <!-- 单独的成员编辑弹窗（包含排班设置） -->
   <div class="modal-mask" v-if="memberEditModal.show" @click.self="memberEditModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">编辑 {{getMemberName(memberEditModal.key)}} 信息</h3>
@@ -338,6 +343,33 @@
         </div>
         <div class="input-wrap"><label>身体情况（如脂肪肝、性早熟等）</label><textarea v-model="memberData[memberEditModal.key].health" rows="1"></textarea></div>
         <div class="input-wrap"><label>基础忌口（如高草酸、激素食物）</label><input v-model="memberData[memberEditModal.key].taboo"/></div>
+        
+        <!-- 针对爸爸和妈妈的排班设置 -->
+        <div v-if="memberEditModal.key === 'dad' || memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">📅 排班周期设置（调班直接改这里）</h4>
+          <div class="two-col-row" v-if="memberEditModal.key === 'dad'">
+            <div class="input-wrap"><label>起始日期</label><input type="date" v-model="scheduleConfig.dad.startDate"/></div>
+            <div class="input-wrap"><label>在家天数</label><input type="number" v-model.number="scheduleConfig.dad.homeDays"/></div>
+          </div>
+          <div class="two-col-row" v-if="memberEditModal.key === 'dad'">
+            <div class="input-wrap"><label>不在家天数</label><input type="number" v-model.number="scheduleConfig.dad.awayDays"/></div>
+            <div class="input-wrap"><label>回家首日吃</label><input value="晚餐" disabled style="background:#f5f5f5;color:#999;"/></div>
+          </div>
+          
+          <div class="two-col-row" v-if="memberEditModal.key === 'mom'">
+            <div class="input-wrap"><label>起始日期</label><input type="date" v-model="scheduleConfig.mom.startDate"/></div>
+            <div class="input-wrap"><label>起始班次</label>
+              <select v-model="scheduleConfig.mom.firstShift">
+                <option value="morning">早班（外带）</option>
+                <option value="afternoon">下午班</option>
+              </select>
+            </div>
+          </div>
+          <div class="input-wrap" v-if="memberEditModal.key === 'mom'">
+            <label>循环周期</label>
+            <input value="2天（早班↔下午班）" disabled style="background:#f5f5f5;color:#999;"/>
+          </div>
+        </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn secondary" style="flex:1" @click="memberEditModal.show=false">取消</button>
@@ -382,10 +414,22 @@ createApp({
   data(){
     return{
       view: 'home',
-      homeDate: '',
+      homeDate: new Date().toISOString().split('T')[0], // 默认今天
       selDateIdx: 0,
       ingTab: 'raw',
       searchIng: '',
+      // 排班基础配置
+      scheduleConfig: {
+        dad: {
+          startDate: '2026-10-15', // 基准日期
+          homeDays: 4,
+          awayDays: 4,
+        },
+        mom: {
+          startDate: '2026-10-16',
+          firstShift: 'morning',
+        }
+      },
       memberData:{
         dad:{age:35, height:176, weight:90, schedule:"4天在家4天不在", health:"轻微脂肪肝，肾结石", taboo:"高草酸蔬菜需焯水，不吃内脏"},
         mom:{age:35, height:150, weight:50, schedule:"早班/下午班交替", health:"气血不足，二胎后大肚腩", taboo:"无"},
@@ -438,25 +482,105 @@ createApp({
     hasUnfinishedTask(){
       return this.shoppingList.some(i => !i.bought);
     },
-    // 动态计算今日就餐人员
+    // 动态计算今日就餐人员（核心逻辑）
     todayMembers(){
-      // 这里可以根据 homeDate 判断，目前为了演示，直接基于当前日期动态生成逻辑
-      const today = new Date();
-      const dayOfWeek = today.getDay(); // 0是周日，1-6是周一到周六
+      // 如果未选日期，默认用今天
+      const targetDateStr = this.homeDate || new Date().toISOString().split('T')[0];
+      const targetDate = new Date(targetDateStr);
+      const dayOfWeek = targetDate.getDay(); // 0是周日，1-6是周一到周六
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-      // 模拟爸爸4天轮休 (简化：按日期奇偶或周期，这里假设这周爸爸在家)
-      const dadAtHome = true; // 实际可从设置拉取
+      const result = [];
 
-      // 模拟妈妈排班 (简化：隔天早班)
-      const momMorningShift = today.getDate() % 2 === 0;
+      // ---- 1. 爸爸排班计算 ----
+      const dadConfig = this.scheduleConfig.dad;
+      const dadStart = new Date(dadConfig.startDate);
+      const dadDiffDays = Math.floor((targetDate - dadStart) / (1000 * 60 * 60 * 24));
+      const dadCycle = dadConfig.homeDays + dadConfig.awayDays;
+      const dadDayInCycle = ((dadDiffDays % dadCycle) + dadCycle) % dadCycle; // 确保正数
 
-      return [
-        { key: 'dad', name: '爸爸', icon: '👨', status: dadAtHome ? '在家休息' : '全天上班', statusClass: dadAtHome ? 'status-rest' : 'status-work', dinner: dadAtHome },
-        { key: 'mom', name: '妈妈', icon: '👩', status: momMorningShift ? '早班 (带饭)' : '下午班 (在家吃)', statusClass: 'status-work', dinner: !momMorningShift },
-        { key: 'sister', name: '姐姐', icon: '👧', status: isWeekend ? '休息日' : '上学日', statusClass: isWeekend ? 'status-rest' : 'status-work', dinner: true },
-        { key: 'brother', name: '弟弟', icon: '👦', status: isWeekend ? '休息日' : '上学日 (幼儿园)', statusClass: isWeekend ? 'status-rest' : 'status-work', dinner: true }
-      ];
+      let dadMeals = [];
+      let dadStatus = "";
+      let dadStatusClass = "";
+
+      if (dadDayInCycle === 0) {
+        // 第1天：下午回家，吃晚餐
+        dadMeals = ['晚'];
+        dadStatus = '下午回家';
+        dadStatusClass = 'status-rest';
+      } else if (dadDayInCycle === 1 || dadDayInCycle === 2) {
+        // 第2、3天：全天在家
+        dadMeals = ['早', '午', '晚'];
+        dadStatus = '在家休息';
+        dadStatusClass = 'status-rest';
+      } else if (dadDayInCycle === 3) {
+        // 第4天：全天在家（最后一天）
+        dadMeals = ['早', '午', '晚'];
+        dadStatus = '在家休息';
+        dadStatusClass = 'status-rest';
+      } else if (dadDayInCycle === 4) {
+        // 第5天：下午吃完午餐去上班
+        dadMeals = ['早', '午'];
+        dadStatus = '下午上班';
+        dadStatusClass = 'status-work';
+      } else {
+        // 第6、7、8天：不在家
+        dadMeals = [];
+        dadStatus = '全天上班';
+        dadStatusClass = 'status-work';
+      }
+
+      result.push({ key: 'dad', name: '爸爸', icon: '👨', status: dadStatus, statusClass: dadStatusClass, meals: dadMeals });
+
+      // ---- 2. 妈妈排班计算 ----
+      const momConfig = this.scheduleConfig.mom;
+      const momStart = new Date(momConfig.startDate);
+      const momDiffDays = Math.floor((targetDate - momStart) / (1000 * 60 * 60 * 24));
+      const momDayInCycle = ((momDiffDays % 2) + 2) % 2; // 0 或 1
+
+      let momMeals = [];
+      let momStatus = "";
+      let momStatusClass = "";
+
+      if (momDayInCycle === 0) {
+        // 早班：外带，在家吃午、晚
+        momMeals = ['午', '晚'];
+        momStatus = '早班 (外带)';
+        momStatusClass = 'status-work';
+      } else {
+        // 下午班：全天在家（根据实际情况，下午班通常中午也在家？这里按全天处理）
+        momMeals = ['早', '午', '晚'];
+        momStatus = '下午班';
+        momStatusClass = 'status-work';
+      }
+
+      result.push({ key: 'mom', name: '妈妈', icon: '👩', status: momStatus, statusClass: momStatusClass, meals: momMeals });
+
+      // ---- 3. 姐姐排班计算 ----
+      let sisterMeals = [];
+      let sisterStatus = "";
+      if (isWeekend) {
+        sisterMeals = ['早', '午', '晚'];
+        sisterStatus = '休息日';
+      } else {
+        sisterMeals = ['早', '午', '晚']; // 姐姐中午回家吃
+        sisterStatus = '上学日';
+      }
+      result.push({ key: 'sister', name: '姐姐', icon: '👧', status: sisterStatus, statusClass: isWeekend ? 'status-rest' : 'status-work', meals: sisterMeals });
+
+      // ---- 4. 弟弟排班计算 ----
+      let brotherMeals = [];
+      let brotherStatus = "";
+      if (isWeekend) {
+        brotherMeals = ['早', '午', '晚'];
+        brotherStatus = '休息日';
+      } else {
+        brotherMeals = ['早', '晚']; // 弟弟中午在幼儿园
+        brotherStatus = '上学日';
+      }
+      result.push({ key: 'brother', name: '弟弟', icon: '👦', status: brotherStatus, statusClass: isWeekend ? 'status-rest' : 'status-work', meals: brotherMeals });
+
+      return result;
     }
   },
   methods:{
@@ -497,7 +621,6 @@ createApp({
     renderSingleChart(person){
       const ctx = this.$refs.chartCanvasRef.getContext('2d');
       if(this.currentChart) this.currentChart.destroy();
-      // 简化模拟数据
       const chartConfig = {
         type:'line',
         data:{
