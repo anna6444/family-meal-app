@@ -134,30 +134,38 @@
         </div>
       </div>
 
-      <!-- 菜单预览（动态渲染） -->
+      <!-- 菜单预览（动态渲染，与周菜谱同步） -->
       <div class="card">
         <h2>🍽️ 菜单预览</h2>
         
-        <!-- 早餐 -->
-        <div class="menu-preview-section">
-          <div class="menu-preview-title">🌅 早餐</div>
-          <div class="menu-preview-row"><span>👨‍👩‍👧‍👦 全家共享：</span>蒸红薯、水煮蛋、温牛奶、原味坚果</div>
-          <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span>👩 妈妈（早班外带）：</span>前一晚备好装盒，带上燕麦粥+水煮蛋+水果</div>
-        </div>
+        <div v-if="homeCurrentDayDishes">
+          <!-- 早餐 -->
+          <div class="menu-preview-section">
+            <div class="menu-preview-title">🌅 早餐</div>
+            <div class="menu-preview-row"><span>👨‍👩‍👧‍👦 全家共享：</span>
+              {{ homeCurrentDayDishes.breakfast.map(d => d.name).join('、') || '暂无安排' }}
+            </div>
+            <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span>👩 妈妈（早班外带）：</span>前一晚备好装盒</div>
+          </div>
 
-        <!-- 午餐 -->
-        <div class="menu-preview-section">
-          <div class="menu-preview-title">☀️ 午餐</div>
-          <div class="menu-preview-row"><span>👧 姐姐（回家）：</span>杂粮饭 + 清蒸鲈鱼 + 菌菇西兰花</div>
-          <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span>👩 妈妈（早班）：</span>午餐在家或单位吃（按实际排班）</div>
-          <div class="menu-preview-row" style="color:#c46838" v-else><span>👩 妈妈（下午班）：</span>香菇蒸鸡 + 蒸红薯 + 水煮蛋</div>
-        </div>
+          <!-- 午餐 -->
+          <div class="menu-preview-section">
+            <div class="menu-preview-title">☀️ 午餐</div>
+            <div class="menu-preview-row"><span>👧 姐姐（回家）：</span>{{ homeCurrentDayDishes.lunch.map(d => d.name).join('、') || '暂无安排' }}</div>
+            <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span>👩 妈妈（早班）：</span>午餐在家或单位吃（按实际排班）</div>
+            <div class="menu-preview-row" style="color:#c46838" v-else><span>👩 妈妈（下午班）：</span>{{ homeCurrentDayDishes.lunch.map(d => d.name).join('、') || '暂无安排' }}</div>
+          </div>
 
-        <!-- 晚餐 -->
-        <div class="menu-preview-section">
-          <div class="menu-preview-title">🌙 晚餐</div>
-          <div class="menu-preview-row"><span>👨‍👩‍👧‍👦 全家：</span>蔬菜鸡肉丸子、娃娃菜豆腐汤、甜玉米</div>
-          <div class="menu-preview-row" style="color:#c46838"><span>👦 弟弟专属：</span>肉丸里混入菠菜碎+胡萝卜碎</div>
+          <!-- 晚餐 -->
+          <div class="menu-preview-section">
+            <div class="menu-preview-title">🌙 晚餐</div>
+            <div class="menu-preview-row"><span>👨‍👩‍👧‍👦 全家：</span>{{ homeCurrentDayDishes.dinner.map(d => d.name).join('、') || '暂无安排' }}</div>
+            <div class="menu-preview-row" style="color:#c46838"><span>👦 弟弟专属：</span>肉丸/菜肴中混入菠菜碎+胡萝卜碎（隐形蔬菜）</div>
+          </div>
+        </div>
+        
+        <div v-else class="empty-text">
+          暂无菜单数据，请先到「周菜谱」点击“一键生成下周食谱”。
         </div>
       </div>
 
@@ -193,7 +201,6 @@
         <button class="btn small" @click="generateNextWeekPlan">🪄 一键生成下周食谱</button>
       </div>
       
-      <!-- 动态日期选择器 -->
       <div class="date-scroll">
         <div v-for="d in weekDateList" class="date-item" :class="{active:selDateIdx===d.idx}" @click="selDateIdx=d.idx">
           <div style="font-size:13px">{{d.week}}</div>
@@ -201,7 +208,6 @@
         </div>
       </div>
       
-      <!-- 显示当天菜单 -->
       <div v-if="currentDayDishes">
         <div class="meal-title">🌅 早餐</div>
         <div v-if="currentDayDishes.breakfast.length === 0" class="empty-text" style="padding: 10px;">暂无早餐安排</div>
@@ -304,9 +310,8 @@
       </div>
     </div>
 
-    <!-- 待操作（采购清单分类） -->
+    <!-- 待操作 -->
     <div v-if="view === 'todo'">
-      <!-- 周末大采购 -->
       <div class="card">
         <h2>🛒 周末大采购（耐储存）</h2>
         <p class="card-subtitle">根据下周食谱自动汇总，并已扣除当前食材库库存。建议周末一次性买齐。</p>
@@ -319,7 +324,6 @@
         </div>
       </div>
 
-      <!-- 提前1-2天补货 -->
       <div class="card">
         <h2>🛒 提前1-2天买（新鲜食材）</h2>
         <p class="card-subtitle">易腐烂的叶菜、鲜鱼、鲜肉等，建议提前1-2天购买。</p>
@@ -332,7 +336,6 @@
         </div>
       </div>
       
-      <!-- 预处理清单 -->
       <div class="card">
         <h2>⏱️ 预处理清单（周日准备）</h2>
         <div class="section-title">📅 周末批量处理（节省工作日时间）</div>
@@ -721,7 +724,6 @@ createApp({
         { name: "虾滑", weight: 200, expireDay: 90 }
       ],
       
-      // 每日菜单数据结构
       weekMenu: [
         { breakfast: [], lunch: [], dinner: [] },
         { breakfast: [], lunch: [], dinner: [] },
@@ -790,7 +792,6 @@ createApp({
       if(!kw) return this.preIngList;
       return this.preIngList.filter(i => i.name.toLowerCase().includes(kw));
     },
-    // 将购物清单分为周末大采购和日常采购
     weekendShoppingList() {
       return this.shoppingList.filter(i => i.category === 'weekend');
     },
@@ -801,10 +802,18 @@ createApp({
       return this.shoppingList.some(i => !i.bought);
     },
     
-    // 首页妈妈是否早班
     momIsMorningShift() {
       const today = this.todayMembers.find(m => m.key === 'mom');
       return today && today.status.includes('早班');
+    },
+    
+    // 首页当前选中日期的菜单
+    homeCurrentDayDishes() {
+      if (!this.homeDate || this.weekMenu.length === 0) return null;
+      const targetDate = new Date(this.homeDate);
+      const dayOfWeek = targetDate.getDay(); // 0是周日, 1是周一
+      const idx = (dayOfWeek + 6) % 7; // 转换为 0-6 (周一=0, 周日=6)
+      return this.weekMenu[idx];
     },
     
     currentDayDishes() {
@@ -989,7 +998,6 @@ createApp({
         });
       });
       
-      // 智能分类：哪些是周末买，哪些是提前1-2天买
       let newShoppingList = [];
       let itemId = 1;
       
@@ -1003,8 +1011,6 @@ createApp({
         let buyWeight = totalWeight - stockWeight;
         
         if (buyWeight > 0) {
-          // 判断类别：主食、冷冻肉、根茎类、干货归类为 weekend（耐储存）
-          // 叶菜、鲜鱼、鲜肉、豆腐归类为 daily（易腐烂）
           let category = 'weekend';
           const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬'];
           if (dailyKeywords.some(k => name.includes(k))) {
