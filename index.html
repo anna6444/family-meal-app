@@ -19,7 +19,6 @@
     .tab-label { font-size: 12px; color: #999; font-weight: 500; transition: all 0.2s; }
     .tab-item.active .tab-label { color: #e6703b; font-weight: 600; }
     
-    /* 中间凸起的“待操作”按钮 */
     .tab-item-center { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; cursor: pointer; }
     .tab-center-btn { width: 56px; height: 56px; background: #e6703b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 26px; margin-top: -28px; box-shadow: 0 4px 12px rgba(230,112,59,0.4); position: relative; transition: transform 0.2s; }
     .tab-item-center:active .tab-center-btn { transform: scale(0.95); }
@@ -62,7 +61,6 @@
     .meal-title { font-size: 17px; font-weight: 600; margin: 22px 0 12px; color: #c46838; }
     .section-title { font-size: 16px; font-weight: 600; margin: 18px 0 10px; color: #555; }
 
-    /* 弹窗 */
     .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
     .modal-box { background: #fff; border-radius: 22px; padding: 24px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; }
     .member-block { border: 1px solid #eee6db; border-radius: 16px; padding: 14px; margin-bottom: 14px; }
@@ -70,7 +68,6 @@
     .pre-taboo-tag { display: inline-block; border: 1px solid #ddd; border-radius: 8px; padding: 4px 8px; margin: 4px; cursor: pointer; font-size: 13px; }
     .pre-taboo-tag.active { background: #e6703b; color: white; border-color: #e6703b; }
 
-    /* 人员设置列表 */
     .member-list-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f1ede4; cursor: pointer; }
     .member-list-item:last-child { border-bottom: none; }
     .member-status-badge { font-size: 13px; padding: 4px 10px; border-radius: 12px; background: #f1ede4; color: #666; }
@@ -79,7 +76,6 @@
     .status-sick { background: #fce8e8; color: #d14a4a; }
     .meal-label { display: inline-block; padding: 3px 8px; border-radius: 8px; background: #eaf6ec; color: #2b703b; font-size: 12px; margin-left: 4px; font-weight: 600;}
     
-    /* 休息日/假期标签 */
     .rest-day-tag { display: inline-flex; align-items: center; background: #fff1e6; color: #c46838; border-radius: 8px; padding: 6px 10px; font-size: 13px; margin: 4px; border: 1px solid #f7dcc8; }
     .rest-day-tag span { margin-left: 6px; cursor: pointer; color: #999; font-weight: bold; }
   </style>
@@ -237,7 +233,6 @@
         </div>
       </div>
 
-      <!-- 修改：极简列表，点击弹窗编辑 -->
       <div class="card">
         <h2>⚠️ 成员临时状态与忌口</h2>
         <p class="card-subtitle">点击成员可单独设置当前状态与忌口</p>
@@ -300,7 +295,7 @@
     </div>
   </div>
 
-  <!-- 成员临时状态与忌口弹窗 -->
+  <!-- 临时状态与忌口弹窗 -->
   <div class="modal-mask" v-if="tempStatusModal.show" @click.self="tempStatusModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">设置 {{getMemberName(tempStatusModal.key)}} 的状态与忌口</h3>
@@ -310,13 +305,11 @@
           <select v-model="memberTempStatus[tempStatusModal.key]">
             <option value="normal">正常</option>
             <option value="sick">生病</option>
-            <!-- 只有妈妈有姨妈期选项 -->
             <option v-if="tempStatusModal.key === 'mom'" value="period">姨妈期</option>
           </select>
         </div>
         <label>忌口选择</label>
         <div>
-          <!-- 根据成员动态渲染忌口标签 -->
           <span v-for="word in getTabooOptions(tempStatusModal.key)" :key="word"
                 class="pre-taboo-tag"
                 :class="{active:memberTaboo[tempStatusModal.key].includes(word)}"
@@ -331,7 +324,7 @@
     </div>
   </div>
 
-  <!-- 成员信息编辑弹窗 -->
+  <!-- 成员编辑弹窗 -->
   <div class="modal-mask" v-if="memberEditModal.show" @click.self="memberEditModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">编辑 {{getMemberName(memberEditModal.key)}} 信息</h3>
@@ -451,11 +444,12 @@
     </div>
   </div>
 
-  <!-- 趋势图弹窗 -->
+  <!-- 趋势图弹窗（修复版） -->
   <div class="modal-mask" v-if="chartModal.show" @click.self="closeChartModal">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
-      <div style="width:100%;height:280px;margin-top:10px">
+      <!-- 注意：这里的 canvas 容器高度需要固定，否则图表可能不显示 -->
+      <div style="width:100%;height:280px;margin-top:10px;position: relative;">
         <canvas ref="chartCanvasRef"></canvas>
       </div>
       <button class="btn secondary" style="width:100%;margin-top:16px" @click="closeChartModal">关闭</button>
@@ -494,9 +488,17 @@ createApp({
       chartModal:{ show:false, title:'', target:'' },
       currentChart:null,
       memberEditModal: { show: false, key: 'dad' },
-      tempStatusModal: { show: false, key: 'dad' }, // 新增：临时状态弹窗
+      tempStatusModal: { show: false, key: 'dad' },
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
       addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
+      
+      // 新增：每个人真实的历史数据（包含日期）
+      historyData: {
+        dad: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [92, 91.5, 91, 90.5, 90, 90] },
+        mom: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [52, 51.5, 51, 50.5, 50, 50] },
+        sister: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], height: [132, 134, 135, 136, 137, 138], weight: [28, 29, 29.5, 30, 30.5, 31] },
+        brother: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], height: [102, 103, 104, 105, 106, 107], weight: [17, 17.5, 18, 18.3, 18.6, 19] }
+      },
       
       rawIngList: [
         { name: "鸡蛋", weight: 470, expireDay: 14 },
@@ -603,12 +605,7 @@ createApp({
     calcBMI(heightCm, weightKg){ if(!heightCm || !weightKg) return "-"; const h = heightCm / 100; return (weightKg / (h*h)).toFixed(1); },
     toggleTaboo(person, word){ const arr = this.memberTaboo[person]; const idx = arr.indexOf(word); if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); } },
     
-    // 新：打开临时状态弹窗
-    openTempStatusModal(key){
-      this.tempStatusModal.key = key;
-      this.tempStatusModal.show = true;
-    },
-    // 新：获取状态文本
+    openTempStatusModal(key){ this.tempStatusModal.key = key; this.tempStatusModal.show = true; },
     getStatusText(status, person){
       if (person === 'mom') {
         if (status === 'period') return '姨妈期';
@@ -617,12 +614,10 @@ createApp({
       }
       return status === 'sick' ? '生病' : '正常';
     },
-    // 新：获取状态样式
     getStatusClass(status){
       if (status === 'sick' || status === 'period') return 'status-sick';
-      return 'status-rest'; // 正常状态使用浅橙色
+      return 'status-rest';
     },
-    // 新：获取成员的忌口选项
     getTabooOptions(person){
       const options = {
         dad: ['生冷', '辛辣', '油腻', '海鲜'],
@@ -633,7 +628,6 @@ createApp({
       return options[person] || [];
     },
     
-    // 自动扣减逻辑
     completeDish(dish) {
       if (dish.completed) return;
       let deductedList = [];
@@ -703,9 +697,136 @@ createApp({
     getMemberName(key){ const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' }; return map[key] || ''; },
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
     saveMemberEdit(){ alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`); this.memberEditModal.show = false; },
-    openChartModal(personKey){ this.chartModal.target = personKey; const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}; this.chartModal.title = nameMap[personKey]; this.chartModal.show = true; this.$nextTick(()=>{ this.renderSingleChart(personKey); }) },
-    closeChartModal(){ this.chartModal.show = false; if(this.currentChart) this.currentChart.destroy(); this.currentChart = null; },
-    renderSingleChart(person){ const ctx = this.$refs.chartCanvasRef.getContext('2d'); if(this.currentChart) this.currentChart.destroy(); const chartConfig = { type:'line', data:{ labels: ['1月','2月','3月','4月'], datasets:[{ label:'数据', data:[50, 52, 51, 53], borderColor:'#e6703b', fill:false }] }, options:{responsive:true, maintainAspectRatio:false} }; this.currentChart = new Chart(ctx, chartConfig); },
+    
+    // 修复后的图表渲染逻辑
+    openChartModal(personKey){
+      this.chartModal.target = personKey;
+      const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}
+      this.chartModal.title = nameMap[personKey];
+      this.chartModal.show = true;
+      this.$nextTick(()=>{
+        this.renderSingleChart(personKey);
+      })
+    },
+    closeChartModal(){
+      this.chartModal.show = false;
+      if(this.currentChart) this.currentChart.destroy();
+      this.currentChart = null;
+    },
+    renderSingleChart(person){
+      // 由于弹窗是 v-if 控制，必须确保 canvas 在 DOM 中
+      const canvas = this.$refs.chartCanvasRef;
+      if (!canvas) {
+        console.error("Canvas not found");
+        return;
+      }
+      const ctx = canvas.getContext('2d');
+      if(this.currentChart) this.currentChart.destroy();
+      
+      const data = this.historyData[person];
+      let chartData, chartOptions;
+
+      if (person === 'dad' || person === 'mom') {
+        // 大人：单轴（体重）
+        chartData = {
+          labels: data.labels,
+          datasets: [{
+            label: person === 'dad' ? '爸爸体重(kg)' : '妈妈体重(kg)',
+            data: data.weight,
+            borderColor: '#e6703b',
+            backgroundColor: 'rgba(230, 112, 59, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 4,
+            pointBackgroundColor: '#e6703b'
+          }]
+        };
+        chartOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } }
+            },
+            y: {
+              beginAtZero: false,
+              title: { display: true, text: '体重 (kg)' }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                title: function(context) { return '日期：' + context[0].label; }
+              }
+            }
+          }
+        };
+      } else {
+        // 小孩：双轴（身高和体重）
+        chartData = {
+          labels: data.labels,
+          datasets: [
+            {
+              label: '身高(cm)',
+              data: data.height,
+              borderColor: '#2b9954',
+              backgroundColor: 'rgba(43, 153, 84, 0.1)',
+              fill: false,
+              tension: 0.3,
+              yAxisID: 'y',
+              pointRadius: 4,
+              pointBackgroundColor: '#2b9954'
+            },
+            {
+              label: '体重(kg)',
+              data: data.weight,
+              borderColor: '#c46838',
+              backgroundColor: 'rgba(196, 104, 56, 0.1)',
+              fill: false,
+              tension: 0.3,
+              yAxisID: 'y1',
+              pointRadius: 4,
+              pointBackgroundColor: '#c46838'
+            }
+          ]
+        };
+        chartOptions = {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } }
+            },
+            y: {
+              type: 'linear',
+              display: true,
+              position: 'left',
+              title: { display: true, text: '身高 (cm)' }
+            },
+            y1: {
+              type: 'linear',
+              display: true,
+              position: 'right',
+              grid: { drawOnChartArea: false },
+              title: { display: true, text: '体重 (kg)' }
+            }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                title: function(context) { return '日期：' + context[0].label; }
+              }
+            }
+          }
+        };
+      }
+      
+      this.currentChart = new Chart(ctx, {
+        type: 'line',
+        data: chartData,
+        options: chartOptions
+      });
+    },
     toggleBought(item){ item.bought = !item.bought; }
   }
 }).mount('#app')
