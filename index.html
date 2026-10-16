@@ -11,7 +11,7 @@
     body { background-color: #f9f6ef; color: #333; padding-bottom: 100px; font-size: 15px; }
     .container { max-width: 740px; margin: 0 auto; padding: 18px; }
 
-    /* 底部导航 - 现代清爽版 */
+    /* 底部导航 */
     .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #ece7dc; display: flex; z-index: 99; height: 76px; align-items: center; justify-content: space-around; padding-bottom: env(safe-area-inset-bottom); }
     .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 8px 0; position: relative; }
     .tab-icon { font-size: 22px; filter: grayscale(1); opacity: 0.6; transition: all 0.2s; }
@@ -38,6 +38,18 @@
     .tag.orange { background: #fff1e6; color: #c46838; }
     .tag.red { background: #fce8e8; color: #d14a4a; }
 
+    /* 优化日期选择器 */
+    .date-picker-wrapper { display: flex; align-items: center; justify-content: space-between; background: #fff5ef; border-radius: 14px; padding: 10px 16px; border: 1px solid #fce8df; }
+    .date-picker-wrapper label { font-size: 15px; color: #c46838; font-weight: 600; margin: 0; display: flex; align-items: center; gap: 6px; }
+    .date-picker-wrapper input[type="date"] { border: none; background: transparent; color: #333; font-size: 14px; font-weight: 500; padding: 4px; text-align: right; width: auto; min-height: auto; outline: none; }
+
+    /* 菜单预览拆分 */
+    .menu-preview-section { border-bottom: 1px dashed #eee; padding-bottom: 12px; margin-bottom: 12px; }
+    .menu-preview-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .menu-preview-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; color: #c46838; display: flex; align-items: center; gap: 6px; }
+    .menu-preview-row { font-size: 14px; line-height: 1.7; color: #444; margin-bottom: 4px; display: flex; align-items: flex-start; gap: 6px; }
+    .menu-preview-row span { flex-shrink: 0; }
+
     .date-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 6px 0 14px; }
     .date-item { min-width: 80px; padding: 12px 8px; border-radius: 16px; text-align: center; background: #fff; border: 1px solid #e8e2d6; cursor: pointer; flex-shrink: 0; font-size: 15px; }
     .date-item.active { background: #f7e4d8; border-color: #e6703b; }
@@ -50,8 +62,8 @@
     .dish-card { border-radius: 20px; background: #fff; padding: 20px; margin-bottom: 16px; border: 1px solid #f0ebe2; }
     .dish-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
     .feedback-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 16px; }
-    .feedback-btn { border-radius: 14px; border: 1px solid #e2ddd2; padding: 12px 10px; text-align: center; cursor: pointer; font-size: 14px; }
-    .feedback-btn.selected { background: #f7e4d8; border-color: #e6703b; }
+    .feedback-btn { border-radius: 14px; border: 1px solid #e2ddd2; padding: 12px 10px; text-align: center; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .feedback-btn.selected { background: #f7e4d8; border-color: #e6703b; color: #e6703b; font-weight: 600; }
 
     .tab-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
     .switch-btn { padding: 14px; border-radius: 14px; text-align: center; border: 1px solid #e8e2d6; cursor: pointer; font-size: 15px; }
@@ -87,10 +99,12 @@
     <!-- 首页 -->
     <div v-if="view === 'home'">
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-          <h2>📅 今日膳食</h2>
-          <input type="date" v-model="homeDate" style="width:auto;padding:10px 12px;font-size:14px"/>
+        <!-- 优化后的日期选择器 -->
+        <div class="date-picker-wrapper" style="margin-bottom:14px">
+          <label>📅 今日膳食</label>
+          <input type="date" v-model="homeDate" />
         </div>
+
         <div class="card-subtitle">今日就餐人员及状态</div>
         <div v-for="m in todayMembers" :key="m.key" class="list-row">
           <div style="display: flex; align-items: center;">
@@ -107,17 +121,26 @@
         </div>
       </div>
 
+      <!-- 拆分后的菜单预览 -->
       <div class="card">
         <h2>🍽️ 菜单预览</h2>
-        <p style="margin:8px 0;line-height:1.7"><b>【全家共享早餐】</b><br/>蒸红薯、水煮蛋、温牛奶、原味坚果</p>
-        <p style="margin:8px 0;line-height:1.7"><b>【午餐】</b><br/>
-          👧 姐姐（回家）：杂粮饭 + 清蒸鲈鱼 + 菌菇西兰花<br/>
-          <span style="color:#c46838">👩 妈妈（早班带饭）：香菇蒸鸡 + 蒸红薯 + 水煮蛋</span>
-        </p>
-        <p style="margin:8px 0;line-height:1.7"><b>【晚餐】</b><br/>
-          全家：蔬菜鸡肉丸子、娃娃菜豆腐汤、甜玉米<br/>
-          <span style="color:#c46838">👦 弟弟专属：肉丸里混入菠菜碎+胡萝卜碎</span>
-        </p>
+        
+        <div class="menu-preview-section">
+          <div class="menu-preview-title">🌅 早餐</div>
+          <div class="menu-preview-row"><span>全家共享：</span>蒸红薯、水煮蛋、温牛奶、原味坚果</div>
+        </div>
+
+        <div class="menu-preview-section">
+          <div class="menu-preview-title">☀️ 午餐</div>
+          <div class="menu-preview-row"><span>👧 姐姐（回家）：</span>杂粮饭 + 清蒸鲈鱼 + 菌菇西兰花</div>
+          <div class="menu-preview-row" style="color:#c46838"><span>👩 妈妈（早班带饭）：</span>香菇蒸鸡 + 蒸红薯 + 水煮蛋（前一晚备好装盒）</div>
+        </div>
+
+        <div class="menu-preview-section">
+          <div class="menu-preview-title">🌙 晚餐</div>
+          <div class="menu-preview-row"><span>全家：</span>蔬菜鸡肉丸子、娃娃菜豆腐汤、甜玉米</div>
+          <div class="menu-preview-row" style="color:#c46838"><span>👦 弟弟专属：</span>肉丸里混入菠菜碎+胡萝卜碎（隐形蔬菜）</div>
+        </div>
       </div>
     </div>
 
@@ -147,10 +170,11 @@
             {{dish.completed ? '✅ 已完成制作' : '确认制作完成'}}
           </button>
         </div>
+        <!-- 修复后的反馈按钮 -->
         <div class="feedback-row">
-          <div class="feedback-btn">😋 爱吃</div>
-          <div class="feedback-btn">🙂 一般</div>
-          <div class="feedback-btn">😐 不爱吃</div>
+          <div class="feedback-btn" :class="{selected: dish.feedback === 'love'}" @click="setDishFeedback(dish, 'love')">😋 爱吃</div>
+          <div class="feedback-btn" :class="{selected: dish.feedback === 'ok'}" @click="setDishFeedback(dish, 'ok')">🙂 一般</div>
+          <div class="feedback-btn" :class="{selected: dish.feedback === 'dislike'}" @click="setDishFeedback(dish, 'dislike')">😐 不爱吃</div>
         </div>
       </div>
     </div>
@@ -491,7 +515,6 @@ createApp({
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
       addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
       
-      // 历史数据（修正了姐姐的体重数据数组）
       historyData: {
         dad: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [92, 91.5, 91, 90.5, 90, 90] },
         mom: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [52, 51.5, 51, 50.5, 50, 50] },
@@ -514,9 +537,9 @@ createApp({
         { name: "虾滑", weight: 200, expireDay: 90 }
       ],
       weekDishes: [
-        { id: 1, name: "香煎龙利鱼｜主菜", tag: "蛋白质·清淡鲜香", ingredients: [{name:'龙利鱼柳', weight:150}, {name:'黑胡椒', weight:0.5}], steps: ['龙利鱼解冻吸干水分，撒少量盐、黑胡椒', '平底锅少油，中火每面煎2-3分钟至金黄', '出锅挤几滴柠檬汁，切成一口小块'], completed: false },
-        { id: 2, name: "蒸红薯｜主食", tag: "碳水·膳食纤维", ingredients: [{name:'红薯', weight:250}], steps: ['红薯洗净去皮切块', '水开上锅蒸18分钟'], completed: false },
-        { id: 3, name: "蔬菜鸡肉丸子｜主菜", tag: "优质蛋白", ingredients: [{name:'鸡肉丸子', weight:200}, {name:'娃娃菜', weight:150}, {name:'嫩豆腐', weight:100}], steps: ['清水烧开，放入丸子煮5分钟', '放入娃娃菜、豆腐小火煮3分钟', '少量盐调味即可'], completed: false }
+        { id: 1, name: "香煎龙利鱼｜主菜", tag: "蛋白质·清淡鲜香", ingredients: [{name:'龙利鱼柳', weight:150}, {name:'黑胡椒', weight:0.5}], steps: ['龙利鱼解冻吸干水分，撒少量盐、黑胡椒', '平底锅少油，中火每面煎2-3分钟至金黄', '出锅挤几滴柠檬汁，切成一口小块'], completed: false, feedback: '' },
+        { id: 2, name: "蒸红薯｜主食", tag: "碳水·膳食纤维", ingredients: [{name:'红薯', weight:250}], steps: ['红薯洗净去皮切块', '水开上锅蒸18分钟'], completed: false, feedback: '' },
+        { id: 3, name: "蔬菜鸡肉丸子｜主菜", tag: "优质蛋白", ingredients: [{name:'鸡肉丸子', weight:200}, {name:'娃娃菜', weight:150}, {name:'嫩豆腐', weight:100}], steps: ['清水烧开，放入丸子煮5分钟', '放入娃娃菜、豆腐小火煮3分钟', '少量盐调味即可'], completed: false, feedback: '' }
       ],
       shoppingList: [
         { id: 1, name: "龙利鱼柳", weight: 150, bought: false },
@@ -559,7 +582,6 @@ createApp({
 
       const result = [];
 
-      // 爸爸
       const dadConfig = this.scheduleConfig.dad;
       const dadStart = new Date(dadConfig.startDate);
       const dadDiffDays = Math.floor((targetDate - dadStart) / (1000 * 60 * 60 * 24));
@@ -572,7 +594,6 @@ createApp({
       else { dadMeals = []; dadStatus = '全天上班'; dadStatusClass = 'status-work'; }
       result.push({ key: 'dad', name: '爸爸', icon: '👨', status: dadStatus, statusClass: dadStatusClass, meals: dadMeals, dateStr: targetDateStr });
 
-      // 妈妈
       let momMeals = []; let momStatus = ""; let momStatusClass = "";
       if (isMomRest) { momMeals = ['早', '午', '晚']; momStatus = '休息日'; momStatusClass = 'status-rest'; } 
       else {
@@ -585,13 +606,11 @@ createApp({
       }
       result.push({ key: 'mom', name: '妈妈', icon: '👩', status: momStatus, statusClass: momStatusClass, meals: momMeals, isRest: isMomRest, dateStr: targetDateStr });
 
-      // 姐姐
       let sisterMeals = []; let sisterStatus = "";
       if (isWeekend || isSisterHoliday) { sisterMeals = ['早', '午', '晚']; sisterStatus = isSisterHoliday ? '假期' : '休息日'; } 
       else { sisterMeals = ['早', '午', '晚']; sisterStatus = '上学日'; }
       result.push({ key: 'sister', name: '姐姐', icon: '👧', status: sisterStatus, statusClass: (isWeekend || isSisterHoliday) ? 'status-rest' : 'status-work', meals: sisterMeals, dateStr: targetDateStr });
 
-      // 弟弟
       let brotherMeals = []; let brotherStatus = "";
       if (isWeekend || isBrotherHoliday) { brotherMeals = ['早', '午', '晚']; brotherStatus = isBrotherHoliday ? '假期' : '休息日'; } 
       else { brotherMeals = ['早', '晚']; brotherStatus = '上学日'; }
@@ -604,6 +623,11 @@ createApp({
     calcBMI(heightCm, weightKg){ if(!heightCm || !weightKg) return "-"; const h = heightCm / 100; return (weightKg / (h*h)).toFixed(1); },
     toggleTaboo(person, word){ const arr = this.memberTaboo[person]; const idx = arr.indexOf(word); if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); } },
     
+    // 修复反馈按钮逻辑
+    setDishFeedback(dish, type) {
+      dish.feedback = type;
+    },
+
     openTempStatusModal(key){ this.tempStatusModal.key = key; this.tempStatusModal.show = true; },
     getStatusText(status, person){
       if (person === 'mom') {
@@ -697,7 +721,6 @@ createApp({
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
     saveMemberEdit(){ alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`); this.memberEditModal.show = false; },
     
-    // 修复后的图表渲染逻辑
     openChartModal(personKey){
       this.chartModal.target = personKey;
       const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}
@@ -722,7 +745,6 @@ createApp({
       let chartData, chartOptions;
 
       if (person === 'dad' || person === 'mom') {
-        // 大人：单轴（体重）
         chartData = {
           labels: data.labels,
           datasets: [{
@@ -730,96 +752,37 @@ createApp({
             data: data.weight,
             borderColor: '#e6703b',
             backgroundColor: 'rgba(230, 112, 59, 0.1)',
-            fill: true,
-            tension: 0.3,
-            pointRadius: 4,
-            pointBackgroundColor: '#e6703b',
-            borderWidth: 2
+            fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#e6703b', borderWidth: 2
           }]
         };
         chartOptions = {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           scales: {
             x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
             y: { beginAtZero: false, title: { display: true, text: '体重 (kg)' } }
           },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                title: function(context) { return '日期：' + context[0].label; }
-              }
-            }
-          }
+          plugins: { tooltip: { callbacks: { title: function(context) { return '日期：' + context[0].label; } } } }
         };
       } else {
-        // 小孩：双轴（身高和体重）- 修复了 y1 轴范围导致线条不显示的问题
         chartData = {
           labels: data.labels,
           datasets: [
-            {
-              label: '身高(cm)',
-              data: data.height,
-              borderColor: '#2b9954',
-              backgroundColor: 'rgba(43, 153, 84, 0.1)',
-              fill: false,
-              tension: 0.3,
-              yAxisID: 'y',
-              pointRadius: 4,
-              pointBackgroundColor: '#2b9954',
-              borderWidth: 2
-            },
-            {
-              label: '体重(kg)',
-              data: data.weight,
-              borderColor: '#c46838',
-              backgroundColor: 'rgba(196, 104, 56, 0.1)',
-              fill: false,
-              tension: 0.3,
-              yAxisID: 'y1',
-              pointRadius: 4,
-              pointBackgroundColor: '#c46838',
-              borderWidth: 2
-            }
+            { label: '身高(cm)', data: data.height, borderColor: '#2b9954', backgroundColor: 'rgba(43, 153, 84, 0.1)', fill: false, tension: 0.3, yAxisID: 'y', pointRadius: 4, pointBackgroundColor: '#2b9954', borderWidth: 2 },
+            { label: '体重(kg)', data: data.weight, borderColor: '#c46838', backgroundColor: 'rgba(196, 104, 56, 0.1)', fill: false, tension: 0.3, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#c46838', borderWidth: 2 }
           ]
         };
         chartOptions = {
-          responsive: true,
-          maintainAspectRatio: false,
+          responsive: true, maintainAspectRatio: false,
           scales: {
             x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
-            y: {
-              type: 'linear',
-              display: true,
-              position: 'left',
-              title: { display: true, text: '身高 (cm)' }
-            },
-            y1: {
-              type: 'linear',
-              display: true,
-              position: 'right',
-              grid: { drawOnChartArea: false },
-              title: { display: true, text: '体重 (kg)' },
-              // 关键修复：显式设置右轴的范围，防止 Chart.js 自动缩放把橙色线隐藏掉
-              min: Math.floor(Math.min(...data.weight) - 2),
-              max: Math.ceil(Math.max(...data.weight) + 2)
-            }
+            y: { type: 'linear', display: true, position: 'left', title: { display: true, text: '身高 (cm)' } },
+            y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '体重 (kg)' }, min: Math.floor(Math.min(...data.weight) - 2), max: Math.ceil(Math.max(...data.weight) + 2) }
           },
-          plugins: {
-            tooltip: {
-              callbacks: {
-                title: function(context) { return '日期：' + context[0].label; }
-              }
-            }
-          }
+          plugins: { tooltip: { callbacks: { title: function(context) { return '日期：' + context[0].label; } } } }
         };
       }
       
-      this.currentChart = new Chart(ctx, {
-        type: 'line',
-        data: chartData,
-        options: chartOptions
-      });
+      this.currentChart = new Chart(ctx, { type: 'line', data: chartData, options: chartOptions });
     },
     toggleBought(item){ item.bought = !item.bought; }
   }
