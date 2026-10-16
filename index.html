@@ -11,17 +11,21 @@
     body { background-color: #f9f6ef; color: #333; padding-bottom: 100px; font-size: 15px; }
     .container { max-width: 740px; margin: 0 auto; padding: 18px; }
 
-    /* 底部导航 */
-    .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #ece7dc; display: flex; z-index: 99; height: 78px; align-items: flex-start; justify-content: space-around; padding-top: 4px; padding-bottom: env(safe-area-inset-bottom); }
-    .tab-item { flex: 1; text-align: center; padding-top: 10px; font-size: 15px; color: #666; cursor: pointer; position: relative; font-weight: 500; }
-    .tab-item.active { color: #e6703b; }
-    .tab-center { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 0; cursor: pointer; }
-    .center-line-wrap { position: relative; width: 64px; height: 14px; }
-    .center-line { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: #ece7dc; }
-    .center-arc { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 52px; height: 26px; border-radius: 52px 52px 0 0; background: #fff; border-left: 1px solid #ece7dc; border-right: 1px solid #ece7dc; border-top: 1px solid #ece7dc; border-bottom: none; }
-    .red-dot { position: absolute; top: -2px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: #ff4d4f; border: 2px solid #fff; z-index: 3; }
-    .tab-center-text { margin-top: 8px; font-size: 16px; color: #666; font-weight: 600; }
-    .tab-center-text.active { color: #e6703b; }
+    /* 底部导航 - 现代清爽版 */
+    .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #ece7dc; display: flex; z-index: 99; height: 76px; align-items: center; justify-content: space-around; padding-bottom: env(safe-area-inset-bottom); }
+    .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 8px 0; position: relative; }
+    .tab-icon { font-size: 22px; filter: grayscale(1); opacity: 0.6; transition: all 0.2s; }
+    .tab-item.active .tab-icon { filter: grayscale(0); opacity: 1; }
+    .tab-label { font-size: 12px; color: #999; font-weight: 500; transition: all 0.2s; }
+    .tab-item.active .tab-label { color: #e6703b; font-weight: 600; }
+    
+    /* 中间凸起的“待操作”按钮 */
+    .tab-item-center { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; cursor: pointer; }
+    .tab-center-btn { width: 56px; height: 56px; background: #e6703b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 26px; margin-top: -28px; box-shadow: 0 4px 12px rgba(230,112,59,0.4); position: relative; transition: transform 0.2s; }
+    .tab-item-center:active .tab-center-btn { transform: scale(0.95); }
+    .red-dot { position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: #ff4d4f; border: 2px solid #fff; }
+    .tab-center-text { font-size: 12px; color: #999; font-weight: 500; margin-top: 4px; }
+    .tab-item-center.active .tab-center-text { color: #e6703b; font-weight: 600; }
 
     /* 卡片通用 */
     .card { background: #fff; border-radius: 22px; padding: 22px; margin-bottom: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
@@ -41,7 +45,6 @@
     .input-wrap { margin: 14px 0; }
     label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; }
     input, textarea, select { width: 100%; border: 1px solid #ddd8ce; border-radius: 14px; padding: 12px; font-size: 15px; background: #fff; }
-    
     input[type="date"] { display: block; width: 100%; padding: 12px; appearance: none; -webkit-appearance: none; min-height: 48px; }
 
     .dish-card { border-radius: 20px; background: #fff; padding: 20px; margin-bottom: 16px; border: 1px solid #f0ebe2; }
@@ -106,22 +109,21 @@
         </div>
       </div>
 
-      <!-- 菜单预览 -->
       <div class="card">
         <h2>🍽️ 菜单预览</h2>
         <p style="margin:8px 0;line-height:1.7"><b>【全家共享早餐】</b><br/>蒸红薯、水煮蛋、温牛奶、原味坚果</p>
         <p style="margin:8px 0;line-height:1.7"><b>【午餐】</b><br/>
           👧 姐姐（回家）：杂粮饭 + 清蒸鲈鱼 + 菌菇西兰花<br/>
-          <span style="color:#c46838">👩 妈妈（早班带饭）：香菇蒸鸡 + 蒸红薯 + 水煮蛋（前一晚备好装盒）</span>
+          <span style="color:#c46838">👩 妈妈（早班带饭）：香菇蒸鸡 + 蒸红薯 + 水煮蛋</span>
         </p>
         <p style="margin:8px 0;line-height:1.7"><b>【晚餐】</b><br/>
           全家：蔬菜鸡肉丸子、娃娃菜豆腐汤、甜玉米<br/>
-          <span style="color:#c46838">👦 弟弟专属：肉丸里混入菠菜碎+胡萝卜碎（隐形蔬菜）</span>
+          <span style="color:#c46838">👦 弟弟专属：肉丸里混入菠菜碎+胡萝卜碎</span>
         </p>
       </div>
     </div>
 
-    <!-- 周菜谱 -->
+    <!-- 周菜谱（联动食材库自动扣减） -->
     <div v-if="view === 'weekMenu'">
       <h2 style="margin-bottom:14px">每周菜谱</h2>
       <div class="date-scroll">
@@ -130,29 +132,28 @@
           <div style="font-size:19px">{{d.day}}</div>
         </div>
       </div>
+      
       <div class="meal-title">🌅 早餐</div>
-      <div class="dish-card">
-        <div class="dish-header"><div><b>蒸红薯｜主食</b></div><span class="tag green">碳水·膳食纤维</span></div>
-        <div class="card-subtitle">食材：小红薯250g</div>
-        <div style="font-size:14px;line-height:1.7"><b>小白做法：</b><br/>1.红薯洗净去皮切块<br/>2.水开上锅蒸18分钟</div>
-        <div style="margin-top:14px"><button class="btn small secondary">✅ 已完成制作</button></div>
-        <div class="feedback-row"><div class="feedback-btn">😋 爱吃</div><div class="feedback-btn">🙂 一般</div><div class="feedback-btn">😐 不爱吃</div></div>
-      </div>
-      <div class="meal-title">☀️ 午餐（姐姐）</div>
-      <div class="dish-card">
-        <div class="dish-header"><div><b>香煎龙利鱼｜主菜</b></div><span class="tag">蛋白质·清淡鲜香</span></div>
-        <div class="card-subtitle">食材：龙利鱼柳150g，黑胡椒0.5g，柠檬1角</div>
-        <div style="font-size:14px;line-height:1.7"><b>小白做法：</b><br/>1.龙利鱼解冻吸干水分，撒少量盐、黑胡椒<br/>2.平底锅少油，中火每面煎2-3分钟至金黄<br/>3.出锅挤几滴柠檬汁，切成一口小块</div>
-        <div style="margin-top:14px"><button class="btn small secondary">✅ 已完成制作</button></div>
-        <div class="feedback-row"><div class="feedback-btn selected">😋 爱吃</div><div class="feedback-btn">🙂 一般</div><div class="feedback-btn">😐 不爱吃</div></div>
-      </div>
-      <div class="meal-title">🌙 晚餐（全家）</div>
-      <div class="dish-card">
-        <div class="dish-header"><div><b>蔬菜鸡肉丸子｜主菜</b></div><span class="tag">优质蛋白</span></div>
-        <div class="card-subtitle">食材：鸡肉丸子200g，娃娃菜150g，嫩豆腐100g</div>
-        <div style="font-size:14px;line-height:1.7"><b>小白做法：</b><br/>1.清水烧开，放入丸子煮5分钟<br/>2.放入娃娃菜、豆腐小火煮3分钟<br/>3.少量盐调味即可</div>
-        <div style="margin-top:14px"><button class="btn small secondary">✅ 已完成制作</button></div>
-        <div class="feedback-row"><div class="feedback-btn">😋 爱吃</div><div class="feedback-btn selected">🙂 一般</div><div class="feedback-btn">😐 不爱吃</div></div>
+      <div v-for="dish in weekDishes" :key="dish.id" class="dish-card">
+        <div class="dish-header">
+          <div><b>{{dish.name}}</b></div>
+          <span class="tag green">{{dish.tag}}</span>
+        </div>
+        <div class="card-subtitle">食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+        <div style="font-size:14px;line-height:1.7;margin-top:8px;">
+          <b>小白做法：</b><br/>
+          <span v-for="(step, idx) in dish.steps" :key="idx">{{idx+1}}.{{step}}<br/></span>
+        </div>
+        <div style="margin-top:14px; display: flex; gap: 10px;">
+          <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
+            {{dish.completed ? '✅ 已完成制作' : '确认制作完成'}}
+          </button>
+        </div>
+        <div class="feedback-row">
+          <div class="feedback-btn">😋 爱吃</div>
+          <div class="feedback-btn">🙂 一般</div>
+          <div class="feedback-btn">😐 不爱吃</div>
+        </div>
       </div>
     </div>
 
@@ -178,7 +179,7 @@
       </div>
     </div>
 
-    <!-- 食材库 -->
+    <!-- 食材库（新增和扣减） -->
     <div v-if="view === 'ingredientLib'">
       <h2 style="margin-bottom:14px">🥬 食材库</h2>
       <div class="tab-switch">
@@ -189,20 +190,26 @@
         <input v-model="searchIng" placeholder="🔍 搜索食材，输入关键字筛选"/>
       </div>
       <div v-if="ingTab==='raw'">
-        <div v-for="item in filteredRawList" class="list-row" @click="openStockModal(item, 'raw')" style="cursor:pointer">
+        <div v-for="item in filteredRawList" class="list-row" style="cursor:pointer">
           <div>{{item.name}}</div>
-          <div>库存：{{item.weight}}g｜保质期 {{item.expireDay}}天</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span>库存：{{item.weight}}g</span>
+            <button class="btn small" @click="openStockModal(item, 'raw')">调整</button>
+          </div>
         </div>
         <div v-if="filteredRawList.length===0" class="empty-text">无匹配食材</div>
       </div>
       <div v-if="ingTab==='pre'">
-        <div v-for="item in filteredPreList" class="list-row" @click="openStockModal(item, 'pre')" style="cursor:pointer">
+        <div v-for="item in filteredPreList" class="list-row" style="cursor:pointer">
           <div>{{item.name}}</div>
-          <div>库存：{{item.weight}}g｜冷冻保存{{item.expireDay}}天</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span>库存：{{item.weight}}g</span>
+            <button class="btn small" @click="openStockModal(item, 'pre')">调整</button>
+          </div>
         </div>
         <div v-if="filteredPreList.length===0" class="empty-text">无匹配食材</div>
       </div>
-      <button class="btn" style="margin-top:20px">新增食材入库</button>
+      <button class="btn" style="margin-top:20px; width:100%;" @click="openAddIngModal">➕ 新增食材入库</button>
     </div>
 
     <!-- 我的页面 -->
@@ -228,7 +235,6 @@
         </div>
       </div>
 
-      <!-- 临时状态与忌口 -->
       <div class="card">
         <h2>⚠️ 成员临时状态与忌口</h2>
         <div class="member-block">
@@ -302,7 +308,6 @@
         </div>
       </div>
 
-      <!-- 身体数据趋势 -->
       <div class="card">
         <h2>📈 身体数据趋势</h2>
         <p class="card-subtitle">点击成员查看趋势图表</p>
@@ -319,21 +324,32 @@
 
   <!-- 底部导航 -->
   <div class="tab-bar">
-    <div class="tab-item" :class="{active:view==='home'}" @click="view='home'">首页</div>
-    <div class="tab-item" :class="{active:view==='weekMenu'}" @click="view='weekMenu'">周菜谱</div>
-    <div class="tab-center" @click="view='todo'">
-      <div class="center-line-wrap">
-        <div class="center-line"></div>
-        <div class="center-arc"></div>
-        <span v-if="hasUnfinishedTask" class="red-dot"></span>
-      </div>
-      <div class="tab-center-text" :class="{active:view==='todo'}">待操作</div>
+    <div class="tab-item" :class="{active:view==='home'}" @click="view='home'">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">首页</span>
     </div>
-    <div class="tab-item" :class="{active:view==='ingredientLib'}" @click="view='ingredientLib'">食材库</div>
-    <div class="tab-item" :class="{active:view==='setting'}" @click="view='setting'">我的</div>
+    <div class="tab-item" :class="{active:view==='weekMenu'}" @click="view='weekMenu'">
+      <span class="tab-icon">📅</span>
+      <span class="tab-label">周菜谱</span>
+    </div>
+    <div class="tab-item-center" @click="view='todo'" :class="{active:view==='todo'}">
+      <div class="tab-center-btn">
+        <span>📝</span>
+        <span class="red-dot" v-if="hasUnfinishedTask"></span>
+      </div>
+      <span class="tab-center-text">待操作</span>
+    </div>
+    <div class="tab-item" :class="{active:view==='ingredientLib'}" @click="view='ingredientLib'">
+      <span class="tab-icon">🥬</span>
+      <span class="tab-label">食材库</span>
+    </div>
+    <div class="tab-item" :class="{active:view==='setting'}" @click="view='setting'">
+      <span class="tab-icon">👤</span>
+      <span class="tab-label">我的</span>
+    </div>
   </div>
 
-  <!-- 成员编辑弹窗（包含排班、休息日、节假日设置） -->
+  <!-- 成员编辑弹窗 -->
   <div class="modal-mask" v-if="memberEditModal.show" @click.self="memberEditModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">编辑 {{getMemberName(memberEditModal.key)}} 信息</h3>
@@ -346,37 +362,27 @@
           <div class="input-wrap"><label>体重kg</label><input v-model.number="memberData[memberEditModal.key].weight" type="number"/></div>
           <div class="input-wrap"><label>排班/上学状态</label><input v-model="memberData[memberEditModal.key].schedule" placeholder="例如：4天在家4天不在"/></div>
         </div>
-        <div class="input-wrap"><label>身体情况（如脂肪肝、性早熟等）</label><textarea v-model="memberData[memberEditModal.key].health" rows="1"></textarea></div>
-        <div class="input-wrap"><label>基础忌口（如高草酸、激素食物）</label><input v-model="memberData[memberEditModal.key].taboo"/></div>
+        <div class="input-wrap"><label>身体情况</label><textarea v-model="memberData[memberEditModal.key].health" rows="1"></textarea></div>
+        <div class="input-wrap"><label>基础忌口</label><input v-model="memberData[memberEditModal.key].taboo"/></div>
         
-        <!-- 爸爸和妈妈的排班设置 -->
         <div v-if="memberEditModal.key === 'dad' || memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
           <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">📅 排班周期设置</h4>
-          
           <div v-if="memberEditModal.key === 'dad'">
             <div class="input-wrap"><label>起始日期</label><input type="date" v-model="scheduleConfig.dad.startDate"/></div>
             <div class="input-wrap"><label>在家天数</label><input type="number" v-model.number="scheduleConfig.dad.homeDays"/></div>
             <div class="input-wrap"><label>不在家天数</label><input type="number" v-model.number="scheduleConfig.dad.awayDays"/></div>
-            <div class="input-wrap"><label>回家首日吃</label><input value="晚餐" disabled style="background:#f5f5f5;color:#999;"/></div>
           </div>
-          
           <div v-if="memberEditModal.key === 'mom'">
             <div class="input-wrap"><label>起始日期</label><input type="date" v-model="scheduleConfig.mom.startDate"/></div>
             <div class="input-wrap"><label>起始班次</label>
-              <select v-model="scheduleConfig.mom.firstShift">
-                <option value="morning">早班（外带）</option>
-                <option value="afternoon">下午班</option>
-              </select>
+              <select v-model="scheduleConfig.mom.firstShift"><option value="morning">早班</option><option value="afternoon">下午班</option></select>
             </div>
-            <div class="input-wrap"><label>循环周期</label><input value="2天（早班↔下午班）" disabled style="background:#f5f5f5;color:#999;"/></div>
           </div>
         </div>
         
-        <!-- 妈妈专属的休息日设置（改为日期范围） -->
+        <!-- 妈妈休息日设置（日期范围） -->
         <div v-if="memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
-          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 特殊休息日设置（不固定）</h4>
-          <p style="font-size: 12px; color: #888; margin-bottom: 10px;">添加后，妈妈在该时间段自动变为“休息日”，全天在家吃。</p>
-          
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 特殊休息日设置</h4>
           <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
             <div style="display: flex; gap: 10px; align-items: center;">
               <input type="date" v-model="newMomRestForm.start" style="flex: 1; min-height: 44px;" />
@@ -385,44 +391,31 @@
             </div>
             <button class="btn small" style="width: 100%;" @click="addMomRestDay">添加休息日</button>
           </div>
-          
-          <div v-if="momRestDays.length > 0" style="margin-top: 10px;">
-            <label style="font-size: 13px; color: #555;">已设置的休息日（点击标签可删除）：</label>
-            <div>
-              <span v-for="(h, idx) in momRestDays" :key="idx" class="rest-day-tag">
-                {{h.start === h.end ? h.start : h.start + ' 至 ' + h.end}} <span @click="removeMomRestDay(idx)">✕</span>
-              </span>
-            </div>
+          <div v-if="momRestDays.length > 0">
+            <div><span v-for="(h, idx) in momRestDays" :key="idx" class="rest-day-tag">{{h.start}} 至 {{h.end}} <span @click="removeMomRestDay(idx)">✕</span></span></div>
           </div>
-          <div v-else class="empty-text" style="padding: 10px; font-size: 13px;">暂无特殊休息日</div>
         </div>
         
-        <!-- 孩子专属的节假日/请假设置（改为日期范围） -->
+        <!-- 孩子假期设置（日期范围） -->
         <div v-if="memberEditModal.key === 'sister' || memberEditModal.key === 'brother'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
-          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 节假日/请假设置（全天在家）</h4>
-          <p style="font-size: 12px; color: #888; margin-bottom: 10px;">添加后，该时间段自动变为“休息日”，全天在家吃。</p>
-          
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌  <节假日/请假设置</h4>
           <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
-            <input type="text" v-model="newHolidayForm[memberEditModal.key].name" placeholder="假期名称（如：暑假、请假）" style="width: 100%;" />
+            <input type="text" v-model="newHolidayForm[memberEditModal.key].name" placeholder="假期名称" style="width: 100%;" />
             <div style="display: flex; gap: 10px; align-items: center;">
               <input type="date" v-model="newHolidayForm[memberEditModal.key].start" style="flex: 1; min-height: 44px;" />
-              <span>至</span>
+             span>至</span>
               <input type="date" v-model="newHolidayForm[memberEditModal.key].end" style="flex: 1; min-height: 44px;" />
             </div>
             <button class="btn small" style="width: 100%;" @click="addHoliday(memberEditModal.key)">添加假期</button>
           </div>
-          
-          <div v-if="(memberEditModal.key === 'sister' && sisterHolidays.length > 0) || (memberEditModal.key === 'brother' && brotherHolidays.length > 0)" style="margin-top: 10px;">
-            <label style="font-size: 13px; color: #555;">已设置的假期（点击标签可删除）：</label>
+          <div v-if="(memberEditModal.key === 'sister' && sisterHolidays.length > 0) || (memberEditModal.key === 'brother' && brotherHolidays.length > 0)">
             <div>
               <span v-for="(h, idx) in (memberEditModal.key === 'sister' ? sisterHolidays : brotherHolidays)" :key="idx" class="rest-day-tag">
                 {{h.name}}：{{h.start}} 至 {{h.end}} <span @click="removeHoliday(memberEditModal.key, idx)">✕</span>
               </span>
             </div>
           </div>
-          <div v-else class="empty-text" style="padding: 10px; font-size: 13px;">暂无特殊假期</div>
         </div>
-        
       </div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn secondary" style="flex:1" @click="memberEditModal.show=false">取消</button>
@@ -445,6 +438,36 @@
         <button class="btn" style="flex:1" @click="changeStockByModal(1)">增加库存</button>
       </div>
       <button class="btn secondary" style="width:100%;margin-top:10px" @click="stockModal.show=false">取消</button>
+    </div>
+  </div>
+
+  <!-- 新增食材弹窗 -->
+  <div class="modal-mask" v-if="addIngModal.show" @click.self="addIngModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">新增食材入库</h3>
+      <div class="input-wrap">
+        <label>食材名称</label>
+        <input v-model="addIngModal.name" placeholder="例如：西兰花" />
+      </div>
+      <div class="input-wrap">
+        <label>类型</label>
+        <select v-model="addIngModal.type">
+          <option value="raw">原材料</option>
+          <option value="pre">预制菜</option>
+        </select>
+      </div>
+      <div class="input-wrap">
+        <label>初始重量（g）</label>
+        <input v-model.number="addIngModal.weight" type="number" placeholder="例如：500" />
+      </div>
+      <div class="input-wrap">
+        <label>保质期（天）</label>
+        <input v-model.number="addIngModal.expireDay" type="number" placeholder="例如：5" />
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="addIngModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveNewIngredient">保存入库</button>
+      </div>
     </div>
   </div>
 
@@ -473,26 +496,17 @@ createApp({
       searchIng: '',
       // 排班基础配置
       scheduleConfig: {
-        dad: {
-          startDate: '2026-10-15',
-          homeDays: 4,
-          awayDays: 4,
-        },
-        mom: {
-          startDate: '2026-10-16',
-          firstShift: 'morning',
-        }
+        dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 },
+        mom: { startDate: '2026-10-16', firstShift: 'morning' }
       },
-      // 妈妈不固定的休息日列表（日期范围形式）
+      // 妈妈休息日
       momRestDays: [{ start: '2026-10-20', end: '2026-10-20', name: '休息日' }], 
       newMomRestForm: { start: '', end: '' },
-      // 孩子各自的假期列表（日期范围形式）
+      // 孩子假期
       sisterHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
       brotherHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
-      newHolidayForm: { 
-        sister: { name: '', start: '', end: '' }, 
-        brother: { name: '', start: '', end: '' } 
-      },
+      newHolidayForm: { sister: { name: '', start: '', end: '' }, brother: { name: '', start: '', end: '' } },
+      // 成员数据
       memberData:{
         dad:{age:35, height:176, weight:90, schedule:"4天在家4天不在", health:"轻微脂肪肝，肾结石", taboo:"高草酸蔬菜需焯水，不吃内脏"},
         mom:{age:35, height:150, weight:50, schedule:"早班/下午班交替", health:"气血不足，二胎后大肚腩", taboo:"无"},
@@ -505,14 +519,28 @@ createApp({
       currentChart:null,
       memberEditModal: { show: false, key: 'dad' },
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
+      addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
+      
+      // 食材库数据
       rawIngList: [
         { name: "鸡蛋", weight: 470, expireDay: 14 },
         { name: "红薯", weight: 360, expireDay: 21 },
-        { name: "西兰花", weight: 180, expireDay: 5 }
+        { name: "西兰花", weight: 180, expireDay: 5 },
+        { name: "龙利鱼柳", weight: 300, expireDay: 30 },
+        { name: "黑胡椒", weight: 50, expireDay: 180 },
+        { name: "娃娃菜", weight: 500, expireDay: 7 },
+        { name: "鸡肉丸子", weight: 400, expireDay: 90 },
+        { name: "嫩豆腐", weight: 200, expireDay: 3 }
       ],
       preIngList: [
         { name: "蔬菜鸡肉丸子（预制）", weight: 320, expireDay: 90 },
         { name: "虾滑", weight: 200, expireDay: 90 }
+      ],
+      // 周菜谱数据（含食材，用于自动扣减）
+      weekDishes: [
+        { id: 1, name: "香煎龙利鱼｜主菜", tag: "蛋白质·清淡鲜香", ingredients: [{name:'龙利鱼柳', weight:150}, {name:'黑胡椒', weight:0.5}], steps: ['龙利鱼解冻吸干水分，撒少量盐、黑胡椒', '平底锅少油，中火每面煎2-3分钟至金黄', '出锅挤几滴柠檬汁，切成一口小块'], completed: false },
+        { id: 2, name: "蒸红薯｜主食", tag: "碳水·膳食纤维", ingredients: [{name:'红薯', weight:250}], steps: ['红薯洗净去皮切块', '水开上锅蒸18分钟'], completed: false },
+        { id: 3, name: "蔬菜鸡肉丸子｜主菜", tag: "优质蛋白", ingredients: [{name:'鸡肉丸子', weight:200}, {name:'娃娃菜', weight:150}, {name:'嫩豆腐', weight:100}], steps: ['清水烧开，放入丸子煮5分钟', '放入娃娃菜、豆腐小火煮3分钟', '少量盐调味即可'], completed: false }
       ],
       shoppingList: [
         { id: 1, name: "龙利鱼柳", weight: 150, bought: false },
@@ -549,171 +577,89 @@ createApp({
       const dayOfWeek = targetDate.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-      // 使用 some 和日期范围判断
       const isMomRest = this.momRestDays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
       const isSisterHoliday = this.sisterHolidays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
       const isBrotherHoliday = this.brotherHolidays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
 
       const result = [];
 
-      // ---- 1. 爸爸排班（不受节假日影响） ----
+      // 爸爸
       const dadConfig = this.scheduleConfig.dad;
       const dadStart = new Date(dadConfig.startDate);
       const dadDiffDays = Math.floor((targetDate - dadStart) / (1000 * 60 * 60 * 24));
       const dadCycle = dadConfig.homeDays + dadConfig.awayDays;
       const dadDayInCycle = ((dadDiffDays % dadCycle) + dadCycle) % dadCycle;
-
-      let dadMeals = [];
-      let dadStatus = "";
-      let dadStatusClass = "";
-
-      if (dadDayInCycle === 0) {
-        dadMeals = ['晚']; dadStatus = '下午回家'; dadStatusClass = 'status-rest';
-      } else if (dadDayInCycle >= 1 && dadDayInCycle <= 3) {
-        dadMeals = ['早', '午', '晚']; dadStatus = '在家休息'; dadStatusClass = 'status-rest';
-      } else if (dadDayInCycle === 4) {
-        dadMeals = ['早', '午']; dadStatus = '下午上班'; dadStatusClass = 'status-work';
-      } else {
-        dadMeals = []; dadStatus = '全天上班'; dadStatusClass = 'status-work';
-      }
+      let dadMeals = []; let dadStatus = ""; let dadStatusClass = "";
+      if (dadDayInCycle === 0) { dadMeals = ['晚']; dadStatus = '下午回家'; dadStatusClass = 'status-rest'; } 
+      else if (dadDayInCycle >= 1 && dadDayInCycle <= 3) { dadMeals = ['早', '午', '晚']; dadStatus = '在家休息'; dadStatusClass = 'status-rest'; } 
+      else if (dadDayInCycle === 4) { dadMeals = ['早', '午']; dadStatus = '下午上班'; dadStatusClass = 'status-work'; } 
+      else { dadMeals = []; dadStatus = '全天上班'; dadStatusClass = 'status-work'; }
       result.push({ key: 'dad', name: '爸爸', icon: '👨', status: dadStatus, statusClass: dadStatusClass, meals: dadMeals, dateStr: targetDateStr });
 
-      // ---- 2. 妈妈排班（不受节假日影响，但受特殊休息日影响） ----
-      let momMeals = [];
-      let momStatus = "";
-      let momStatusClass = "";
-
-      if (isMomRest) {
-        momMeals = ['早', '午', '晚'];
-        momStatus = '休息日';
-        momStatusClass = 'status-rest';
-      } else {
+      // 妈妈
+      let momMeals = []; let momStatus = ""; let momStatusClass = "";
+      if (isMomRest) { momMeals = ['早', '午', '晚']; momStatus = '休息日'; momStatusClass = 'status-rest'; } 
+      else {
         const momConfig = this.scheduleConfig.mom;
         const momStart = new Date(momConfig.startDate);
         const momDiffDays = Math.floor((targetDate - momStart) / (1000 * 60 * 60 * 24));
         const momDayInCycle = ((momDiffDays % 2) + 2) % 2;
-
-        if (momDayInCycle === 0) {
-          momMeals = ['午', '晚']; momStatus = '早班 (外带)'; momStatusClass = 'status-work';
-        } else {
-          momMeals = ['早', '午', '晚']; momStatus = '下午班'; momStatusClass = 'status-work';
-        }
+        if (momDayInCycle === 0) { momMeals = ['午', '晚']; momStatus = '早班 (外带)'; momStatusClass = 'status-work'; } 
+        else { momMeals = ['早', '午', '晚']; momStatus = '下午班'; momStatusClass = 'status-work'; }
       }
       result.push({ key: 'mom', name: '妈妈', icon: '👩', status: momStatus, statusClass: momStatusClass, meals: momMeals, isRest: isMomRest, dateStr: targetDateStr });
 
-      // ---- 3. 姐姐排班（受假期影响） ----
-      let sisterMeals = [];
-      let sisterStatus = "";
-      if (isWeekend || isSisterHoliday) {
-        sisterMeals = ['早', '午', '晚'];
-        sisterStatus = isSisterHoliday ? '假期' : '休息日';
-      } else {
-        sisterMeals = ['早', '午', '晚'];
-        sisterStatus = '上学日';
-      }
+      // 姐姐
+      let sisterMeals = []; let sisterStatus = "";
+      if (isWeekend || isSisterHoliday) { sisterMeals = ['早', '午', '晚']; sisterStatus = isSisterHoliday ? '假期' : '休息日'; } 
+      else { sisterMeals = ['早', '午', '晚']; sisterStatus = '上学日'; }
       result.push({ key: 'sister', name: '姐姐', icon: '👧', status: sisterStatus, statusClass: (isWeekend || isSisterHoliday) ? 'status-rest' : 'status-work', meals: sisterMeals, dateStr: targetDateStr });
 
-      // ---- 4. 弟弟排班（受假期影响） ----
-      let brotherMeals = [];
-      let brotherStatus = "";
-      if (isWeekend || isBrotherHoliday) {
-        brotherMeals = ['早', '午', '晚'];
-        brotherStatus = isBrotherHoliday ? '假期' : '休息日';
-      } else {
-        brotherMeals = ['早', '晚'];
-        brotherStatus = '上学日';
-      }
+      // 弟弟
+      let brotherMeals = []; let brotherStatus = "";
+      if (isWeekend || isBrotherHoliday) { brotherMeals = ['早', '午', '晚']; brotherStatus = isBrotherHoliday ? '假期' : '休息日'; } 
+      else { brotherMeals = ['早', '晚']; brotherStatus = '上学日'; }
       result.push({ key: 'brother', name: '弟弟', icon: '👦', status: brotherStatus, statusClass: (isWeekend || isBrotherHoliday) ? 'status-rest' : 'status-work', meals: brotherMeals, dateStr: targetDateStr });
 
       return result;
     }
   },
   methods:{
-    calcBMI(heightCm, weightKg){
-      if(!heightCm || !weightKg) return "-";
-      const h = heightCm / 100;
-      return (weightKg / (h*h)).toFixed(1);
-    },
-    toggleTaboo(person, word){
-      const arr = this.memberTaboo[person];
-      const idx = arr.indexOf(word);
-      if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); }
-    },
-    // 妈妈休息日操作（日期范围）
-    addMomRestDay() {
-      const form = this.newMomRestForm;
-      if (!form.start || !form.end) {
-        alert("请选择开始和结束日期"); return;
-      }
-      if (form.start > form.end) {
-        alert("开始日期不能晚于结束日期"); return;
-      }
-      this.momRestDays.push({ name: '休息日', start: form.start, end: form.end });
-      this.newMomRestForm = { start: '', end: '' };
-    },
-    removeMomRestDay(index) {
-      this.momRestDays.splice(index, 1);
-    },
-    // 孩子假期操作（日期范围）
-    addHoliday(person) {
-      const form = this.newHolidayForm[person];
-      if (!form.start || !form.end) {
-        alert("请选择开始和结束日期"); return;
-      }
-      if (form.start > form.end) {
-        alert("开始日期不能晚于结束日期"); return;
-      }
-      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
-      targetArray.push({
-        name: form.name || '假期/请假',
-        start: form.start,
-        end: form.end
+    calcBMI(heightCm, weightKg){ if(!heightCm || !weightKg) return "-"; const h = heightCm / 100; return (weightKg / (h*h)).toFixed(1); },
+    toggleTaboo(person, word){ const arr = this.memberTaboo[person]; const idx = arr.indexOf(word); if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); } },
+    
+    // 自动扣减逻辑（重点！）
+    completeDish(dish) {
+      if (dish.completed) return;
+      
+      let deductedList = [];
+      dish.ingredients.forEach(ing => {
+        // 在原材料库中查找
+        let target = this.rawIngList.find(i => i.name === ing.name);
+        if (!target) {
+          // 如果原材料库找不到，在预制菜库中查找
+          target = this.preIngList.find(i => i.name === ing.name);
+        }
+        
+        if (target) {
+          if (target.weight >= ing.weight) {
+            target.weight -= ing.weight;
+            deductedList.push(`${ing.name} ${ing.weight}g`);
+          } else {
+            // 如果库存不足，扣到0
+            deductedList.push(`${ing.name} 库存不足（需${ing.weight}g，现有${target.weight}g，已扣为0）`);
+            target.weight = 0;
+          }
+        } else {
+          deductedList.push(`${ing.name} 未找到`);
+        }
       });
-      // 重置表单
-      this.newHolidayForm[person] = { name: '', start: '', end: '' };
+      
+      dish.completed = true;
+      alert(`【${dish.name}】已完成制作！\n系统已自动扣减食材：\n${deductedList.join('\n')}`);
     },
-    removeHoliday(person, index) {
-      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
-      targetArray.splice(index, 1);
-    },
-    getMemberName(key){
-      const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' };
-      return map[key] || '';
-    },
-    openMemberEdit(key){
-      this.memberEditModal.key = key;
-      this.memberEditModal.show = true;
-    },
-    saveMemberEdit(){
-      alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`);
-      this.memberEditModal.show = false;
-    },
-    openChartModal(personKey){
-      this.chartModal.target = personKey;
-      const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}
-      this.chartModal.title = nameMap[personKey];
-      this.chartModal.show = true;
-      this.$nextTick(()=>{ this.renderSingleChart(personKey); })
-    },
-    closeChartModal(){
-      this.chartModal.show = false;
-      if(this.currentChart) this.currentChart.destroy();
-      this.currentChart = null;
-    },
-    renderSingleChart(person){
-      const ctx = this.$refs.chartCanvasRef.getContext('2d');
-      if(this.currentChart) this.currentChart.destroy();
-      const chartConfig = {
-        type:'line',
-        data:{
-          labels: ['1月','2月','3月','4月'],
-          datasets:[{ label:'数据', data:[50, 52, 51, 53], borderColor:'#e6703b', fill:false }]
-        },
-        options:{responsive:true, maintainAspectRatio:false}
-      };
-      this.currentChart = new Chart(ctx, chartConfig);
-    },
-    toggleBought(item){ item.bought = !item.bought; },
+    
+    // 手动调整库存
     openStockModal(item, source){
       this.stockModal.item = item;
       this.stockModal.source = source;
@@ -728,7 +674,59 @@ createApp({
         this.stockModal.item.weight = newWeight;
         this.stockModal.show = false;
       }
-    }
+    },
+    
+    // 新增食材入库
+    openAddIngModal() {
+      this.addIngModal = { show: true, name: '', type: 'raw', weight: null, expireDay: null };
+    },
+    saveNewIngredient() {
+      const { name, type, weight, expireDay } = this.addIngModal;
+      if (!name || !weight || !expireDay) { alert("请填写完整信息"); return; }
+      const newItem = { name, weight: Number(weight), expireDay: Number(expireDay) };
+      if (type === 'raw') {
+        this.rawIngList.push(newItem);
+      } else {
+        this.preIngList.push(newItem);
+      }
+      this.addIngModal.show = false;
+      alert(`【${name}】已成功入库！`);
+    },
+
+    // 妈妈休息日
+    addMomRestDay() {
+      const form = this.newMomRestForm;
+      if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
+      if (form.start > form.end) { alert("开始日期不能晚于结束日期"); return; }
+      this.momRestDays.push({ name: '休息日', start: form.start, end: form.end });
+      this.newMomRestForm = { start: '', end: '' };
+    },
+    removeMomRestDay(index) { this.momRestDays.splice(index, 1); },
+    
+    // 孩子假期
+    addHoliday(person) {
+      const form = this.newHolidayForm[person];
+      if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
+      if (form.start > form.end) { alert("开始日期不能晚于结束日期"); return; }
+      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
+      targetArray.push({ name: form.name || '假期/请假', start: form.start, end: form.end });
+      this.newHolidayForm[person] = { name: '', start: '', end: '' };
+    },
+    removeHoliday(person, index) {
+      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
+      targetArray.splice(index, 1);
+    },
+    
+    getMemberName(key){ const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' }; return map[key] || ''; },
+    openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
+    saveMemberEdit(){ alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`); this.memberEditModal.show = false; },
+    
+    // 趋势图
+    openChartModal(personKey){ this.chartModal.target = personKey; const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}; this.chartModal.title = nameMap[personKey]; this.chartModal.show = true; this.$nextTick(()=>{ this.renderSingleChart(personKey); }) },
+    closeChartModal(){ this.chartModal.show = false; if(this.currentChart) this.currentChart.destroy(); this.currentChart = null; },
+    renderSingleChart(person){ const ctx = this.$refs.chartCanvasRef.getContext('2d'); if(this.currentChart) this.currentChart.destroy(); const chartConfig = { type:'line', data:{ labels: ['1月','2月','3月','4月'], datasets:[{ label:'数据', data:[50, 52, 51, 53], borderColor:'#e6703b', fill:false }] }, options:{responsive:true, maintainAspectRatio:false} }; this.currentChart = new Chart(ctx, chartConfig); },
+    
+    toggleBought(item){ item.bought = !item.bought; }
   }
 }).mount('#app')
 </script>
