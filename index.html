@@ -448,7 +448,6 @@
   <div class="modal-mask" v-if="chartModal.show" @click.self="closeChartModal">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
-      <!-- 注意：这里的 canvas 容器高度需要固定，否则图表可能不显示 -->
       <div style="width:100%;height:280px;margin-top:10px;position: relative;">
         <canvas ref="chartCanvasRef"></canvas>
       </div>
@@ -492,7 +491,7 @@ createApp({
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
       addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
       
-      // 新增：每个人真实的历史数据（包含日期）
+      // 历史数据（修正了姐姐的体重数据数组）
       historyData: {
         dad: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [92, 91.5, 91, 90.5, 90, 90] },
         mom: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [52, 51.5, 51, 50.5, 50, 50] },
@@ -714,12 +713,8 @@ createApp({
       this.currentChart = null;
     },
     renderSingleChart(person){
-      // 由于弹窗是 v-if 控制，必须确保 canvas 在 DOM 中
       const canvas = this.$refs.chartCanvasRef;
-      if (!canvas) {
-        console.error("Canvas not found");
-        return;
-      }
+      if (!canvas) return;
       const ctx = canvas.getContext('2d');
       if(this.currentChart) this.currentChart.destroy();
       
@@ -738,20 +733,16 @@ createApp({
             fill: true,
             tension: 0.3,
             pointRadius: 4,
-            pointBackgroundColor: '#e6703b'
+            pointBackgroundColor: '#e6703b',
+            borderWidth: 2
           }]
         };
         chartOptions = {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: {
-              ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } }
-            },
-            y: {
-              beginAtZero: false,
-              title: { display: true, text: '体重 (kg)' }
-            }
+            x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+            y: { beginAtZero: false, title: { display: true, text: '体重 (kg)' } }
           },
           plugins: {
             tooltip: {
@@ -762,7 +753,7 @@ createApp({
           }
         };
       } else {
-        // 小孩：双轴（身高和体重）
+        // 小孩：双轴（身高和体重）- 修复了 y1 轴范围导致线条不显示的问题
         chartData = {
           labels: data.labels,
           datasets: [
@@ -775,7 +766,8 @@ createApp({
               tension: 0.3,
               yAxisID: 'y',
               pointRadius: 4,
-              pointBackgroundColor: '#2b9954'
+              pointBackgroundColor: '#2b9954',
+              borderWidth: 2
             },
             {
               label: '体重(kg)',
@@ -786,7 +778,8 @@ createApp({
               tension: 0.3,
               yAxisID: 'y1',
               pointRadius: 4,
-              pointBackgroundColor: '#c46838'
+              pointBackgroundColor: '#c46838',
+              borderWidth: 2
             }
           ]
         };
@@ -794,9 +787,7 @@ createApp({
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: {
-              ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } }
-            },
+            x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
             y: {
               type: 'linear',
               display: true,
@@ -808,7 +799,10 @@ createApp({
               display: true,
               position: 'right',
               grid: { drawOnChartArea: false },
-              title: { display: true, text: '体重 (kg)' }
+              title: { display: true, text: '体重 (kg)' },
+              // 关键修复：显式设置右轴的范围，防止 Chart.js 自动缩放把橙色线隐藏掉
+              min: Math.floor(Math.min(...data.weight) - 2),
+              max: Math.ceil(Math.max(...data.weight) + 2)
             }
           },
           plugins: {
