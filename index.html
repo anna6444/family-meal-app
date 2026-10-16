@@ -50,7 +50,7 @@
     .menu-preview-row { font-size: 14px; line-height: 1.7; color: #444; margin-bottom: 4px; display: flex; align-items: flex-start; gap: 6px; }
     .menu-preview-row span { flex-shrink: 0; }
 
-    /* 加餐推荐 - 极简版 */
+    /* 加餐推荐 */
     .snack-recommend-box { display: flex; gap: 12px; margin-top: 10px; }
     .snack-recommend-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px 10px; background: #fafaf5; border-radius: 16px; border: 1px solid #f0ebe2; text-align: center; }
     .snack-recommend-item.urgent { border: 1px solid #fce8e8; background: #fff8f8; }
@@ -129,7 +129,26 @@
         </div>
       </div>
 
-      <!-- 今日加餐推荐（极简版） -->
+      <!-- 菜单预览（已调换到上方） -->
+      <div class="card">
+        <h2>🍽️ 菜单预览</h2>
+        <div class="menu-preview-section">
+          <div class="menu-preview-title">🌅 早餐</div>
+          <div class="menu-preview-row"><span>全家共享：</span>蒸红薯、水煮蛋、温牛奶、原味坚果</div>
+        </div>
+        <div class="menu-preview-section">
+          <div class="menu-preview-title">☀️ 午餐</div>
+          <div class="menu-preview-row"><span>👧 姐姐（回家）：</span>杂粮饭 + 清蒸鲈鱼 + 菌菇西兰花</div>
+          <div class="menu-preview-row" style="color:#c46838"><span>👩 妈妈（早班带饭）：</span>香菇蒸鸡 + 蒸红薯 + 水煮蛋</div>
+        </div>
+        <div class="menu-preview-section">
+          <div class="menu-preview-title">🌙 晚餐</div>
+          <div class="menu-preview-row"><span>全家：</span>蔬菜鸡肉丸子、娃娃菜豆腐汤、甜玉米</div>
+          <div class="menu-preview-row" style="color:#c46838"><span>👦 弟弟专属：</span>肉丸里混入菠菜碎+胡萝卜碎</div>
+        </div>
+      </div>
+
+      <!-- 今日加餐推荐（已调换到下方） -->
       <div class="card">
         <h2>🍎 今日加餐推荐</h2>
         <p class="card-subtitle">每天只推 1 种水果 + 1 种坚果/零食，优先消耗快过期的。</p>
@@ -152,29 +171,14 @@
           <b>搭配原则：</b>水果和坚果安排在早餐或下午2点上学/上班前。坚果类5岁以下小朋友必须打成粉拌入酸奶，避免呛噎。
         </div>
       </div>
-
-      <div class="card">
-        <h2>🍽️ 菜单预览</h2>
-        <div class="menu-preview-section">
-          <div class="menu-preview-title">🌅 早餐</div>
-          <div class="menu-preview-row"><span>全家共享：</span>蒸红薯、水煮蛋、温牛奶、原味坚果</div>
-        </div>
-        <div class="menu-preview-section">
-          <div class="menu-preview-title">☀️ 午餐</div>
-          <div class="menu-preview-row"><span>👧 姐姐（回家）：</span>杂粮饭 + 清蒸鲈鱼 + 菌菇西兰花</div>
-          <div class="menu-preview-row" style="color:#c46838"><span>👩 妈妈（早班带饭）：</span>香菇蒸鸡 + 蒸红薯 + 水煮蛋</div>
-        </div>
-        <div class="menu-preview-section">
-          <div class="menu-preview-title">🌙 晚餐</div>
-          <div class="menu-preview-row"><span>全家：</span>蔬菜鸡肉丸子、娃娃菜豆腐汤、甜玉米</div>
-          <div class="menu-preview-row" style="color:#c46838"><span>👦 弟弟专属：</span>肉丸里混入菠菜碎+胡萝卜碎</div>
-        </div>
-      </div>
     </div>
 
     <!-- 周菜谱 -->
     <div v-if="view === 'weekMenu'">
-      <h2 style="margin-bottom:14px">每周菜谱</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h2>每周菜谱</h2>
+        <button class="btn small" @click="generateNextWeekPlan">🪄 一键生成下周食谱</button>
+      </div>
       <div class="date-scroll">
         <div v-for="d in weekDateList" class="date-item" :class="{active:selDateIdx===d.idx}" @click="selDateIdx=d.idx">
           <div style="font-size:13px">{{d.week}}</div>
@@ -182,26 +186,29 @@
         </div>
       </div>
       
-      <div class="meal-title">🌅 早餐</div>
-      <div v-for="dish in weekDishes" :key="dish.id" class="dish-card">
-        <div class="dish-header">
-          <div><b>{{dish.name}}</b></div>
-          <span class="tag green">{{dish.tag}}</span>
-        </div>
-        <div class="card-subtitle">食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
-        <div style="font-size:14px;line-height:1.7;margin-top:8px;">
-          <b>小白做法：</b><br/>
-          <span v-for="(step, idx) in dish.steps" :key="idx">{{idx+1}}.{{step}}<br/></span>
-        </div>
-        <div style="margin-top:14px; display: flex; gap: 10px;">
-          <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
-            {{dish.completed ? '✅ 已完成制作' : '确认制作完成'}}
-          </button>
-        </div>
-        <div class="feedback-row">
-          <div class="feedback-btn" :class="{selected: dish.feedback === 'love'}" @click="setDishFeedback(dish, 'love')">😋 爱吃</div>
-          <div class="feedback-btn" :class="{selected: dish.feedback === 'ok'}" @click="setDishFeedback(dish, 'ok')">🙂 一般</div>
-          <div class="feedback-btn" :class="{selected: dish.feedback === 'dislike'}" @click="setDishFeedback(dish, 'dislike')">😐 不爱吃</div>
+      <div v-if="weekDishes.length === 0" class="empty-text">下周食谱尚未生成，请点击上方按钮一键排餐。</div>
+      <div v-else>
+        <div class="meal-title">🌅 早餐</div>
+        <div v-for="dish in weekDishes" :key="dish.id" class="dish-card">
+          <div class="dish-header">
+            <div><b>{{dish.name}}</b></div>
+            <span class="tag green">{{dish.tag}}</span>
+          </div>
+          <div class="card-subtitle">食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+          <div style="font-size:14px;line-height:1.7;margin-top:8px;">
+            <b>小白做法：</b><br/>
+            <span v-for="(step, idx) in dish.steps" :key="idx">{{idx+1}}.{{step}}<br/></span>
+          </div>
+          <div style="margin-top:14px; display: flex; gap: 10px;">
+            <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
+              {{dish.completed ? '✅ 已完成制作' : '确认制作完成'}}
+            </button>
+          </div>
+          <div class="feedback-row">
+            <div class="feedback-btn" :class="{selected: dish.feedback === 'love'}" @click="setDishFeedback(dish, 'love')">😋 爱吃</div>
+            <div class="feedback-btn" :class="{selected: dish.feedback === 'ok'}" @click="setDishFeedback(dish, 'ok')">🙂 一般</div>
+            <div class="feedback-btn" :class="{selected: dish.feedback === 'dislike'}" @click="setDishFeedback(dish, 'dislike')">😐 不爱吃</div>
+          </div>
         </div>
       </div>
     </div>
@@ -209,7 +216,9 @@
     <!-- 待操作 -->
     <div v-if="view === 'todo'">
       <div class="card">
-        <h2>🛒 采购清单（今日）</h2>
+        <h2>🛒 采购清单（下周）</h2>
+        <p class="card-subtitle">根据下周食谱自动汇总，并已扣除当前食材库库存。如有变化可手动调整。</p>
+        <div v-if="shoppingList.length === 0" class="empty-text">暂无采购需求，请先点击“周菜谱”生成食谱。</div>
         <div v-for="item in sortedShoppingList" :key="item.id" class="list-row">
           <div>{{item.name}} {{item.weight}}g</div>
           <button class="btn small" :class="item.bought ? 'secondary' : ''" @click="toggleBought(item)">
@@ -217,14 +226,15 @@
           </button>
         </div>
       </div>
+      
       <div class="card">
-        <h2>⏱️ 预处理清单</h2>
-        <div class="section-title">📅 单日处理（今晚准备，明天早餐）</div>
-        <div style="padding:10px 0;line-height:1.8;font-size:15px">✅ 红薯洗净，预约蒸锅</div>
-        <div style="padding:10px 0;line-height:1.8;font-size:15px">✅ 鸡蛋备好，预约煮蛋</div>
-        <div class="section-title">📆 周末处理</div>
-        <div style="padding:10px 0;line-height:1.8;font-size:15px">📌 制作一批蔬菜鸡肉丸子冷冻保存</div>
-        <div style="padding:10px 0;line-height:1.8;font-size:15px">📌 整理下周食材库存与预制菜</div>
+        <h2>⏱️ 预处理清单（周日准备）</h2>
+        <div class="section-title">📅 周末批量处理（节省工作日时间）</div>
+        <div v-if="prepTasks.length === 0" class="empty-text">暂无预处理任务。</div>
+        <div v-for="(task, idx) in prepTasks" :key="idx" style="padding:10px 0;line-height:1.8;font-size:15px; border-bottom: 1px dashed #eee;">
+          <span style="font-weight: 600; color: #e6703b;">📌 {{task.title}}</span><br/>
+          <span style="font-size: 13px; color: #666;">{{task.desc}}</span>
+        </div>
       </div>
     </div>
 
@@ -578,6 +588,7 @@ createApp({
         brother: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], height: [102, 103, 104, 105, 106, 107], weight: [17, 17.5, 18, 18.3, 18.6, 19] }
       },
       
+      // 食材库
       rawIngList: [
         { name: "鸡蛋", weight: 470, expireDay: 14 },
         { name: "红薯", weight: 360, expireDay: 21 },
@@ -604,15 +615,32 @@ createApp({
         { name: "蔬菜鸡肉丸子（预制）", weight: 320, expireDay: 90 },
         { name: "虾滑", weight: 200, expireDay: 90 }
       ],
-      weekDishes: [
-        { id: 1, name: "香煎龙利鱼｜主菜", tag: "蛋白质·清淡鲜香", ingredients: [{name:'龙利鱼柳', weight:150}, {name:'黑胡椒', weight:0.5}], steps: ['龙利鱼解冻吸干水分，撒少量盐、黑胡椒', '平底锅少油，中火每面煎2-3分钟至金黄', '出锅挤几滴柠檬汁，切成一口小块'], completed: false, feedback: '' },
-        { id: 2, name: "蒸红薯｜主食", tag: "碳水·膳食纤维", ingredients: [{name:'红薯', weight:250}], steps: ['红薯洗净去皮切块', '水开上锅蒸18分钟'], completed: false, feedback: '' },
-        { id: 3, name: "蔬菜鸡肉丸子｜主菜", tag: "优质蛋白", ingredients: [{name:'鸡肉丸子', weight:200}, {name:'娃娃菜', weight:150}, {name:'嫩豆腐', weight:100}], steps: ['清水烧开，放入丸子煮5分钟', '放入娃娃菜、豆腐小火煮3分钟', '少量盐调味即可'], completed: false, feedback: '' }
+      
+      // 预设菜谱库（用于一键排餐）
+      recipeLibrary: [
+        { name: "番茄炖瘦牛腩", tag: "补铁·高蛋白", ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:600}, {name:'姜', weight:10}], steps: ['牛腩焯水', '番茄切块', '一起炖煮40分钟'], type: 'main' },
+        { name: "清蒸鲈鱼", tag: "优质蛋白·低脂", ingredients: [{name:'鲈鱼', weight:700}, {name:'姜', weight:15}, {name:'葱', weight:20}], steps: ['鱼洗净', '水开蒸8分钟', '淋豉油'], type: 'main' },
+        { name: "香菇蒸鸡", tag: "补气血·低脂", ingredients: [{name:'鸡腿肉', weight:400}, {name:'香菇', weight:100}], steps: ['鸡肉切块腌制', '香菇切片', '蒸15分钟'], type: 'main' },
+        { name: "蔬菜鸡肉丸子", tag: "隐形蔬菜·优质蛋白", ingredients: [{name:'鸡肉丸子', weight:200}, {name:'娃娃菜', weight:150}, {name:'嫩豆腐', weight:100}], steps: ['丸子煮5分钟', '加入蔬菜豆腐煮3分钟'], type: 'main' },
+        { name: "清炒西兰花", tag: "膳食纤维", ingredients: [{name:'西兰花', weight:300}, {name:'蒜', weight:10}], steps: ['西兰花焯水', '蒜爆香', '翻炒出锅'], type: 'veg' },
+        { name: "蒜蓉生菜", tag: "维生素", ingredients: [{name:'生菜', weight:300}, {name:'蒜', weight:10}], steps: ['生菜洗净', '蒜爆香', '大火翻炒'], type: 'veg' }
       ],
+      
+      weekDishes: [
+        { id: 1, name: "香煎龙利鱼｜主菜", tag: "蛋白质·清淡鲜香", ingredients: [{name:'龙利鱼柳', weight:150}, {name:'黑胡椒', weight:0.5}], steps: ['龙利鱼解冻吸干水分', '中火煎至两面金黄', '切小块'], completed: false, feedback: '' },
+        { id: 2, name: "蒸红薯｜主食", tag: "碳水·膳食纤维", ingredients: [{name:'红薯', weight:250}], steps: ['红薯切块', '水开蒸18分钟'], completed: false, feedback: '' }
+      ],
+      
+      // 采购与预处理清单
       shoppingList: [
         { id: 1, name: "龙利鱼柳", weight: 150, bought: false },
         { id: 2, name: "娃娃菜", weight: 200, bought: false }
       ],
+      prepTasks: [
+        { title: "制作一批蔬菜鸡肉丸子", desc: "将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟后冷冻保存。" },
+        { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜等洗净焯水，沥干冷藏。" }
+      ],
+      
       weekDateList: [
         { idx: 0, week: "周一", day: "13" }, { idx: 1, week: "周二", day: "14" },
         { idx: 2, week: "周三", day: "15" }, { idx: 3, week: "周四", day: "16" },
@@ -649,21 +677,18 @@ createApp({
       return this.shoppingList.some(i => !i.bought);
     },
     
-    // 极简版推荐逻辑：每天只推 1 种水果 + 1 种零食
     dailySnackRecommendations(){
       const targetDateStr = this.homeDate || new Date().toISOString().split('T')[0];
       const members = this.todayMembers;
       const hasDad = members.find(m => m.key === 'dad' && m.meals.length > 0);
       const hasMom = members.find(m => m.key === 'mom' && m.meals.length > 0);
-      const hasSister = members.find(m => m.key === 'sister' && m.meals.length > 0);
       const hasBrother = members.find(m => m.key === 'brother' && m.meals.length > 0);
       const momIsPeriod = this.memberTempStatus.mom === 'period';
       
       let recommendations = [];
       
-      // 1. 筛选水果：按保质期排序，优先快过期，过滤爸爸禁忌和妈妈经期禁忌
       let fruitPool = this.fruitList.filter(item => item.weight > 0);
-      fruitPool.sort((a, b) => a.expireDay - b.expireDay); // 快过期的排前面
+      fruitPool.sort((a, b) => a.expireDay - b.expireDay);
       
       const highOxalateFruits = ['猕猴桃', '草莓', '蓝莓', '无花果', '榴莲'];
       const coldFruits = ['西瓜', '梨', '香蕉', '柚子', '柿子'];
@@ -671,61 +696,30 @@ createApp({
       let selectedFruit = null;
       for (let fruit of fruitPool) {
         let canEat = true;
-        // 如果爸爸在家，避开高草酸水果
-        if (hasDad && highOxalateFruits.includes(fruit.name)) {
-          // 如果是快过期的，勉强推荐，但加提示；否则跳过
-          if (fruit.expireDay > 3) { canEat = false; }
-        }
-        // 如果妈妈经期，避开寒凉水果
-        if (hasMom && momIsPeriod && coldFruits.includes(fruit.name)) {
-          if (fruit.expireDay > 3) { canEat = false; }
-        }
-        
-        if (canEat) {
-          selectedFruit = fruit;
-          break;
-        }
+        if (hasDad && highOxalateFruits.includes(fruit.name) && fruit.expireDay > 3) { canEat = false; }
+        if (hasMom && momIsPeriod && coldFruits.includes(fruit.name) && fruit.expireDay > 3) { canEat = false; }
+        if (canEat) { selectedFruit = fruit; break; }
       }
-      
-      // 如果因为忌口跳过了所有快过期的，就选第一个能吃的，或者保底推荐第一个快过期的
-      if (!selectedFruit && fruitPool.length > 0) {
-        selectedFruit = fruitPool[0];
-      }
+      if (!selectedFruit && fruitPool.length > 0) { selectedFruit = fruitPool[0]; }
       
       if (selectedFruit) {
         let reason = selectedFruit.expireDay <= 3 ? `仅剩${selectedFruit.expireDay}天，优先吃` : '日常补充维生素';
-        if (hasDad && highOxalateFruits.includes(selectedFruit.name) && selectedFruit.expireDay <= 3) {
-          reason += '（爸爸少吃）';
-        }
-        if (hasMom && momIsPeriod && coldFruits.includes(selectedFruit.name) && selectedFruit.expireDay <= 3) {
-          reason += '（妈妈少吃）';
-        }
         recommendations.push({
-          name: selectedFruit.name,
-          icon: selectedFruit.icon || '🍎',
-          gram: 200,
-          reason: reason,
-          urgent: selectedFruit.expireDay <= 3
+          name: selectedFruit.name, icon: selectedFruit.icon || '🍎', gram: 200,
+          reason: reason, urgent: selectedFruit.expireDay <= 3
         });
       }
       
-      // 2. 筛选零食：按保质期排序，优先快过期
       let snackPool = this.snackList.filter(item => item.weight > 0);
       snackPool.sort((a, b) => a.expireDay - b.expireDay);
-      
       if (snackPool.length > 0) {
         let selectedSnack = snackPool[0];
         const isNuts = ['核桃', '南瓜子', '花生', '杏仁', '腰果'].some(n => selectedSnack.name.includes(n));
         let reason = isNuts ? '优质脂肪（约15g）' : '补充钙和蛋白质';
-        if (hasBrother && isNuts) {
-          reason += '，弟弟需打粉';
-        }
+        if (hasBrother && isNuts) { reason += '，弟弟需打粉'; }
         recommendations.push({
-          name: selectedSnack.name,
-          icon: selectedSnack.icon || '🥜',
-          gram: isNuts ? 15 : 100,
-          reason: reason,
-          urgent: selectedSnack.expireDay <= 3
+          name: selectedSnack.name, icon: selectedSnack.icon || '🥜',
+          gram: isNuts ? 15 : 100, reason: reason, urgent: selectedSnack.expireDay <= 3
         });
       }
       
@@ -784,6 +778,88 @@ createApp({
   methods:{
     calcBMI(heightCm, weightKg){ if(!heightCm || !weightKg) return "-"; const h = heightCm / 100; return (weightKg / (h*h)).toFixed(1); },
     toggleTaboo(person, word){ const arr = this.memberTaboo[person]; const idx = arr.indexOf(word); if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); } },
+    
+    // 核心功能：一键生成下周食谱并联动采购和预处理
+    generateNextWeekPlan() {
+      // 1. 模拟智能排餐，从菜谱库中抽取菜品组合
+      let newWeekDishes = [];
+      let dishId = 1;
+      
+      // 假设下周7天，每天都排一道主菜和一道蔬菜
+      for (let i = 0; i < 7; i++) {
+        let mainDish = this.recipeLibrary[Math.floor(Math.random() * this.recipeLibrary.length)];
+        let vegDish = this.recipeLibrary.find(r => r.type === 'veg') || this.recipeLibrary[0];
+        
+        newWeekDishes.push({
+          id: dishId++,
+          name: `${mainDish.name}｜主菜`,
+          tag: mainDish.tag,
+          ingredients: mainDish.ingredients,
+          steps: mainDish.steps,
+          completed: false,
+          feedback: ''
+        });
+        
+        newWeekDishes.push({
+          id: dishId++,
+          name: `${vegDish.name}｜蔬菜`,
+          tag: vegDish.tag,
+          ingredients: vegDish.ingredients,
+          steps: vegDish.steps,
+          completed: false,
+          feedback: ''
+        });
+      }
+      
+      this.weekDishes = newWeekDishes;
+      
+      // 2. 计算采购清单：汇总下周所需所有食材 - 现有库存
+      let neededMap = {};
+      newWeekDishes.forEach(dish => {
+        dish.ingredients.forEach(ing => {
+          if (!neededMap[ing.name]) neededMap[ing.name] = 0;
+          neededMap[ing.name] += ing.weight;
+        });
+      });
+      
+      let newShoppingList = [];
+      let itemId = 1;
+      
+      for (let [name, totalWeight] of Object.entries(neededMap)) {
+        // 在库中查找
+        let stock = this.rawIngList.find(i => i.name === name) || 
+                    this.preIngList.find(i => i.name === name) ||
+                    this.fruitList.find(i => i.name === name) ||
+                    this.snackList.find(i => i.name === name);
+        
+        let stockWeight = stock ? stock.weight : 0;
+        let buyWeight = totalWeight - stockWeight;
+        
+        if (buyWeight > 0) {
+          newShoppingList.push({ id: itemId++, name: name, weight: buyWeight, bought: false });
+        }
+      }
+      
+      // 加上水果和坚果的采购建议
+      let fruitStock = this.fruitList.reduce((sum, item) => sum + item.weight, 0);
+      let snackStock = this.snackList.reduce((sum, item) => sum + item.weight, 0);
+      
+      if (fruitStock < 2000) newShoppingList.push({ id: itemId++, name: "苹果/香蕉等应季水果", weight: 2000 - fruitStock, bought: false });
+      if (snackStock < 500) newShoppingList.push({ id: itemId++, name: "核桃/南瓜子等坚果", weight: 500 - snackStock, bought: false });
+      
+      this.shoppingList = newShoppingList;
+      
+      // 3. 生成预处理任务清单
+      this.prepTasks = [
+        { title: "制作一批蔬菜肉丸/肉饼", desc: "根据食谱，将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟或煎熟后冷冻，工作日可直接拿出来热。" },
+        { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜、生菜等洗净，西兰花菠菜需焯水30秒，沥干冷藏。" },
+        { title: "分装杂粮饭", desc: "煮一大锅杂粮饭，按每顿分量分装冷冻，吃之前微波炉加热即可。" },
+        { title: "处理坚果（弟弟专用）", desc: "将核桃、南瓜子等打成粉末，装入密封罐冷藏，每天拌入弟弟的酸奶中。" }
+      ];
+      
+      alert("✅ 下周食谱已成功生成！\n\n系统已根据食谱：\n1. 更新了每周菜谱\n2. 计算出采购缺口，请到「待操作」查看采购清单\n3. 生成了周末预处理任务");
+      this.view = 'weekMenu'; // 自动跳转到周菜谱
+    },
     
     setDishFeedback(dish, type) { dish.feedback = type; },
 
