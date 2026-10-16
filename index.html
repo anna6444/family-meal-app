@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>家庭膳食工作台</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: #f9f6ef; color: #333; padding-bottom: 100px; font-size: 15px; }
+    .container { max-width: 740px; margin: 0 auto; padding: 18px; }
+
+    /* 底部导航 */
+    .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #ece7dc; display: flex; z-index: 99; height: 78px; align-items: flex-start; justify-content: space-around; padding-top: 4px; padding-bottom: env(safe-area-inset-bottom); }
+    .tab-item { flex: 1; text-align: center; padding-top: 10px; font-size: 15px; color: #666; cursor: pointer; position: relative; font-weight: 500; }
+    .tab-item.active { color: #e6703b; }
+    .tab-center { flex: 1; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 0; cursor: pointer; }
+    .center-line-wrap { position: relative; width: 64px; height: 14px; }
+    .center-line { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: #ece7dc; }
+    .center-arc { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 52px; height: 26px; border-radius: 52px 52px 0 0; background: #fff; border-left: 1px solid #ece7dc; border-right: 1px solid #ece7dc; border-top: 1px solid #ece7dc; border-bottom: none; }
+    .red-dot { position: absolute; top: -2px; right: 10px; width: 9px; height: 9px; border-radius: 50%; background: #ff4d4f; border: 2px solid #fff; z-index: 3; }
+    .tab-center-text { margin-top: 8px; font-size: 16px; color: #666; font-weight: 600; }
+    .tab-center-text.active { color: #e6703b; }
+
+    /* 卡片通用 */
+    .card { background: #fff; border-radius: 22px; padding: 22px; margin-bottom: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+    .card h2 { font-size: 19px; margin-bottom: 12px; font-weight: 600; }
+    .card-subtitle { font-size: 14px; color: #666; margin-bottom: 10px; }
+    .btn { background: #e6703b; color: #fff; border: none; border-radius: 14px; padding: 12px 16px; cursor: pointer; font-size: 15px; }
+    .btn.secondary { background: #f1ede4; color: #333; }
+    .btn.small { padding: 9px 14px; font-size: 14px; border-radius: 12px; }
+    .tag { display: inline-block; background: #f4ece3; color: #b06237; border-radius: 20px; padding: 5px 10px; font-size: 13px; margin: 3px; }
+    .tag.green { background: #eaf6ec; color: #2b703b; }
+
+    .date-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 6px 0 14px; }
+    .date-item { min-width: 80px; padding: 12px 8px; border-radius: 16px; text-align: center; background: #fff; border: 1px solid #e8e2d6; cursor: pointer; flex-shrink: 0; font-size: 15px; }
+    .date-item.active { background: #f7e4d8; border-color: #e6703b; }
+
+    .input-wrap { margin: 14px 0; }
+    label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; }
+    input, textarea, select { width: 100%; border: 1px solid #ddd8ce; border-radius: 14px; padding: 12px; font-size: 15px; background: #fff; }
+
+    .dish-card { border-radius: 20px; background: #fff; padding: 20px; margin-bottom: 16px; border: 1px solid #f0ebe2; }
+    .dish-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+    .feedback-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .feedback-btn { border-radius: 14px; border: 1px solid #e2ddd2; padding: 12px 10px; text-align: center; cursor: pointer; font-size: 14px; }
+    .feedback-btn.selected { background: #f7e4d8; border-color: #e6703b; }
+
+    .tab-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+    .switch-btn { padding: 14px; border-radius: 14px; text-align: center; border: 1px solid #e8e2d6; cursor: pointer; font-size: 15px; }
+    .switch-btn.active { background: #e6703b; color: white; border-color: #e6703b; }
+    .list-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1ede4; font-size: 15px; gap: 10px; }
+    .empty-text { text-align: center; padding: 30px; color: #999; font-size: 14px; }
+    .meal-title { font-size: 17px; font-weight: 600; margin: 22px 0 12px; color: #c46838; }
+    .section-title { font-size: 16px; font-weight: 600; margin: 18px 0 10px; color: #555; }
+
+    /* 弹窗 */
+    .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+    .modal-box { background: #fff; border-radius: 22px; padding: 24px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; }
+    .two-col-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .member-block { border: 1px solid #eee6db; border-radius: 16px; padding: 14px; margin-bottom: 14px; }
+    .member-block h4 { margin-bottom: 10px; }
+    .pre-taboo-tag { display: inline-block; border: 1px solid #ddd; border-radius: 8px; padding: 4px 8px; margin: 4px; cursor: pointer; font-size: 13px; }
+    .pre-taboo-tag.active { background: #e6703b; color: white; border-color: #e6703b; }
+
+    /* 人员设置列表 */
+    .member-list-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f1ede4; cursor: pointer; }
+    .member-list-item:last-child { border-bottom: none; }
+    .member-status-badge { font-size: 13px; padding: 4px 10px; border-radius: 12px; background: #f1ede4; color: #666; }
+    .status-work { background: #eaf6ec; color: #2b703b; }
+    .status-rest { background: #fff1e6; color: #c46838; }
+    .menu-person-tag { font-size: 12px; padding: 2px 6px; border-radius: 6px; background: #eee; color: #555; margin-left: 6px; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="container">
+
+    <!-- 首页 -->
+    <div v-if="view === 'home'">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <h2>📅 今日膳食</h2>
+          <input type="date" v-model="homeDate" style="width:auto;padding:10px 12px;font-size:14px"/>
+        </div>
+        <div class="card-subtitle">今日就餐人员及状态</div>
+        <div class="list-row" v-for="m in todayMembers" :key="m.key">
+          <div>{{m.icon}} {{m.name}} <span class="member-status-badge" :class="m.statusClass">{{m.status}}</span></div>
+          <div class="tag green" v-if="m.dinner">晚餐在家</div>
+          <div class="tag" v-else>三餐在外/自备</div>
+        </div>
+        <div style="margin-top:14px">
+          <span class="tag green">加餐：原味坚果+应季水果（下午上学/上班前）</span>
+        </div>
+      </div>
+
+      <!-- 菜单预览（区分不同人的菜谱） -->
+      <div class="card">
+        <h2>🍽️ 菜单预览</h2>
+        <p style="margin:8px 0;line-height:1.7"><b>【全家共享早餐】</b><br/>蒸红薯、水煮蛋、温牛奶、原味坚果</p>
+        <p style="margin:8px 0;line-height:1.7"><b>【午餐】</b><br/>
+          👧 姐姐（回家）：杂粮饭 + 清蒸鲈鱼 + 菌菇西兰花<br/>
+          <span style="color:#c46838">👩 妈妈（早班带饭）：香菇蒸鸡 + 蒸红薯 + 水煮蛋（前一晚备好装盒）</span>
+        </p>
+        <p style="margin:8px 0;line-height:1.7"><b>【晚餐】</b><br/>
+          全家：蔬菜鸡肉丸子、娃娃菜豆腐汤、甜玉米<br/>
+          <span style="color:#c46838">👦 弟弟专属：肉丸里混入菠菜碎+胡萝卜碎（隐形蔬菜）</span>
+        </p>
+      </div>
+    </div>
+
+    <!-- 周菜谱（保持原样，略作调整） -->
+    <div v-if="view === 'weekMenu'">
+      <h2 style="margin-bottom:14px">每周菜谱</h2>
+      <div class="date-scroll">
+        <div v-for="d in weekDateList" class="date-item" :class="{active:selDateIdx===d.idx}" @click="selDateIdx=d.idx">
+          <div style="font-size:13px">{{d.week}}</div>
+          <div style="font-size:19px">{{d.day}}</div>
+        </div>
+      </div>
+      <div class="meal-title">🌅 早餐</div>
+      <div class="dish-card">
+        <div class="dish-header"><div><b>蒸红薯｜主食</b></div><span class="tag green">碳水·膳食纤维</span></div>
+        <div class="card-subtitle">食材：小红薯250g</div>
+        <div style="font-size:14px;line-height:1.7"><b>小白做法：</b><br/>1.红薯洗净去皮切块<br/>2.水开上锅蒸18分钟</div>
+        <div style="margin-top:14px"><button class="btn small secondary">✅ 已完成制作</button></div>
+        <div class="feedback-row"><div class="feedback-btn">😋 爱吃</div><div class="feedback-btn">🙂 一般</div><div class="feedback-btn">😐 不爱吃</div></div>
+      </div>
+      <div class="meal-title">☀️ 午餐（姐姐）</div>
+      <div class="dish-card">
+        <div class="dish-header"><div><b>香煎龙利鱼｜主菜</b></div><span class="tag">蛋白质·清淡鲜香</span></div>
+        <div class="card-subtitle">食材：龙利鱼柳150g，黑胡椒0.5g，柠檬1角</div>
+        <div style="font-size:14px;line-height:1.7"><b>小白做法：</b><br/>1.龙利鱼解冻吸干水分，撒少量盐、黑胡椒<br/>2.平底锅少油，中火每面煎2-3分钟至金黄<br/>3.出锅挤几滴柠檬汁，切成一口小块</div>
+        <div style="margin-top:14px"><button class="btn small secondary">✅ 已完成制作</button></div>
+        <div class="feedback-row"><div class="feedback-btn selected">😋 爱吃</div><div class="feedback-btn">🙂 一般</div><div class="feedback-btn">😐 不爱吃</div></div>
+      </div>
+      <div class="meal-title">🌙 晚餐（全家）</div>
+      <div class="dish-card">
+        <div class="dish-header"><div><b>蔬菜鸡肉丸子｜主菜</b></div><span class="tag">优质蛋白</span></div>
+        <div class="card-subtitle">食材：鸡肉丸子200g，娃娃菜150g，嫩豆腐100g</div>
+        <div style="font-size:14px;line-height:1.7"><b>小白做法：</b><br/>1.清水烧开，放入丸子煮5分钟<br/>2.放入娃娃菜、豆腐小火煮3分钟<br/>3.少量盐调味即可</div>
+        <div style="margin-top:14px"><button class="btn small secondary">✅ 已完成制作</button></div>
+        <div class="feedback-row"><div class="feedback-btn">😋 爱吃</div><div class="feedback-btn selected">🙂 一般</div><div class="feedback-btn">😐 不爱吃</div></div>
+      </div>
+    </div>
+
+    <!-- 待操作 -->
+    <div v-if="view === 'todo'">
+      <div class="card">
+        <h2>🛒 采购清单（今日）</h2>
+        <div v-for="item in sortedShoppingList" :key="item.id" class="list-row">
+          <div>{{item.name}} {{item.weight}}g</div>
+          <button class="btn small" :class="item.bought ? 'secondary' : ''" @click="toggleBought(item)">
+            {{item.bought ? '已采购' : '未采购'}}
+          </button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>⏱️ 预处理清单</h2>
+        <div class="section-title">📅 单日处理（今晚准备，明天早餐）</div>
+        <div style="padding:10px 0;line-height:1.8;font-size:15px">✅ 红薯洗净，预约蒸锅</div>
+        <div style="padding:10px 0;line-height:1.8;font-size:15px">✅ 鸡蛋备好，预约煮蛋</div>
+        <div class="section-title">📆 周末处理</div>
+        <div style="padding:10px 0;line-height:1.8;font-size:15px">📌 制作一批蔬菜鸡肉丸子冷冻保存</div>
+        <div style="padding:10px 0;line-height:1.8;font-size:15px">📌 整理下周食材库存与预制菜</div>
+      </div>
+    </div>
+
+    <!-- 食材库 -->
+    <div v-if="view === 'ingredientLib'">
+      <h2 style="margin-bottom:14px">🥬 食材库</h2>
+      <div class="tab-switch">
+        <div class="switch-btn" :class="{active:ingTab==='raw'}" @click="ingTab='raw'">原材料库</div>
+        <div class="switch-btn" :class="{active:ingTab==='pre'}" @click="ingTab='pre'">预制菜库</div>
+      </div>
+      <div class="input-wrap">
+        <input v-model="searchIng" placeholder="🔍 搜索食材，输入关键字筛选"/>
+      </div>
+      <div v-if="ingTab==='raw'">
+        <div v-for="item in filteredRawList" class="list-row" @click="openStockModal(item, 'raw')" style="cursor:pointer">
+          <div>{{item.name}}</div>
+          <div>库存：{{item.weight}}g｜保质期 {{item.expireDay}}天</div>
+        </div>
+        <div v-if="filteredRawList.length===0" class="empty-text">无匹配食材</div>
+      </div>
+      <div v-if="ingTab==='pre'">
+        <div v-for="item in filteredPreList" class="list-row" @click="openStockModal(item, 'pre')" style="cursor:pointer">
+          <div>{{item.name}}</div>
+          <div>库存：{{item.weight}}g｜冷冻保存{{item.expireDay}}天</div>
+        </div>
+        <div v-if="filteredPreList.length===0" class="empty-text">无匹配食材</div>
+      </div>
+      <button class="btn" style="margin-top:20px">新增食材入库</button>
+    </div>
+
+    <!-- 我的页面（重构版） -->
+    <div v-if="view === 'setting'">
+      <!-- 人员管理：列表式点击进入，不再全部展开 -->
+      <div class="card">
+        <h2>👨‍👩‍👧‍👦 人员管理</h2>
+        <p class="card-subtitle">点击成员可单独设置其排班与身体状况</p>
+        <div class="member-list-item" @click="openMemberEdit('dad')">
+          <div>👨 爸爸 <span class="tag" style="margin-left:6px">{{memberData.dad.schedule}}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+        <div class="member-list-item" @click="openMemberEdit('mom')">
+          <div>👩 妈妈 <span class="tag" style="margin-left:6px">{{memberData.mom.schedule}}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+        <div class="member-list-item" @click="openMemberEdit('sister')">
+          <div>👧 姐姐 <span class="tag" style="margin-left:6px">{{memberData.sister.schedule}}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+        <div class="member-list-item" @click="openMemberEdit('brother')">
+          <div>👦 弟弟 <span class="tag" style="margin-left:6px">{{memberData.brother.schedule}}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+      </div>
+
+      <!-- 临时状态与忌口 -->
+      <div class="card">
+        <h2>⚠️ 成员临时状态与忌口</h2>
+        <div class="member-block">
+          <h4>👨 爸爸</h4>
+          <div class="input-wrap">
+            <label>当前状态</label>
+            <select v-model="memberTempStatus.dad">
+              <option value="normal">正常</option>
+              <option value="sick">生病</option>
+            </select>
+          </div>
+          <label>忌口选择（生病禁食）</label>
+          <div>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.dad.includes('生冷')}" @click="toggleTaboo('dad','生冷')">生冷</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.dad.includes('辛辣')}" @click="toggleTaboo('dad','辛辣')">辛辣</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.dad.includes('油腻')}" @click="toggleTaboo('dad','油腻')">油腻</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.dad.includes('海鲜')}" @click="toggleTaboo('dad','海鲜')">海鲜</span>
+          </div>
+        </div>
+        <div class="member-block">
+          <h4>👩 妈妈</h4>
+          <div class="input-wrap">
+            <label>当前状态</label>
+            <select v-model="memberTempStatus.mom">
+              <option value="normal">正常</option>
+              <option value="sick">生病</option>
+              <option value="period">姨妈期</option>
+            </select>
+          </div>
+          <label>忌口选择（生病/姨妈禁食）</label>
+          <div>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.mom.includes('生冷')}" @click="toggleTaboo('mom','生冷')">生冷</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.mom.includes('辛辣')}" @click="toggleTaboo('mom','辛辣')">辛辣</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.mom.includes('寒凉水果')}" @click="toggleTaboo('mom','寒凉水果')">寒凉水果</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.mom.includes('浓茶咖啡')}" @click="toggleTaboo('mom','浓茶咖啡')">浓茶咖啡</span>
+          </div>
+        </div>
+        <div class="member-block">
+          <h4>👧 姐姐</h4>
+          <div class="input-wrap">
+            <label>当前状态</label>
+            <select v-model="memberTempStatus.sister">
+              <option value="normal">正常</option>
+              <option value="sick">生病</option>
+            </select>
+          </div>
+          <label>忌口选择（生病禁食）</label>
+          <div>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.sister.includes('生冷')}" @click="toggleTaboo('sister','生冷')">生冷</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.sister.includes('油炸')}" @click="toggleTaboo('sister','油炸')">油炸</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.sister.includes('甜食')}" @click="toggleTaboo('sister','甜食')">甜食</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.sister.includes('海鲜')}" @click="toggleTaboo('sister','海鲜')">海鲜</span>
+          </div>
+        </div>
+        <div class="member-block">
+          <h4>👦 弟弟</h4>
+          <div class="input-wrap">
+            <label>当前状态</label>
+            <select v-model="memberTempStatus.brother">
+              <option value="normal">正常</option>
+              <option value="sick">生病</option>
+            </select>
+          </div>
+          <label>忌口选择（生病禁食）</label>
+          <div>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.brother.includes('生冷')}" @click="toggleTaboo('brother','生冷')">生冷</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.brother.includes('油炸')}" @click="toggleTaboo('brother','油炸')">油炸</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.brother.includes('甜食')}" @click="toggleTaboo('brother','甜食')">甜食</span>
+            <span class="pre-taboo-tag" :class="{active:memberTaboo.brother.includes('海鲜')}" @click="toggleTaboo('brother','海鲜')">海鲜</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 身体数据趋势 -->
+      <div class="card">
+        <h2>📈 身体数据趋势</h2>
+        <p class="card-subtitle">点击成员查看趋势图表</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <button class="btn small" @click="openChartModal('dad')">👨爸爸体重</button>
+          <button class="btn small" @click="openChartModal('mom')">👩妈妈体重</button>
+          <button class="btn small" @click="openChartModal('sister')">👧姐姐身高体重</button>
+          <button class="btn small" @click="openChartModal('brother')">👦弟弟身高体重</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 底部导航 -->
+  <div class="tab-bar">
+    <div class="tab-item" :class="{active:view==='home'}" @click="view='home'">首页</div>
+    <div class="tab-item" :class="{active:view==='weekMenu'}" @click="view='weekMenu'">周菜谱</div>
+    <div class="tab-center" @click="view='todo'">
+      <div class="center-line-wrap">
+        <div class="center-line"></div>
+        <div class="center-arc"></div>
+        <span v-if="hasUnfinishedTask" class="red-dot"></span>
+      </div>
+      <div class="tab-center-text" :class="{active:view==='todo'}">待操作</div>
+    </div>
+    <div class="tab-item" :class="{active:view==='ingredientLib'}" @click="view='ingredientLib'">食材库</div>
+    <div class="tab-item" :class="{active:view==='setting'}" @click="view='setting'">我的</div>
+  </div>
+
+  <!-- 【修改：单独的成员编辑弹窗】 -->
+  <div class="modal-mask" v-if="memberEditModal.show" @click.self="memberEditModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">编辑 {{getMemberName(memberEditModal.key)}} 信息</h3>
+      <div class="member-block" v-if="memberEditModal.key">
+        <div class="two-col-row">
+          <div class="input-wrap"><label>年龄</label><input v-model.number="memberData[memberEditModal.key].age" type="number"/></div>
+          <div class="input-wrap"><label>身高cm</label><input v-model.number="memberData[memberEditModal.key].height" type="number"/></div>
+        </div>
+        <div class="two-col-row">
+          <div class="input-wrap"><label>体重kg</label><input v-model.number="memberData[memberEditModal.key].weight" type="number"/></div>
+          <div class="input-wrap"><label>排班/上学状态</label><input v-model="memberData[memberEditModal.key].schedule" placeholder="例如：4天在家4天不在"/></div>
+        </div>
+        <div class="input-wrap"><label>身体情况（如脂肪肝、性早熟等）</label><textarea v-model="memberData[memberEditModal.key].health" rows="1"></textarea></div>
+        <div class="input-wrap"><label>基础忌口（如高草酸、激素食物）</label><input v-model="memberData[memberEditModal.key].taboo"/></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="memberEditModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveMemberEdit">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 食材库存修改弹窗 -->
+  <div class="modal-mask" v-if="stockModal.show" @click.self="stockModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">{{stockModal.item.name}}</h3>
+      <div class="card-subtitle" style="margin-bottom:14px">当前库存：{{stockModal.item.weight}}g</div>
+      <div class="input-wrap">
+        <label>填写克数</label>
+        <input v-model.number="stockModal.inputGram" type="number" placeholder="例如：50"/>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="changeStockByModal(-1)">减少库存</button>
+        <button class="btn" style="flex:1" @click="changeStockByModal(1)">增加库存</button>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:10px" @click="stockModal.show=false">取消</button>
+    </div>
+  </div>
+
+  <!-- 趋势图弹窗 -->
+  <div class="modal-mask" v-if="chartModal.show" @click.self="closeChartModal">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
+      <div style="width:100%;height:280px;margin-top:10px">
+        <canvas ref="chartCanvasRef"></canvas>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:16px" @click="closeChartModal">关闭</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+createApp({
+  data(){
+    return{
+      view: 'home',
+      homeDate: '',
+      selDateIdx: 0,
+      ingTab: 'raw',
+      searchIng: '',
+      memberData:{
+        dad:{age:35, height:176, weight:90, schedule:"4天在家4天不在", health:"轻微脂肪肝，肾结石", taboo:"高草酸蔬菜需焯水，不吃内脏"},
+        mom:{age:35, height:150, weight:50, schedule:"早班/下午班交替", health:"气血不足，二胎后大肚腩", taboo:"无"},
+        sister:{age:8, height:138, weight:31, schedule:"上学日", health:"有点性早熟，需避激素食物", taboo:"蜂王浆、花粉、滋补品"},
+        brother:{age:5, height:107, weight:19, schedule:"上学日", health:"不爱吃青菜", taboo:"坚果整颗（防呛噎）"}
+      },
+      memberTempStatus:{ dad:'normal', mom:'normal', sister:'normal', brother:'normal' },
+      memberTaboo:{ dad:[], mom:[], sister:[], brother:[] },
+      chartModal:{ show:false, title:'', target:'' },
+      currentChart:null,
+      memberEditModal: { show: false, key: 'dad' },
+      stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
+      rawIngList: [
+        { name: "鸡蛋", weight: 470, expireDay: 14 },
+        { name: "红薯", weight: 360, expireDay: 21 },
+        { name: "西兰花", weight: 180, expireDay: 5 }
+      ],
+      preIngList: [
+        { name: "蔬菜鸡肉丸子（预制）", weight: 320, expireDay: 90 },
+        { name: "虾滑", weight: 200, expireDay: 90 }
+      ],
+      shoppingList: [
+        { id: 1, name: "龙利鱼柳", weight: 150, bought: false },
+        { id: 2, name: "娃娃菜", weight: 200, bought: false }
+      ],
+      weekDateList: [
+        { idx: 0, week: "周一", day: "13" }, { idx: 1, week: "周二", day: "14" },
+        { idx: 2, week: "周三", day: "15" }, { idx: 3, week: "周四", day: "16" },
+        { idx: 4, week: "周五", day: "17" }, { idx: 5, week: "周六", day: "18" },
+        { idx: 6, week: "周日", day: "19" }
+      ]
+    }
+  },
+  mounted(){
+  },
+  computed: {
+    filteredRawList(){
+      const kw = this.searchIng.trim().toLowerCase();
+      if(!kw) return this.rawIngList;
+      return this.rawIngList.filter(i => i.name.toLowerCase().includes(kw));
+    },
+    filteredPreList(){
+      const kw = this.searchIng.trim().toLowerCase();
+      if(!kw) return this.preIngList;
+      return this.preIngList.filter(i => i.name.toLowerCase().includes(kw));
+    },
+    sortedShoppingList(){
+      return [...this.shoppingList].sort((a,b)=>Number(a.bought)-Number(b.bought));
+    },
+    hasUnfinishedTask(){
+      return this.shoppingList.some(i => !i.bought);
+    },
+    // 动态计算今日就餐人员
+    todayMembers(){
+      // 这里可以根据 homeDate 判断，目前为了演示，直接基于当前日期动态生成逻辑
+      const today = new Date();
+      const dayOfWeek = today.getDay(); // 0是周日，1-6是周一到周六
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+      // 模拟爸爸4天轮休 (简化：按日期奇偶或周期，这里假设这周爸爸在家)
+      const dadAtHome = true; // 实际可从设置拉取
+
+      // 模拟妈妈排班 (简化：隔天早班)
+      const momMorningShift = today.getDate() % 2 === 0;
+
+      return [
+        { key: 'dad', name: '爸爸', icon: '👨', status: dadAtHome ? '在家休息' : '全天上班', statusClass: dadAtHome ? 'status-rest' : 'status-work', dinner: dadAtHome },
+        { key: 'mom', name: '妈妈', icon: '👩', status: momMorningShift ? '早班 (带饭)' : '下午班 (在家吃)', statusClass: 'status-work', dinner: !momMorningShift },
+        { key: 'sister', name: '姐姐', icon: '👧', status: isWeekend ? '休息日' : '上学日', statusClass: isWeekend ? 'status-rest' : 'status-work', dinner: true },
+        { key: 'brother', name: '弟弟', icon: '👦', status: isWeekend ? '休息日' : '上学日 (幼儿园)', statusClass: isWeekend ? 'status-rest' : 'status-work', dinner: true }
+      ];
+    }
+  },
+  methods:{
+    calcBMI(heightCm, weightKg){
+      if(!heightCm || !weightKg) return "-";
+      const h = heightCm / 100;
+      return (weightKg / (h*h)).toFixed(1);
+    },
+    toggleTaboo(person, word){
+      const arr = this.memberTaboo[person];
+      const idx = arr.indexOf(word);
+      if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); }
+    },
+    getMemberName(key){
+      const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' };
+      return map[key] || '';
+    },
+    openMemberEdit(key){
+      this.memberEditModal.key = key;
+      this.memberEditModal.show = true;
+    },
+    saveMemberEdit(){
+      alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`);
+      this.memberEditModal.show = false;
+    },
+    openChartModal(personKey){
+      this.chartModal.target = personKey;
+      const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}
+      this.chartModal.title = nameMap[personKey];
+      this.chartModal.show = true;
+      this.$nextTick(()=>{ this.renderSingleChart(personKey); })
+    },
+    closeChartModal(){
+      this.chartModal.show = false;
+      if(this.currentChart) this.currentChart.destroy();
+      this.currentChart = null;
+    },
+    renderSingleChart(person){
+      const ctx = this.$refs.chartCanvasRef.getContext('2d');
+      if(this.currentChart) this.currentChart.destroy();
+      // 简化模拟数据
+      const chartConfig = {
+        type:'line',
+        data:{
+          labels: ['1月','2月','3月','4月'],
+          datasets:[{ label:'数据', data:[50, 52, 51, 53], borderColor:'#e6703b', fill:false }]
+        },
+        options:{responsive:true, maintainAspectRatio:false}
+      };
+      this.currentChart = new Chart(ctx, chartConfig);
+    },
+    toggleBought(item){ item.bought = !item.bought; },
+    openStockModal(item, source){
+      this.stockModal.item = item;
+      this.stockModal.source = source;
+      this.stockModal.inputGram = null;
+      this.stockModal.show = true;
+    },
+    changeStockByModal(delta){
+      const gram = Number(this.stockModal.inputGram);
+      if(!gram || gram <= 0) return;
+      const newWeight = this.stockModal.item.weight + delta * gram;
+      if(newWeight >= 0){
+        this.stockModal.item.weight = newWeight;
+        this.stockModal.show = false;
+      }
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
