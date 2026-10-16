@@ -74,11 +74,7 @@
     .status-rest { background: #fff1e6; color: #c46838; }
     .meal-label { display: inline-block; padding: 3px 8px; border-radius: 8px; background: #eaf6ec; color: #2b703b; font-size: 12px; margin-left: 4px; font-weight: 600;}
     
-    /* 假期管理 */
-    .holiday-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px dashed #eee; }
-    .holiday-item:last-child { border-bottom: none; }
-    
-    /* 休息日标签 */
+    /* 休息日/假期标签 */
     .rest-day-tag { display: inline-flex; align-items: center; background: #fff1e6; color: #c46838; border-radius: 8px; padding: 6px 10px; font-size: 13px; margin: 4px; border: 1px solid #f7dcc8; }
     .rest-day-tag span { margin-left: 6px; cursor: pointer; color: #999; font-weight: bold; }
   </style>
@@ -211,21 +207,6 @@
 
     <!-- 我的页面 -->
     <div v-if="view === 'setting'">
-      <!-- 假期管理模块 -->
-      <div class="card">
-        <h2>📅 特殊假期设置（仅作用于孩子）</h2>
-        <p class="card-subtitle">添加假期后，姐姐和弟弟将自动切换为“假期”状态，全天在家吃。</p>
-        <div v-if="holidayList.length === 0" class="empty-text">暂无假期安排</div>
-        <div v-for="(h, index) in holidayList" :key="index" class="holiday-item">
-          <div>
-            <div style="font-weight: 600;">{{h.name}}</div>
-            <div style="font-size: 13px; color: #888;">{{h.start}} 至 {{h.end}}</div>
-          </div>
-          <button class="btn small secondary" @click="removeHoliday(index)">删除</button>
-        </div>
-        <button class="btn" style="margin-top: 15px; width: 100%;" @click="openAddHolidayModal">➕ 添加新假期</button>
-      </div>
-
       <div class="card">
         <h2>👨‍👩‍👧‍👦 人员管理</h2>
         <p class="card-subtitle">点击成员可单独设置其排班与身体状况</p>
@@ -352,7 +333,7 @@
     <div class="tab-item" :class="{active:view==='setting'}" @click="view='setting'">我的</div>
   </div>
 
-  <!-- 单独的成员编辑弹窗（包含排班设置与休息日配置） -->
+  <!-- 成员编辑弹窗（包含排班、休息日、节假日设置） -->
   <div class="modal-mask" v-if="memberEditModal.show" @click.self="memberEditModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">编辑 {{getMemberName(memberEditModal.key)}} 信息</h3>
@@ -368,7 +349,7 @@
         <div class="input-wrap"><label>身体情况（如脂肪肝、性早熟等）</label><textarea v-model="memberData[memberEditModal.key].health" rows="1"></textarea></div>
         <div class="input-wrap"><label>基础忌口（如高草酸、激素食物）</label><input v-model="memberData[memberEditModal.key].taboo"/></div>
         
-        <!-- 针对爸爸和妈妈的排班设置 -->
+        <!-- 爸爸和妈妈的排班设置 -->
         <div v-if="memberEditModal.key === 'dad' || memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
           <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">📅 排班周期设置</h4>
           
@@ -412,33 +393,39 @@
           <div v-else class="empty-text" style="padding: 10px; font-size: 13px;">暂无特殊休息日</div>
         </div>
         
+        <!-- 孩子专属的节假日/请假设置 -->
+        <div v-if="memberEditModal.key === 'sister' || memberEditModal.key === 'brother'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 节假日/请假设置（全天在家）</h4>
+          <p style="font-size: 12px; color: #888; margin-bottom: 10px;">添加后，该日期自动变为“休息日”，全天在家吃。</p>
+          
+          <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
+            <input type="date" v-model="newHolidayDate[memberEditModal.key]" style="flex: 1; margin: 0; min-height: 44px;" />
+            <button class="btn small" style="height: 44px;" @click="addHoliday(memberEditModal.key)">添加</button>
+          </div>
+          
+          <div v-if="memberEditModal.key === 'sister' && sisterHolidays.length > 0" style="margin-top: 10px;">
+            <label style="font-size: 13px; color: #555;">已设置的假期（点击标签可删除）：</label>
+            <div>
+              <span v-for="day in sisterHolidays" :key="day" class="rest-day-tag">
+                {{day}} <span @click="removeHoliday('sister', day)">✕</span>
+              </span>
+            </div>
+          </div>
+          <div v-if="memberEditModal.key === 'brother' && brotherHolidays.length > 0" style="margin-top: 10px;">
+            <label style="font-size: 13px; color: #555;">已设置的假期（点击标签可删除）：</label>
+            <div>
+              <span v-for="day in brotherHolidays" :key="day" class="rest-day-tag">
+                {{day}} <span @click="removeHoliday('brother', day)">✕</span>
+              </span>
+            </div>
+          </div>
+          <div v-if="(memberEditModal.key === 'sister' && sisterHolidays.length === 0) || (memberEditModal.key === 'brother' && brotherHolidays.length === 0)" class="empty-text" style="padding: 10px; font-size: 13px;">暂无特殊假期</div>
+        </div>
+        
       </div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn secondary" style="flex:1" @click="memberEditModal.show=false">取消</button>
         <button class="btn" style="flex:1" @click="saveMemberEdit">保存</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 添加假期弹窗 -->
-  <div class="modal-mask" v-if="holidayModal.show" @click.self="holidayModal.show=false">
-    <div class="modal-box">
-      <h3 style="margin-bottom:14px">添加假期（仅作用于孩子）</h3>
-      <div class="input-wrap">
-        <label>假期名称</label>
-        <input v-model="holidayModal.name" placeholder="例如：暑假、国庆节" />
-      </div>
-      <div class="input-wrap">
-        <label>开始日期</label>
-        <input type="date" v-model="holidayModal.start" />
-      </div>
-      <div class="input-wrap">
-        <label>结束日期</label>
-        <input type="date" v-model="holidayModal.end" />
-      </div>
-      <div style="display:flex;gap:10px;margin-top:16px">
-        <button class="btn secondary" style="flex:1" @click="holidayModal.show=false">取消</button>
-        <button class="btn" style="flex:1" @click="saveHoliday">保存</button>
       </div>
     </div>
   </div>
@@ -495,13 +482,13 @@ createApp({
           firstShift: 'morning',
         }
       },
-      // 特殊假期列表（仅作用于孩子）
-      holidayList: [
-        { name: '国庆假期', start: '2026-10-01', end: '2026-10-07' }
-      ],
       // 妈妈不固定的休息日列表
       momRestDays: ['2026-10-20'], 
-      newMomRestDate: '', // 用于添加休息日的临时变量
+      newMomRestDate: '',
+      // 孩子各自的假期列表（示例：默认国庆）
+      sisterHolidays: ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07'],
+      brotherHolidays: ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07'],
+      newHolidayDate: { sister: '', brother: '' },
       memberData:{
         dad:{age:35, height:176, weight:90, schedule:"4天在家4天不在", health:"轻微脂肪肝，肾结石", taboo:"高草酸蔬菜需焯水，不吃内脏"},
         mom:{age:35, height:150, weight:50, schedule:"早班/下午班交替", health:"气血不足，二胎后大肚腩", taboo:"无"},
@@ -513,7 +500,6 @@ createApp({
       chartModal:{ show:false, title:'', target:'' },
       currentChart:null,
       memberEditModal: { show: false, key: 'dad' },
-      holidayModal: { show: false, name: '', start: '', end: '' },
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
       rawIngList: [
         { name: "鸡蛋", weight: 470, expireDay: 14 },
@@ -535,8 +521,6 @@ createApp({
         { idx: 6, week: "周日", day: "19" }
       ]
     }
-  },
-  mounted(){
   },
   computed: {
     filteredRawList(){
@@ -561,14 +545,11 @@ createApp({
       const dayOfWeek = targetDate.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-      // 检查是否在特殊假期内（仅用于孩子）
-      const isHoliday = (dateStr) => {
-        return this.holidayList.some(h => dateStr >= h.start && dateStr <= h.end);
-      };
-      const targetIsHoliday = isHoliday(targetDateStr);
-      
       // 检查妈妈今天是否在特殊休息日列表中
       const isMomRest = this.momRestDays.includes(targetDateStr);
+      // 检查孩子今天是否在假期列表中
+      const isSisterHoliday = this.sisterHolidays.includes(targetDateStr);
+      const isBrotherHoliday = this.brotherHolidays.includes(targetDateStr);
 
       const result = [];
 
@@ -617,29 +598,29 @@ createApp({
       }
       result.push({ key: 'mom', name: '妈妈', icon: '👩', status: momStatus, statusClass: momStatusClass, meals: momMeals, isRest: isMomRest, dateStr: targetDateStr });
 
-      // ---- 3. 姐姐排班（受假期影响，不受妈妈休息日影响） ----
+      // ---- 3. 姐姐排班（受假期影响） ----
       let sisterMeals = [];
       let sisterStatus = "";
-      if (isWeekend || targetIsHoliday) {
+      if (isWeekend || isSisterHoliday) {
         sisterMeals = ['早', '午', '晚'];
-        sisterStatus = targetIsHoliday ? '假期' : '休息日';
+        sisterStatus = isSisterHoliday ? '假期' : '休息日';
       } else {
         sisterMeals = ['早', '午', '晚'];
         sisterStatus = '上学日';
       }
-      result.push({ key: 'sister', name: '姐姐', icon: '👧', status: sisterStatus, statusClass: (isWeekend || targetIsHoliday) ? 'status-rest' : 'status-work', meals: sisterMeals, dateStr: targetDateStr });
+      result.push({ key: 'sister', name: '姐姐', icon: '👧', status: sisterStatus, statusClass: (isWeekend || isSisterHoliday) ? 'status-rest' : 'status-work', meals: sisterMeals, dateStr: targetDateStr });
 
-      // ---- 4. 弟弟排班（受假期影响，不受妈妈休息日影响） ----
+      // ---- 4. 弟弟排班（受假期影响） ----
       let brotherMeals = [];
       let brotherStatus = "";
-      if (isWeekend || targetIsHoliday) {
+      if (isWeekend || isBrotherHoliday) {
         brotherMeals = ['早', '午', '晚'];
-        brotherStatus = targetIsHoliday ? '假期' : '休息日';
+        brotherStatus = isBrotherHoliday ? '假期' : '休息日';
       } else {
         brotherMeals = ['早', '晚'];
         brotherStatus = '上学日';
       }
-      result.push({ key: 'brother', name: '弟弟', icon: '👦', status: brotherStatus, statusClass: (isWeekend || targetIsHoliday) ? 'status-rest' : 'status-work', meals: brotherMeals, dateStr: targetDateStr });
+      result.push({ key: 'brother', name: '弟弟', icon: '👦', status: brotherStatus, statusClass: (isWeekend || isBrotherHoliday) ? 'status-rest' : 'status-work', meals: brotherMeals, dateStr: targetDateStr });
 
       return result;
     }
@@ -655,6 +636,7 @@ createApp({
       const idx = arr.indexOf(word);
       if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); }
     },
+    // 妈妈休息日操作
     addMomRestDay() {
       if (!this.newMomRestDate) {
         alert("请先选择休息日日期"); return;
@@ -663,12 +645,32 @@ createApp({
         alert("该日期已经是休息日了"); return;
       }
       this.momRestDays.push(this.newMomRestDate);
-      this.newMomRestDate = ''; // 清空输入框
+      this.newMomRestDate = ''; 
     },
     removeMomRestDay(day) {
       const idx = this.momRestDays.indexOf(day);
       if (idx > -1) {
         this.momRestDays.splice(idx, 1);
+      }
+    },
+    // 孩子假期操作
+    addHoliday(person) {
+      const dateVal = this.newHolidayDate[person];
+      if (!dateVal) {
+        alert("请先选择日期"); return;
+      }
+      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
+      if (targetArray.includes(dateVal)) {
+        alert("该日期已经是假期了"); return;
+      }
+      targetArray.push(dateVal);
+      this.newHolidayDate[person] = ''; 
+    },
+    removeHoliday(person, day) {
+      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
+      const idx = targetArray.indexOf(day);
+      if (idx > -1) {
+        targetArray.splice(idx, 1);
       }
     },
     getMemberName(key){
@@ -682,26 +684,6 @@ createApp({
     saveMemberEdit(){
       alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`);
       this.memberEditModal.show = false;
-    },
-    openAddHolidayModal(){
-      this.holidayModal.name = '';
-      this.holidayModal.start = '';
-      this.holidayModal.end = '';
-      this.holidayModal.show = true;
-    },
-    saveHoliday(){
-      if(!this.holidayModal.name || !this.holidayModal.start || !this.holidayModal.end){
-        alert("请填写完整的假期信息"); return;
-      }
-      this.holidayList.push({
-        name: this.holidayModal.name,
-        start: this.holidayModal.start,
-        end: this.holidayModal.end
-      });
-      this.holidayModal.show = false;
-    },
-    removeHoliday(index){
-      this.holidayList.splice(index, 1);
     },
     openChartModal(personKey){
       this.chartModal.target = personKey;
