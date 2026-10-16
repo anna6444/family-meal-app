@@ -134,26 +134,34 @@
         </div>
       </div>
 
-      <!-- 菜单预览（上方） -->
+      <!-- 菜单预览（动态渲染） -->
       <div class="card">
         <h2>🍽️ 菜单预览</h2>
+        
+        <!-- 早餐 -->
         <div class="menu-preview-section">
           <div class="menu-preview-title">🌅 早餐</div>
-          <div class="menu-preview-row"><span>全家共享：</span>蒸红薯、水煮蛋、温牛奶、原味坚果</div>
+          <div class="menu-preview-row"><span>👨‍👩‍👧‍👦 全家共享：</span>蒸红薯、水煮蛋、温牛奶、原味坚果</div>
+          <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span>👩 妈妈（早班外带）：</span>前一晚备好装盒，带上燕麦粥+水煮蛋+水果</div>
         </div>
+
+        <!-- 午餐 -->
         <div class="menu-preview-section">
           <div class="menu-preview-title">☀️ 午餐</div>
           <div class="menu-preview-row"><span>👧 姐姐（回家）：</span>杂粮饭 + 清蒸鲈鱼 + 菌菇西兰花</div>
-          <div class="menu-preview-row" style="color:#c46838"><span>👩 妈妈（早班带饭）：</span>香菇蒸鸡 + 蒸红薯 + 水煮蛋</div>
+          <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span>👩 妈妈（早班）：</span>午餐在家或单位吃（按实际排班）</div>
+          <div class="menu-preview-row" style="color:#c46838" v-else><span>👩 妈妈（下午班）：</span>香菇蒸鸡 + 蒸红薯 + 水煮蛋</div>
         </div>
+
+        <!-- 晚餐 -->
         <div class="menu-preview-section">
           <div class="menu-preview-title">🌙 晚餐</div>
-          <div class="menu-preview-row"><span>全家：</span>蔬菜鸡肉丸子、娃娃菜豆腐汤、甜玉米</div>
+          <div class="menu-preview-row"><span>👨‍👩‍👧‍👦 全家：</span>蔬菜鸡肉丸子、娃娃菜豆腐汤、甜玉米</div>
           <div class="menu-preview-row" style="color:#c46838"><span>👦 弟弟专属：</span>肉丸里混入菠菜碎+胡萝卜碎</div>
         </div>
       </div>
 
-      <!-- 今日加餐推荐（下方） -->
+      <!-- 今日加餐推荐 -->
       <div class="card">
         <h2>🍎 今日加餐推荐</h2>
         <p class="card-subtitle">每天只推 1 种水果 + 1 种坚果/零食，优先消耗快过期的。</p>
@@ -193,7 +201,7 @@
         </div>
       </div>
       
-      <!-- 显示当天菜单，按早午晚餐分开 -->
+      <!-- 显示当天菜单 -->
       <div v-if="currentDayDishes">
         <div class="meal-title">🌅 早餐</div>
         <div v-if="currentDayDishes.breakfast.length === 0" class="empty-text" style="padding: 10px;">暂无早餐安排</div>
@@ -204,7 +212,6 @@
           </div>
           <div class="card-subtitle">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
           
-          <!-- 分餐建议 -->
           <div class="portion-box" v-if="dish.portions">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议（克数）</div>
             <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}g（减脂/低草酸）</span></div>
@@ -297,13 +304,27 @@
       </div>
     </div>
 
-    <!-- 待操作 -->
+    <!-- 待操作（采购清单分类） -->
     <div v-if="view === 'todo'">
+      <!-- 周末大采购 -->
       <div class="card">
-        <h2>🛒 采购清单（下周）</h2>
-        <p class="card-subtitle">根据下周食谱自动汇总，并已扣除当前食材库库存。如有变化可手动调整。</p>
-        <div v-if="shoppingList.length === 0" class="empty-text">暂无采购需求，请先点击“周菜谱”生成食谱。</div>
-        <div v-for="item in sortedShoppingList" :key="item.id" class="list-row">
+        <h2>🛒 周末大采购（耐储存）</h2>
+        <p class="card-subtitle">根据下周食谱自动汇总，并已扣除当前食材库库存。建议周末一次性买齐。</p>
+        <div v-if="weekendShoppingList.length === 0" class="empty-text">暂无周末采购需求。</div>
+        <div v-for="item in weekendShoppingList" :key="item.id" class="list-row">
+          <div>{{item.name}} {{item.weight}}g</div>
+          <button class="btn small" :class="item.bought ? 'secondary' : ''" @click="toggleBought(item)">
+            {{item.bought ? '已采购' : '未采购'}}
+          </button>
+        </div>
+      </div>
+
+      <!-- 提前1-2天补货 -->
+      <div class="card">
+        <h2>🛒 提前1-2天买（新鲜食材）</h2>
+        <p class="card-subtitle">易腐烂的叶菜、鲜鱼、鲜肉等，建议提前1-2天购买。</p>
+        <div v-if="dailyShoppingList.length === 0" class="empty-text">暂无临时采购需求。</div>
+        <div v-for="item in dailyShoppingList" :key="item.id" class="list-row">
           <div>{{item.name}} {{item.weight}}g</div>
           <button class="btn small" :class="item.bought ? 'secondary' : ''" @click="toggleBought(item)">
             {{item.bought ? '已采购' : '未采购'}}
@@ -311,6 +332,7 @@
         </div>
       </div>
       
+      <!-- 预处理清单 -->
       <div class="card">
         <h2>⏱️ 预处理清单（周日准备）</h2>
         <div class="section-title">📅 周末批量处理（节省工作日时间）</div>
@@ -699,86 +721,48 @@ createApp({
         { name: "虾滑", weight: 200, expireDay: 90 }
       ],
       
-      // 每日菜单数据结构：7天，每天包含早餐、午餐、晚餐
+      // 每日菜单数据结构
       weekMenu: [
-        { breakfast: [], lunch: [], dinner: [] }, // 周一
-        { breakfast: [], lunch: [], dinner: [] }, // 周二
-        { breakfast: [], lunch: [], dinner: [] }, // 周三
-        { breakfast: [], lunch: [], dinner: [] }, // 周四
-        { breakfast: [], lunch: [], dinner: [] }, // 周五
-        { breakfast: [], lunch: [], dinner: [] }, // 周六
-        { breakfast: [], lunch: [], dinner: [] }  // 周日
+        { breakfast: [], lunch: [], dinner: [] },
+        { breakfast: [], lunch: [], dinner: [] },
+        { breakfast: [], lunch: [], dinner: [] },
+        { breakfast: [], lunch: [], dinner: [] },
+        { breakfast: [], lunch: [], dinner: [] },
+        { breakfast: [], lunch: [], dinner: [] },
+        { breakfast: [], lunch: [], dinner: [] }
       ],
       
-      // 预设菜谱库（根据中国膳食指南和家庭需求定制）
       recipeLibrary: {
         breakfast: [
-          { 
-            name: "燕麦牛奶粥+水煮蛋", 
-            tag: "碳水·高钙·优质蛋白", 
-            ingredients: [{name:'燕麦', weight:200}, {name:'牛奶', weight:1000}, {name:'鸡蛋', weight:300}], 
-            steps: ['燕麦加水煮开', '倒入牛奶，小火煮3分钟', '鸡蛋冷水下锅，水开煮8分钟'],
-            portions: { dad: '燕麦40g+奶250ml+蛋1个', mom: '燕麦40g+奶250ml+蛋1个', sister: '燕麦40g+奶250ml+蛋1个', brother: '燕麦30g+奶250ml+蛋1个' }
-          },
-          { 
-            name: "全麦面包+无糖酸奶+坚果", 
-            tag: "快手早餐·优质脂肪", 
-            ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], 
-            steps: ['面包加热', '搭配酸奶', '坚果碾碎撒入'],
-            portions: { dad: '面包2片+酸奶100g+核桃10g', mom: '面包2片+酸奶100g+核桃10g', sister: '面包2片+酸奶100g+核桃10g', brother: '面包1片+酸奶100g+核桃粉5g' }
-          },
-          { 
-            name: "红薯小米粥+蒸蛋羹", 
-            tag: "养胃·易消化", 
-            ingredients: [{name:'红薯', weight:300}, {name:'小米', weight:100}, {name:'鸡蛋', weight:200}], 
-            steps: ['红薯切块和小米同煮', '鸡蛋打散加水蒸10分钟'],
-            portions: { dad: '粥1碗+蛋羹1个', mom: '粥1碗+蛋羹1个', sister: '粥1碗+蛋羹1个', brother: '粥1碗+蛋羹1个' }
-          }
+          { name: "燕麦牛奶粥+水煮蛋", tag: "碳水·高钙·优质蛋白", ingredients: [{name:'燕麦', weight:200}, {name:'牛奶', weight:1000}, {name:'鸡蛋', weight:300}], steps: ['燕麦加水煮开', '倒入牛奶，小火煮3分钟', '鸡蛋冷水下锅，水开煮8分钟'], portions: { dad: '燕麦40g+奶250ml+蛋1个', mom: '燕麦40g+奶250ml+蛋1个', sister: '燕麦40g+奶250ml+蛋1个', brother: '燕麦30g+奶250ml+蛋1个' } },
+          { name: "全麦面包+无糖酸奶+坚果", tag: "快手早餐·优质脂肪", ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], steps: ['面包加热', '搭配酸奶', '坚果碾碎撒入'], portions: { dad: '面包2片+酸奶100g+核桃10g', mom: '面包2片+酸奶100g+核桃10g', sister: '面包2片+酸奶100g+核桃10g', brother: '面包1片+酸奶100g+核桃粉5g' } },
+          { name: "红薯小米粥+蒸蛋羹", tag: "养胃·易消化", ingredients: [{name:'红薯', weight:300}, {name:'小米', weight:100}, {name:'鸡蛋', weight:200}], steps: ['红薯切块和小米同煮', '鸡蛋打散加水蒸10分钟'], portions: { dad: '粥1碗+蛋羹1个', mom: '粥1碗+蛋羹1个', sister: '粥1碗+蛋羹1个', brother: '粥1碗+蛋羹1个' } }
         ],
         lunch: [
-          { 
-            name: "番茄炖瘦牛腩+杂粮饭+清炒西兰花", 
-            tag: "补铁·高蛋白·膳食纤维", 
-            ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:600}, {name:'杂粮米', weight:300}, {name:'西兰花', weight:300}, {name:'姜', weight:10}], 
-            steps: ['牛腩焯水，番茄切块，一起炖煮40分钟', '杂粮饭煮熟', '西兰花焯水后清炒'],
-            portions: { dad: '牛腩80g+饭100g+菜150g', mom: '牛腩100g+饭80g+菜150g', sister: '牛腩60g+饭100g+菜100g', brother: '牛腩50g+饭80g+菜50g(切碎)' }
-          },
-          { 
-            name: "清蒸鲈鱼+菌菇汤+炒青菜", 
-            tag: "优质蛋白·低脂·维生素", 
-            ingredients: [{name:'鲈鱼', weight:700}, {name:'菌菇', weight:200}, {name:'青菜', weight:300}, {name:'姜', weight:15}], 
-            steps: ['鱼洗净，水开蒸8分钟', '菌菇煮汤', '青菜蒜蓉炒'],
-            portions: { dad: '鱼100g+菜150g+汤1碗', mom: '鱼100g+菜150g+汤1碗', sister: '鱼80g+菜100g+汤1碗', brother: '鱼50g+菜50g+汤1碗' }
-          }
+          { name: "番茄炖瘦牛腩+杂粮饭+清炒西兰花", tag: "补铁·高蛋白·膳食纤维", ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:600}, {name:'杂粮米', weight:300}, {name:'西兰花', weight:300}, {name:'姜', weight:10}], steps: ['牛腩焯水，番茄切块，一起炖煮40分钟', '杂粮饭煮熟', '西兰花焯水后清炒'], portions: { dad: '牛腩80g+饭100g+菜150g', mom: '牛腩100g+饭80g+菜150g', sister: '牛腩60g+饭100g+菜100g', brother: '牛腩50g+饭80g+菜50g(切碎)' } },
+          { name: "清蒸鲈鱼+菌菇汤+炒青菜", tag: "优质蛋白·低脂·维生素", ingredients: [{name:'鲈鱼', weight:700}, {name:'菌菇', weight:200}, {name:'青菜', weight:300}, {name:'姜', weight:15}], steps: ['鱼洗净，水开蒸8分钟', '菌菇煮汤', '青菜蒜蓉炒'], portions: { dad: '鱼100g+菜150g+汤1碗', mom: '鱼100g+菜150g+汤1碗', sister: '鱼80g+菜100g+汤1碗', brother: '鱼50g+菜50g+汤1碗' } }
         ],
         dinner: [
-          { 
-            name: "蔬菜鸡肉丸子+娃娃菜豆腐汤+蒸玉米", 
-            tag: "隐形蔬菜·清淡好消化", 
-            ingredients: [{name:'鸡肉丸子', weight:200}, {name:'娃娃菜', weight:150}, {name:'嫩豆腐', weight:100}, {name:'玉米', weight:400}], 
-            steps: ['丸子煮5分钟', '加入娃娃菜豆腐煮3分钟', '玉米蒸15分钟'],
-            portions: { dad: '丸子100g+菜150g+玉米半根', mom: '丸子80g+菜150g+玉米半根', sister: '丸子80g+菜100g+玉米1根', brother: '丸子50g+菜50g+玉米半根' }
-          },
-          { 
-            name: "番茄鸡蛋面+清炒时蔬", 
-            tag: "快手·营养均衡", 
-            ingredients: [{name:'番茄', weight:300}, {name:'鸡蛋', weight:150}, {name:'面条', weight:300}, {name:'时蔬', weight:200}], 
-            steps: ['番茄炒出汁', '加水烧开，下面条和鸡蛋', '时蔬清炒'],
-            portions: { dad: '面1碗+菜100g', mom: '面1碗+菜100g', sister: '面1碗+菜80g', brother: '面半碗+菜50g' }
-          }
+          { name: "蔬菜鸡肉丸子+娃娃菜豆腐汤+蒸玉米", tag: "隐形蔬菜·清淡好消化", ingredients: [{name:'鸡肉丸子', weight:200}, {name:'娃娃菜', weight:150}, {name:'嫩豆腐', weight:100}, {name:'玉米', weight:400}], steps: ['丸子煮5分钟', '加入娃娃菜豆腐煮3分钟', '玉米蒸15分钟'], portions: { dad: '丸子100g+菜150g+玉米半根', mom: '丸子80g+菜150g+玉米半根', sister: '丸子80g+菜100g+玉米1根', brother: '丸子50g+菜50g+玉米半根' } },
+          { name: "番茄鸡蛋面+清炒时蔬", tag: "快手·营养均衡", ingredients: [{name:'番茄', weight:300}, {name:'鸡蛋', weight:150}, {name:'面条', weight:300}, {name:'时蔬', weight:200}], steps: ['番茄炒出汁', '加水烧开，下面条和鸡蛋', '时蔬清炒'], portions: { dad: '面1碗+菜100g', mom: '面1碗+菜100g', sister: '面1碗+菜80g', brother: '面半碗+菜50g' } }
         ]
       },
       
       shoppingList: [
-        { id: 1, name: "龙利鱼柳", weight: 150, bought: false },
-        { id: 2, name: "娃娃菜", weight: 200, bought: false }
+        { id: 1, name: "全麦面包", weight: 600, category: "weekend", bought: false },
+        { id: 2, name: "瘦牛腩", weight: 1500, category: "weekend", bought: false },
+        { id: 3, name: "番茄", weight: 2400, category: "daily", bought: false },
+        { id: 4, name: "杂粮米", weight: 900, category: "weekend", bought: false },
+        { id: 5, name: "西兰花", weight: 720, category: "daily", bought: false },
+        { id: 6, name: "姜", weight: 90, category: "weekend", bought: false },
+        { id: 7, name: "鸡肉丸子", weight: 600, category: "weekend", bought: false },
+        { id: 8, name: "娃娃菜", weight: 250, category: "daily", bought: false }
       ],
       prepTasks: [
         { title: "制作一批蔬菜鸡肉丸子", desc: "将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟后冷冻保存。" },
         { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜等洗净焯水，沥干冷藏。" }
       ],
       
-      // 动态日期由 created 生成
       weekDateList: []
     }
   },
@@ -806,14 +790,23 @@ createApp({
       if(!kw) return this.preIngList;
       return this.preIngList.filter(i => i.name.toLowerCase().includes(kw));
     },
-    sortedShoppingList(){
-      return [...this.shoppingList].sort((a,b)=>Number(a.bought)-Number(b.bought));
+    // 将购物清单分为周末大采购和日常采购
+    weekendShoppingList() {
+      return this.shoppingList.filter(i => i.category === 'weekend');
+    },
+    dailyShoppingList() {
+      return this.shoppingList.filter(i => i.category === 'daily');
     },
     hasUnfinishedTask(){
       return this.shoppingList.some(i => !i.bought);
     },
     
-    // 获取当前选中日期的菜单
+    // 首页妈妈是否早班
+    momIsMorningShift() {
+      const today = this.todayMembers.find(m => m.key === 'mom');
+      return today && today.status.includes('早班');
+    },
+    
     currentDayDishes() {
       if (this.weekMenu.length === 0) return null;
       return this.weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [] };
@@ -899,7 +892,7 @@ createApp({
         const momStart = new Date(momConfig.startDate);
         const momDiffDays = Math.floor((targetDate - momStart) / (1000 * 60 * 60 * 24));
         const momDayInCycle = ((momDiffDays % 2) + 2) % 2;
-        if (momDayInCycle === 0) { momMeals = ['午', '晚']; momStatus = '早班 (外带)'; momStatusClass = 'status-work'; } 
+        if (momDayInCycle === 0) { momMeals = ['早（外带）', '午', '晚']; momStatus = '早班 (外带)'; momStatusClass = 'status-work'; } 
         else { momMeals = ['早', '午', '晚']; momStatus = '下午班'; momStatusClass = 'status-work'; }
       }
       result.push({ key: 'mom', name: '妈妈', icon: '👩', status: momStatus, statusClass: momStatusClass, meals: momMeals, isRest: isMomRest, dateStr: targetDateStr });
@@ -918,11 +911,10 @@ createApp({
     }
   },
   methods:{
-    // 获取北京时间并动态生成一周的日期
     getCurrentWeekDates() {
-      let now = new Date(); // 获取当前手机时间（北京时间）
-      let day = now.getDay() || 7; // 周日是0，转成7
-      let monday = new Date(now.getTime() - (day - 1) * 86400000); // 本周一的时间戳
+      let now = new Date();
+      let day = now.getDay() || 7;
+      let monday = new Date(now.getTime() - (day - 1) * 86400000);
       
       let arr = [];
       for (let i = 0; i < 7; i++) {
@@ -940,7 +932,6 @@ createApp({
     calcBMI(heightCm, weightKg){ if(!heightCm || !weightKg) return "-"; const h = heightCm / 100; return (weightKg / (h*h)).toFixed(1); },
     toggleTaboo(person, word){ const arr = this.memberTaboo[person]; const idx = arr.indexOf(word); if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); } },
     
-    // 核心功能：一键生成下周食谱（遵循中国膳食指南，结合家庭需求）
     generateNextWeekPlan() {
       let idCounter = 1;
       let newWeekMenu = [];
@@ -948,7 +939,6 @@ createApp({
       for (let day = 0; day < 7; day++) {
         let dayMenu = { breakfast: [], lunch: [], dinner: [] };
         
-        // 早餐：从早餐库选
         let bfRecipe = this.recipeLibrary.breakfast[Math.floor(Math.random() * this.recipeLibrary.breakfast.length)];
         dayMenu.breakfast.push({
           id: idCounter++,
@@ -960,7 +950,6 @@ createApp({
           completed: false, feedback: ''
         });
         
-        // 午餐：1荤1素1主食
         let lunchRecipe = this.recipeLibrary.lunch[Math.floor(Math.random() * this.recipeLibrary.lunch.length)];
         dayMenu.lunch.push({
           id: idCounter++,
@@ -972,7 +961,6 @@ createApp({
           completed: false, feedback: ''
         });
         
-        // 晚餐：1主菜1汤/配菜
         let dinnerRecipe = this.recipeLibrary.dinner[Math.floor(Math.random() * this.recipeLibrary.dinner.length)];
         dayMenu.dinner.push({
           id: idCounter++,
@@ -989,7 +977,6 @@ createApp({
       
       this.weekMenu = newWeekMenu;
       
-      // 计算采购清单
       let neededMap = {};
       newWeekMenu.forEach(dayMenu => {
         ['breakfast', 'lunch', 'dinner'].forEach(meal => {
@@ -1002,6 +989,7 @@ createApp({
         });
       });
       
+      // 智能分类：哪些是周末买，哪些是提前1-2天买
       let newShoppingList = [];
       let itemId = 1;
       
@@ -1015,18 +1003,25 @@ createApp({
         let buyWeight = totalWeight - stockWeight;
         
         if (buyWeight > 0) {
-          newShoppingList.push({ id: itemId++, name: name, weight: buyWeight, bought: false });
+          // 判断类别：主食、冷冻肉、根茎类、干货归类为 weekend（耐储存）
+          // 叶菜、鲜鱼、鲜肉、豆腐归类为 daily（易腐烂）
+          let category = 'weekend';
+          const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬'];
+          if (dailyKeywords.some(k => name.includes(k))) {
+            category = 'daily';
+          }
+          
+          newShoppingList.push({ id: itemId++, name: name, weight: buyWeight, category: category, bought: false });
         }
       }
       
       let fruitStock = this.fruitList.reduce((sum, item) => sum + item.weight, 0);
       let snackStock = this.snackList.reduce((sum, item) => sum + item.weight, 0);
-      if (fruitStock < 2000) newShoppingList.push({ id: itemId++, name: "应季水果", weight: 2000 - fruitStock, bought: false });
-      if (snackStock < 500) newShoppingList.push({ id: itemId++, name: "坚果/酸奶", weight: 500 - snackStock, bought: false });
+      if (fruitStock < 2000) newShoppingList.push({ id: itemId++, name: "应季水果", weight: 2000 - fruitStock, category: 'daily', bought: false });
+      if (snackStock < 500) newShoppingList.push({ id: itemId++, name: "坚果/酸奶", weight: 500 - snackStock, category: 'weekend', bought: false });
       
       this.shoppingList = newShoppingList;
       
-      // 生成预处理任务
       this.prepTasks = [
         { title: "制作一批蔬菜肉丸/肉饼", desc: "根据食谱，将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟或煎熟后冷冻，工作日可直接拿出来热。" },
         { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜、生菜等洗净，西兰花菠菜需焯水30秒，沥干冷藏。" },
@@ -1034,7 +1029,7 @@ createApp({
         { title: "处理坚果（弟弟专用）", desc: "将核桃、南瓜子等打成粉末，装入密封罐冷藏，每天拌入弟弟的酸奶中。" }
       ];
       
-      alert("✅ 下周食谱已生成！\n\n已按天分类，可点击日期查看每天的三餐。\n采购清单和预处理任务已同步更新，请到「待操作」查看。");
+      alert("✅ 下周食谱已生成！\n\n已按天分类，可点击日期查看每天的三餐。\n采购清单已分为“周末大采购”和“提前1-2天买”，请到「待操作」查看。");
       this.view = 'weekMenu';
     },
     
