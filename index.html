@@ -37,6 +37,7 @@
     .tag { display: inline-block; background: #f4ece3; color: #b06237; border-radius: 20px; padding: 5px 10px; font-size: 13px; margin: 3px; }
     .tag.green { background: #eaf6ec; color: #2b703b; }
     .tag.orange { background: #fff1e6; color: #c46838; }
+    .tag.red { background: #fce8e8; color: #d14a4a; }
 
     .date-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 6px 0 14px; }
     .date-item { min-width: 80px; padding: 12px 8px; border-radius: 16px; text-align: center; background: #fff; border: 1px solid #e8e2d6; cursor: pointer; flex-shrink: 0; font-size: 15px; }
@@ -75,6 +76,7 @@
     .member-status-badge { font-size: 13px; padding: 4px 10px; border-radius: 12px; background: #f1ede4; color: #666; }
     .status-work { background: #eaf6ec; color: #2b703b; }
     .status-rest { background: #fff1e6; color: #c46838; }
+    .status-sick { background: #fce8e8; color: #d14a4a; }
     .meal-label { display: inline-block; padding: 3px 8px; border-radius: 8px; background: #eaf6ec; color: #2b703b; font-size: 12px; margin-left: 4px; font-weight: 600;}
     
     /* 休息日/假期标签 */
@@ -123,7 +125,7 @@
       </div>
     </div>
 
-    <!-- 周菜谱（联动食材库自动扣减） -->
+    <!-- 周菜谱 -->
     <div v-if="view === 'weekMenu'">
       <h2 style="margin-bottom:14px">每周菜谱</h2>
       <div class="date-scroll">
@@ -179,7 +181,7 @@
       </div>
     </div>
 
-    <!-- 食材库（新增和扣减） -->
+    <!-- 食材库 -->
     <div v-if="view === 'ingredientLib'">
       <h2 style="margin-bottom:14px">🥬 食材库</h2>
       <div class="tab-switch">
@@ -235,76 +237,25 @@
         </div>
       </div>
 
+      <!-- 修改：极简列表，点击弹窗编辑 -->
       <div class="card">
         <h2>⚠️ 成员临时状态与忌口</h2>
-        <div class="member-block">
-          <h4>👨 爸爸</h4>
-          <div class="input-wrap">
-            <label>当前状态</label>
-            <select v-model="memberTempStatus.dad">
-              <option value="normal">正常</option>
-              <option value="sick">生病</option>
-            </select>
-          </div>
-          <label>忌口选择（生病禁食）</label>
-          <div>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.dad.includes('生冷')}" @click="toggleTaboo('dad','生冷')">生冷</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.dad.includes('辛辣')}" @click="toggleTaboo('dad','辛辣')">辛辣</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.dad.includes('油腻')}" @click="toggleTaboo('dad','油腻')">油腻</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.dad.includes('海鲜')}" @click="toggleTaboo('dad','海鲜')">海鲜</span>
-          </div>
+        <p class="card-subtitle">点击成员可单独设置当前状态与忌口</p>
+        <div class="member-list-item" @click="openTempStatusModal('dad')">
+          <div>👨 爸爸 <span class="member-status-badge" :class="getStatusClass(memberTempStatus.dad)">{{ getStatusText(memberTempStatus.dad, 'dad') }}</span></div>
+          <button class="btn small secondary">编辑</button>
         </div>
-        <div class="member-block">
-          <h4>👩 妈妈</h4>
-          <div class="input-wrap">
-            <label>当前状态</label>
-            <select v-model="memberTempStatus.mom">
-              <option value="normal">正常</option>
-              <option value="sick">生病</option>
-              <option value="period">姨妈期</option>
-            </select>
-          </div>
-          <label>忌口选择（生病/姨妈禁食）</label>
-          <div>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.mom.includes('生冷')}" @click="toggleTaboo('mom','生冷')">生冷</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.mom.includes('辛辣')}" @click="toggleTaboo('mom','辛辣')">辛辣</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.mom.includes('寒凉水果')}" @click="toggleTaboo('mom','寒凉水果')">寒凉水果</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.mom.includes('浓茶咖啡')}" @click="toggleTaboo('mom','浓茶咖啡')">浓茶咖啡</span>
-          </div>
+        <div class="member-list-item" @click="openTempStatusModal('mom')">
+          <div>👩 妈妈 <span class="member-status-badge" :class="getStatusClass(memberTempStatus.mom)">{{ getStatusText(memberTempStatus.mom, 'mom') }}</span></div>
+          <button class="btn small secondary">编辑</button>
         </div>
-        <div class="member-block">
-          <h4>👧 姐姐</h4>
-          <div class="input-wrap">
-            <label>当前状态</label>
-            <select v-model="memberTempStatus.sister">
-              <option value="normal">正常</option>
-              <option value="sick">生病</option>
-            </select>
-          </div>
-          <label>忌口选择（生病禁食）</label>
-          <div>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.sister.includes('生冷')}" @click="toggleTaboo('sister','生冷')">生冷</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.sister.includes('油炸')}" @click="toggleTaboo('sister','油炸')">油炸</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.sister.includes('甜食')}" @click="toggleTaboo('sister','甜食')">甜食</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.sister.includes('海鲜')}" @click="toggleTaboo('sister','海鲜')">海鲜</span>
-          </div>
+        <div class="member-list-item" @click="openTempStatusModal('sister')">
+          <div>👧 姐姐 <span class="member-status-badge" :class="getStatusClass(memberTempStatus.sister)">{{ getStatusText(memberTempStatus.sister, 'sister') }}</span></div>
+          <button class="btn small secondary">编辑</button>
         </div>
-        <div class="member-block">
-          <h4>👦 弟弟</h4>
-          <div class="input-wrap">
-            <label>当前状态</label>
-            <select v-model="memberTempStatus.brother">
-              <option value="normal">正常</option>
-              <option value="sick">生病</option>
-            </select>
-          </div>
-          <label>忌口选择（生病禁食）</label>
-          <div>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.brother.includes('生冷')}" @click="toggleTaboo('brother','生冷')">生冷</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.brother.includes('油炸')}" @click="toggleTaboo('brother','油炸')">油炸</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.brother.includes('甜食')}" @click="toggleTaboo('brother','甜食')">甜食</span>
-            <span class="pre-taboo-tag" :class="{active:memberTaboo.brother.includes('海鲜')}" @click="toggleTaboo('brother','海鲜')">海鲜</span>
-          </div>
+        <div class="member-list-item" @click="openTempStatusModal('brother')">
+          <div>👦 弟弟 <span class="member-status-badge" :class="getStatusClass(memberTempStatus.brother)">{{ getStatusText(memberTempStatus.brother, 'brother') }}</span></div>
+          <button class="btn small secondary">编辑</button>
         </div>
       </div>
 
@@ -349,7 +300,38 @@
     </div>
   </div>
 
-  <!-- 成员编辑弹窗 -->
+  <!-- 成员临时状态与忌口弹窗 -->
+  <div class="modal-mask" v-if="tempStatusModal.show" @click.self="tempStatusModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">设置 {{getMemberName(tempStatusModal.key)}} 的状态与忌口</h3>
+      <div class="member-block" v-if="tempStatusModal.key">
+        <div class="input-wrap">
+          <label>当前状态</label>
+          <select v-model="memberTempStatus[tempStatusModal.key]">
+            <option value="normal">正常</option>
+            <option value="sick">生病</option>
+            <!-- 只有妈妈有姨妈期选项 -->
+            <option v-if="tempStatusModal.key === 'mom'" value="period">姨妈期</option>
+          </select>
+        </div>
+        <label>忌口选择</label>
+        <div>
+          <!-- 根据成员动态渲染忌口标签 -->
+          <span v-for="word in getTabooOptions(tempStatusModal.key)" :key="word"
+                class="pre-taboo-tag"
+                :class="{active:memberTaboo[tempStatusModal.key].includes(word)}"
+                @click="toggleTaboo(tempStatusModal.key, word)">
+            {{word}}
+          </span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn" style="flex:1" @click="tempStatusModal.show=false">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成员信息编辑弹窗 -->
   <div class="modal-mask" v-if="memberEditModal.show" @click.self="memberEditModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">编辑 {{getMemberName(memberEditModal.key)}} 信息</h3>
@@ -380,7 +362,6 @@
           </div>
         </div>
         
-        <!-- 妈妈休息日设置（日期范围） -->
         <div v-if="memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
           <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 特殊休息日设置</h4>
           <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
@@ -396,14 +377,13 @@
           </div>
         </div>
         
-        <!-- 孩子假期设置（日期范围） -->
         <div v-if="memberEditModal.key === 'sister' || memberEditModal.key === 'brother'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
-          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌  <节假日/请假设置</h4>
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 节假日/请假设置</h4>
           <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
             <input type="text" v-model="newHolidayForm[memberEditModal.key].name" placeholder="假期名称" style="width: 100%;" />
             <div style="display: flex; gap: 10px; align-items: center;">
               <input type="date" v-model="newHolidayForm[memberEditModal.key].start" style="flex: 1; min-height: 44px;" />
-             span>至</span>
+              <span>至</span>
               <input type="date" v-model="newHolidayForm[memberEditModal.key].end" style="flex: 1; min-height: 44px;" />
             </div>
             <button class="btn small" style="width: 100%;" @click="addHoliday(memberEditModal.key)">添加假期</button>
@@ -494,19 +474,15 @@ createApp({
       selDateIdx: 0,
       ingTab: 'raw',
       searchIng: '',
-      // 排班基础配置
       scheduleConfig: {
         dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 },
         mom: { startDate: '2026-10-16', firstShift: 'morning' }
       },
-      // 妈妈休息日
       momRestDays: [{ start: '2026-10-20', end: '2026-10-20', name: '休息日' }], 
       newMomRestForm: { start: '', end: '' },
-      // 孩子假期
       sisterHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
       brotherHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
       newHolidayForm: { sister: { name: '', start: '', end: '' }, brother: { name: '', start: '', end: '' } },
-      // 成员数据
       memberData:{
         dad:{age:35, height:176, weight:90, schedule:"4天在家4天不在", health:"轻微脂肪肝，肾结石", taboo:"高草酸蔬菜需焯水，不吃内脏"},
         mom:{age:35, height:150, weight:50, schedule:"早班/下午班交替", health:"气血不足，二胎后大肚腩", taboo:"无"},
@@ -518,10 +494,10 @@ createApp({
       chartModal:{ show:false, title:'', target:'' },
       currentChart:null,
       memberEditModal: { show: false, key: 'dad' },
+      tempStatusModal: { show: false, key: 'dad' }, // 新增：临时状态弹窗
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
       addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
       
-      // 食材库数据
       rawIngList: [
         { name: "鸡蛋", weight: 470, expireDay: 14 },
         { name: "红薯", weight: 360, expireDay: 21 },
@@ -536,7 +512,6 @@ createApp({
         { name: "蔬菜鸡肉丸子（预制）", weight: 320, expireDay: 90 },
         { name: "虾滑", weight: 200, expireDay: 90 }
       ],
-      // 周菜谱数据（含食材，用于自动扣减）
       weekDishes: [
         { id: 1, name: "香煎龙利鱼｜主菜", tag: "蛋白质·清淡鲜香", ingredients: [{name:'龙利鱼柳', weight:150}, {name:'黑胡椒', weight:0.5}], steps: ['龙利鱼解冻吸干水分，撒少量盐、黑胡椒', '平底锅少油，中火每面煎2-3分钟至金黄', '出锅挤几滴柠檬汁，切成一口小块'], completed: false },
         { id: 2, name: "蒸红薯｜主食", tag: "碳水·膳食纤维", ingredients: [{name:'红薯', weight:250}], steps: ['红薯洗净去皮切块', '水开上锅蒸18分钟'], completed: false },
@@ -628,25 +603,48 @@ createApp({
     calcBMI(heightCm, weightKg){ if(!heightCm || !weightKg) return "-"; const h = heightCm / 100; return (weightKg / (h*h)).toFixed(1); },
     toggleTaboo(person, word){ const arr = this.memberTaboo[person]; const idx = arr.indexOf(word); if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); } },
     
-    // 自动扣减逻辑（重点！）
+    // 新：打开临时状态弹窗
+    openTempStatusModal(key){
+      this.tempStatusModal.key = key;
+      this.tempStatusModal.show = true;
+    },
+    // 新：获取状态文本
+    getStatusText(status, person){
+      if (person === 'mom') {
+        if (status === 'period') return '姨妈期';
+        if (status === 'sick') return '生病';
+        return '正常';
+      }
+      return status === 'sick' ? '生病' : '正常';
+    },
+    // 新：获取状态样式
+    getStatusClass(status){
+      if (status === 'sick' || status === 'period') return 'status-sick';
+      return 'status-rest'; // 正常状态使用浅橙色
+    },
+    // 新：获取成员的忌口选项
+    getTabooOptions(person){
+      const options = {
+        dad: ['生冷', '辛辣', '油腻', '海鲜'],
+        mom: ['生冷', '辛辣', '寒凉水果', '浓茶咖啡'],
+        sister: ['生冷', '油炸', '甜食', '海鲜'],
+        brother: ['生冷', '油炸', '甜食', '海鲜']
+      };
+      return options[person] || [];
+    },
+    
+    // 自动扣减逻辑
     completeDish(dish) {
       if (dish.completed) return;
-      
       let deductedList = [];
       dish.ingredients.forEach(ing => {
-        // 在原材料库中查找
         let target = this.rawIngList.find(i => i.name === ing.name);
-        if (!target) {
-          // 如果原材料库找不到，在预制菜库中查找
-          target = this.preIngList.find(i => i.name === ing.name);
-        }
-        
+        if (!target) target = this.preIngList.find(i => i.name === ing.name);
         if (target) {
           if (target.weight >= ing.weight) {
             target.weight -= ing.weight;
             deductedList.push(`${ing.name} ${ing.weight}g`);
           } else {
-            // 如果库存不足，扣到0
             deductedList.push(`${ing.name} 库存不足（需${ing.weight}g，现有${target.weight}g，已扣为0）`);
             target.weight = 0;
           }
@@ -654,12 +652,10 @@ createApp({
           deductedList.push(`${ing.name} 未找到`);
         }
       });
-      
       dish.completed = true;
       alert(`【${dish.name}】已完成制作！\n系统已自动扣减食材：\n${deductedList.join('\n')}`);
     },
     
-    // 手动调整库存
     openStockModal(item, source){
       this.stockModal.item = item;
       this.stockModal.source = source;
@@ -675,25 +671,15 @@ createApp({
         this.stockModal.show = false;
       }
     },
-    
-    // 新增食材入库
-    openAddIngModal() {
-      this.addIngModal = { show: true, name: '', type: 'raw', weight: null, expireDay: null };
-    },
+    openAddIngModal() { this.addIngModal = { show: true, name: '', type: 'raw', weight: null, expireDay: null }; },
     saveNewIngredient() {
       const { name, type, weight, expireDay } = this.addIngModal;
       if (!name || !weight || !expireDay) { alert("请填写完整信息"); return; }
       const newItem = { name, weight: Number(weight), expireDay: Number(expireDay) };
-      if (type === 'raw') {
-        this.rawIngList.push(newItem);
-      } else {
-        this.preIngList.push(newItem);
-      }
+      if (type === 'raw') { this.rawIngList.push(newItem); } else { this.preIngList.push(newItem); }
       this.addIngModal.show = false;
       alert(`【${name}】已成功入库！`);
     },
-
-    // 妈妈休息日
     addMomRestDay() {
       const form = this.newMomRestForm;
       if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
@@ -702,8 +688,6 @@ createApp({
       this.newMomRestForm = { start: '', end: '' };
     },
     removeMomRestDay(index) { this.momRestDays.splice(index, 1); },
-    
-    // 孩子假期
     addHoliday(person) {
       const form = this.newHolidayForm[person];
       if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
@@ -716,16 +700,12 @@ createApp({
       const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
       targetArray.splice(index, 1);
     },
-    
     getMemberName(key){ const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' }; return map[key] || ''; },
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
     saveMemberEdit(){ alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`); this.memberEditModal.show = false; },
-    
-    // 趋势图
     openChartModal(personKey){ this.chartModal.target = personKey; const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}; this.chartModal.title = nameMap[personKey]; this.chartModal.show = true; this.$nextTick(()=>{ this.renderSingleChart(personKey); }) },
     closeChartModal(){ this.chartModal.show = false; if(this.currentChart) this.currentChart.destroy(); this.currentChart = null; },
     renderSingleChart(person){ const ctx = this.$refs.chartCanvasRef.getContext('2d'); if(this.currentChart) this.currentChart.destroy(); const chartConfig = { type:'line', data:{ labels: ['1月','2月','3月','4月'], datasets:[{ label:'数据', data:[50, 52, 51, 53], borderColor:'#e6703b', fill:false }] }, options:{responsive:true, maintainAspectRatio:false} }; this.currentChart = new Chart(ctx, chartConfig); },
-    
     toggleBought(item){ item.bought = !item.bought; }
   }
 }).mount('#app')
