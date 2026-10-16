@@ -50,14 +50,14 @@
     .menu-preview-row { font-size: 14px; line-height: 1.7; color: #444; margin-bottom: 4px; display: flex; align-items: flex-start; gap: 6px; }
     .menu-preview-row span { flex-shrink: 0; }
 
-    /* 加餐推荐 */
-    .snack-recommend-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: #fafaf5; border-radius: 12px; margin-bottom: 8px; border-left: 3px solid #e6703b; }
-    .snack-recommend-item.urgent { border-left-color: #d14a4a; background: #fff8f8; }
-    .snack-recommend-icon { font-size: 18px; }
-    .snack-recommend-content { flex: 1; }
-    .snack-recommend-title { font-size: 14px; font-weight: 600; color: #333; }
-    .snack-recommend-desc { font-size: 12px; color: #888; margin-top: 2px; }
-    .snack-recommend-gram { font-size: 12px; color: #c46838; font-weight: 600; margin-left: 4px; }
+    /* 加餐推荐 - 极简版 */
+    .snack-recommend-box { display: flex; gap: 12px; margin-top: 10px; }
+    .snack-recommend-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 16px 10px; background: #fafaf5; border-radius: 16px; border: 1px solid #f0ebe2; text-align: center; }
+    .snack-recommend-item.urgent { border: 1px solid #fce8e8; background: #fff8f8; }
+    .snack-icon { font-size: 32px; margin-bottom: 4px; }
+    .snack-name { font-size: 15px; font-weight: 600; color: #333; }
+    .snack-gram { font-size: 13px; color: #c46838; font-weight: 600; }
+    .snack-reason { font-size: 12px; color: #888; line-height: 1.4; margin-top: 4px; }
 
     .date-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 6px 0 14px; }
     .date-item { min-width: 80px; padding: 12px 8px; border-radius: 16px; text-align: center; background: #fff; border: 1px solid #e8e2d6; cursor: pointer; flex-shrink: 0; font-size: 15px; }
@@ -129,32 +129,27 @@
         </div>
       </div>
 
-      <!-- 加餐推荐 -->
+      <!-- 今日加餐推荐（极简版） -->
       <div class="card">
         <h2>🍎 今日加餐推荐</h2>
-        <p class="card-subtitle">根据食材库存和保质期智能推荐，优先消耗快过期的。</p>
+        <p class="card-subtitle">每天只推 1 种水果 + 1 种坚果/零食，优先消耗快过期的。</p>
         
-        <div v-if="snackRecommendations.length === 0" class="empty-text" style="padding: 20px;">
+        <div v-if="dailySnackRecommendations.length === 0" class="empty-text" style="padding: 20px;">
           暂无水果或零食库存，请先去食材库添加。
         </div>
         
-        <div v-for="(rec, idx) in snackRecommendations" :key="idx" class="snack-recommend-item" :class="{urgent: rec.urgent}">
-          <span class="snack-recommend-icon">{{rec.icon}}</span>
-          <div class="snack-recommend-content">
-            <div class="snack-recommend-title">
-              {{rec.name}} <span class="snack-recommend-gram">建议 {{rec.gram}}g</span>
-            </div>
-            <div class="snack-recommend-desc">
-              {{rec.reason}}
-            </div>
+        <div class="snack-recommend-box">
+          <div v-for="(rec, idx) in dailySnackRecommendations" :key="idx" class="snack-recommend-item" :class="{urgent: rec.urgent}">
+            <span class="snack-icon">{{rec.icon}}</span>
+            <div class="snack-name">{{rec.name}}</div>
+            <div class="snack-gram">建议 {{rec.gram}}g</div>
+            <div class="snack-reason">{{rec.reason}}</div>
+            <span v-if="rec.urgent" class="tag red" style="font-size: 11px; margin-top: 4px;">快过期，优先吃</span>
           </div>
-          <span class="tag" :class="rec.urgent ? 'red' : 'green'" style="font-size: 11px;">
-            {{rec.urgent ? '快过期' : '新鲜'}}
-          </span>
         </div>
         
-        <div style="margin-top: 12px; font-size: 13px; color: #888; line-height: 1.7;">
-          <b>搭配原则：</b>水果和坚果一起安排在早餐或下午2点上学/上班前。坚果类5岁以下小朋友必须打成粉拌入酸奶，避免呛噎。
+        <div style="margin-top: 14px; font-size: 13px; color: #888; line-height: 1.7;">
+          <b>搭配原则：</b>水果和坚果安排在早餐或下午2点上学/上班前。坚果类5岁以下小朋友必须打成粉拌入酸奶，避免呛噎。
         </div>
       </div>
 
@@ -654,107 +649,87 @@ createApp({
       return this.shoppingList.some(i => !i.bought);
     },
     
-    // 新：水果零食推荐逻辑（核心）
-    snackRecommendations(){
+    // 极简版推荐逻辑：每天只推 1 种水果 + 1 种零食
+    dailySnackRecommendations(){
       const targetDateStr = this.homeDate || new Date().toISOString().split('T')[0];
-      const dayOfWeek = new Date(targetDateStr).getDay();
-      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      
-      // 判断明天谁在家，决定推荐数量
       const members = this.todayMembers;
       const hasDad = members.find(m => m.key === 'dad' && m.meals.length > 0);
       const hasMom = members.find(m => m.key === 'mom' && m.meals.length > 0);
       const hasSister = members.find(m => m.key === 'sister' && m.meals.length > 0);
       const hasBrother = members.find(m => m.key === 'brother' && m.meals.length > 0);
-      
-      // 检查妈妈是否经期（经期避开寒凉水果）
       const momIsPeriod = this.memberTempStatus.mom === 'period';
       
-      const recommendations = [];
+      let recommendations = [];
       
-      // 1. 先看水果库
-      this.fruitList.forEach(item => {
-        if (item.weight <= 0) return;
-        
-        // 排除高草酸水果（爸爸肾结石禁忌）
-        const highOxalateFruits = ['猕猴桃', '草莓', '蓝莓', '无花果', '榴莲'];
-        const isHighOxalate = highOxalateFruits.includes(item.name);
-        
-        // 排除寒凉水果（妈妈经期禁忌）
-        const coldFruits = ['西瓜', '梨', '香蕉', '柚子', '柿子'];
-        const isColdFruit = coldFruits.includes(item.name);
-        
-        // 决定推荐原因
-        let reason = '';
-        let urgent = false;
-        let gram = 100; // 建议克数
-        
-        if (item.expireDay <= 3) {
-          urgent = true;
-          reason = `仅剩${item.expireDay}天保质期，优先吃掉`;
-        } else {
-          reason = `库存充足，适合日常补充`;
+      // 1. 筛选水果：按保质期排序，优先快过期，过滤爸爸禁忌和妈妈经期禁忌
+      let fruitPool = this.fruitList.filter(item => item.weight > 0);
+      fruitPool.sort((a, b) => a.expireDay - b.expireDay); // 快过期的排前面
+      
+      const highOxalateFruits = ['猕猴桃', '草莓', '蓝莓', '无花果', '榴莲'];
+      const coldFruits = ['西瓜', '梨', '香蕉', '柚子', '柿子'];
+      
+      let selectedFruit = null;
+      for (let fruit of fruitPool) {
+        let canEat = true;
+        // 如果爸爸在家，避开高草酸水果
+        if (hasDad && highOxalateFruits.includes(fruit.name)) {
+          // 如果是快过期的，勉强推荐，但加提示；否则跳过
+          if (fruit.expireDay > 3) { canEat = false; }
+        }
+        // 如果妈妈经期，避开寒凉水果
+        if (hasMom && momIsPeriod && coldFruits.includes(fruit.name)) {
+          if (fruit.expireDay > 3) { canEat = false; }
         }
         
-        // 加人忌口提示
-        if (hasDad && isHighOxalate) {
-          reason += `（爸爸肾结石，建议只吃几口，其他家人吃）`;
+        if (canEat) {
+          selectedFruit = fruit;
+          break;
         }
-        if (hasMom && momIsPeriod && isColdFruit) {
-          reason += `（妈妈经期，建议少吃或不吃）`;
+      }
+      
+      // 如果因为忌口跳过了所有快过期的，就选第一个能吃的，或者保底推荐第一个快过期的
+      if (!selectedFruit && fruitPool.length > 0) {
+        selectedFruit = fruitPool[0];
+      }
+      
+      if (selectedFruit) {
+        let reason = selectedFruit.expireDay <= 3 ? `仅剩${selectedFruit.expireDay}天，优先吃` : '日常补充维生素';
+        if (hasDad && highOxalateFruits.includes(selectedFruit.name) && selectedFruit.expireDay <= 3) {
+          reason += '（爸爸少吃）';
         }
-        
-        // 按在家人数建议分量
-        if (hasDad && hasMom && hasSister && hasBrother) gram = 200;
-        else if (hasDad && hasSister && hasBrother) gram = 150;
-        else gram = 100;
-        
+        if (hasMom && momIsPeriod && coldFruits.includes(selectedFruit.name) && selectedFruit.expireDay <= 3) {
+          reason += '（妈妈少吃）';
+        }
         recommendations.push({
-          name: item.name,
-          icon: item.icon || '🍎',
-          gram: gram,
+          name: selectedFruit.name,
+          icon: selectedFruit.icon || '🍎',
+          gram: 200,
           reason: reason,
-          urgent: urgent,
-          type: 'fruit'
+          urgent: selectedFruit.expireDay <= 3
         });
-      });
+      }
       
-      // 2. 再看零食库（主要推荐坚果和酸奶）
-      this.snackList.forEach(item => {
-        if (item.weight <= 0) return;
-        
-        let reason = '';
-        let urgent = false;
-        let gram = 15; // 坚果建议15g，酸奶100g
-        
-        const isNuts = ['核桃', '南瓜子', '花生', '杏仁', '腰果'].some(n => item.name.includes(n));
-        if (isNuts) {
-          gram = 15;
-          reason = '坚果含优质脂肪，每人每天一小把（约15g）';
-          // 弟弟5岁以下，坚果必须打粉
-          if (hasBrother) reason += '；弟弟需打成坚果粉拌酸奶';
-        } else {
-          gram = 100;
-          reason = '奶制品补充钙质和蛋白质';
+      // 2. 筛选零食：按保质期排序，优先快过期
+      let snackPool = this.snackList.filter(item => item.weight > 0);
+      snackPool.sort((a, b) => a.expireDay - b.expireDay);
+      
+      if (snackPool.length > 0) {
+        let selectedSnack = snackPool[0];
+        const isNuts = ['核桃', '南瓜子', '花生', '杏仁', '腰果'].some(n => selectedSnack.name.includes(n));
+        let reason = isNuts ? '优质脂肪（约15g）' : '补充钙和蛋白质';
+        if (hasBrother && isNuts) {
+          reason += '，弟弟需打粉';
         }
-        
-        if (item.expireDay <= 3) {
-          urgent = true;
-          reason = `仅剩${item.expireDay}天保质期，优先吃掉。` + reason;
-        }
-        
         recommendations.push({
-          name: item.name,
-          icon: item.icon || '🥜',
-          gram: gram,
+          name: selectedSnack.name,
+          icon: selectedSnack.icon || '🥜',
+          gram: isNuts ? 15 : 100,
           reason: reason,
-          urgent: urgent,
-          type: 'snack'
+          urgent: selectedSnack.expireDay <= 3
         });
-      });
+      }
       
-      // 排序：快过期的排前面
-      return recommendations.sort((a, b) => Number(b.urgent) - Number(a.urgent));
+      return recommendations;
     },
     
     todayMembers(){
