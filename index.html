@@ -372,54 +372,55 @@
           </div>
         </div>
         
-        <!-- 妈妈专属的休息日设置 -->
+        <!-- 妈妈专属的休息日设置（改为日期范围） -->
         <div v-if="memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
           <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 特殊休息日设置（不固定）</h4>
-          <p style="font-size: 12px; color: #888; margin-bottom: 10px;">添加后，妈妈在该日期自动变为“休息日”，全天在家吃。</p>
+          <p style="font-size: 12px; color: #888; margin-bottom: 10px;">添加后，妈妈在该时间段自动变为“休息日”，全天在家吃。</p>
           
-          <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
-            <input type="date" v-model="newMomRestDate" style="flex: 1; margin: 0; min-height: 44px;" />
-            <button class="btn small" style="height: 44px;" @click="addMomRestDay">添加</button>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="date" v-model="newMomRestForm.start" style="flex: 1; min-height: 44px;" />
+              <span>至</span>
+              <input type="date" v-model="newMomRestForm.end" style="flex: 1; min-height: 44px;" />
+            </div>
+            <button class="btn small" style="width: 100%;" @click="addMomRestDay">添加休息日</button>
           </div>
           
           <div v-if="momRestDays.length > 0" style="margin-top: 10px;">
             <label style="font-size: 13px; color: #555;">已设置的休息日（点击标签可删除）：</label>
             <div>
-              <span v-for="day in momRestDays" :key="day" class="rest-day-tag">
-                {{day}} <span @click="removeMomRestDay(day)">✕</span>
+              <span v-for="(h, idx) in momRestDays" :key="idx" class="rest-day-tag">
+                {{h.start === h.end ? h.start : h.start + ' 至 ' + h.end}} <span @click="removeMomRestDay(idx)">✕</span>
               </span>
             </div>
           </div>
           <div v-else class="empty-text" style="padding: 10px; font-size: 13px;">暂无特殊休息日</div>
         </div>
         
-        <!-- 孩子专属的节假日/请假设置 -->
+        <!-- 孩子专属的节假日/请假设置（改为日期范围） -->
         <div v-if="memberEditModal.key === 'sister' || memberEditModal.key === 'brother'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
           <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 节假日/请假设置（全天在家）</h4>
-          <p style="font-size: 12px; color: #888; margin-bottom: 10px;">添加后，该日期自动变为“休息日”，全天在家吃。</p>
+          <p style="font-size: 12px; color: #888; margin-bottom: 10px;">添加后，该时间段自动变为“休息日”，全天在家吃。</p>
           
-          <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 12px;">
-            <input type="date" v-model="newHolidayDate[memberEditModal.key]" style="flex: 1; margin: 0; min-height: 44px;" />
-            <button class="btn small" style="height: 44px;" @click="addHoliday(memberEditModal.key)">添加</button>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+            <input type="text" v-model="newHolidayForm[memberEditModal.key].name" placeholder="假期名称（如：暑假、请假）" style="width: 100%;" />
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="date" v-model="newHolidayForm[memberEditModal.key].start" style="flex: 1; min-height: 44px;" />
+              <span>至</span>
+              <input type="date" v-model="newHolidayForm[memberEditModal.key].end" style="flex: 1; min-height: 44px;" />
+            </div>
+            <button class="btn small" style="width: 100%;" @click="addHoliday(memberEditModal.key)">添加假期</button>
           </div>
           
-          <div v-if="memberEditModal.key === 'sister' && sisterHolidays.length > 0" style="margin-top: 10px;">
+          <div v-if="(memberEditModal.key === 'sister' && sisterHolidays.length > 0) || (memberEditModal.key === 'brother' && brotherHolidays.length > 0)" style="margin-top: 10px;">
             <label style="font-size: 13px; color: #555;">已设置的假期（点击标签可删除）：</label>
             <div>
-              <span v-for="day in sisterHolidays" :key="day" class="rest-day-tag">
-                {{day}} <span @click="removeHoliday('sister', day)">✕</span>
+              <span v-for="(h, idx) in (memberEditModal.key === 'sister' ? sisterHolidays : brotherHolidays)" :key="idx" class="rest-day-tag">
+                {{h.name}}：{{h.start}} 至 {{h.end}} <span @click="removeHoliday(memberEditModal.key, idx)">✕</span>
               </span>
             </div>
           </div>
-          <div v-if="memberEditModal.key === 'brother' && brotherHolidays.length > 0" style="margin-top: 10px;">
-            <label style="font-size: 13px; color: #555;">已设置的假期（点击标签可删除）：</label>
-            <div>
-              <span v-for="day in brotherHolidays" :key="day" class="rest-day-tag">
-                {{day}} <span @click="removeHoliday('brother', day)">✕</span>
-              </span>
-            </div>
-          </div>
-          <div v-if="(memberEditModal.key === 'sister' && sisterHolidays.length === 0) || (memberEditModal.key === 'brother' && brotherHolidays.length === 0)" class="empty-text" style="padding: 10px; font-size: 13px;">暂无特殊假期</div>
+          <div v-else class="empty-text" style="padding: 10px; font-size: 13px;">暂无特殊假期</div>
         </div>
         
       </div>
@@ -482,13 +483,16 @@ createApp({
           firstShift: 'morning',
         }
       },
-      // 妈妈不固定的休息日列表
-      momRestDays: ['2026-10-20'], 
-      newMomRestDate: '',
-      // 孩子各自的假期列表（示例：默认国庆）
-      sisterHolidays: ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07'],
-      brotherHolidays: ['2026-10-01', '2026-10-02', '2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07'],
-      newHolidayDate: { sister: '', brother: '' },
+      // 妈妈不固定的休息日列表（日期范围形式）
+      momRestDays: [{ start: '2026-10-20', end: '2026-10-20', name: '休息日' }], 
+      newMomRestForm: { start: '', end: '' },
+      // 孩子各自的假期列表（日期范围形式）
+      sisterHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
+      brotherHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
+      newHolidayForm: { 
+        sister: { name: '', start: '', end: '' }, 
+        brother: { name: '', start: '', end: '' } 
+      },
       memberData:{
         dad:{age:35, height:176, weight:90, schedule:"4天在家4天不在", health:"轻微脂肪肝，肾结石", taboo:"高草酸蔬菜需焯水，不吃内脏"},
         mom:{age:35, height:150, weight:50, schedule:"早班/下午班交替", health:"气血不足，二胎后大肚腩", taboo:"无"},
@@ -545,11 +549,10 @@ createApp({
       const dayOfWeek = targetDate.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
-      // 检查妈妈今天是否在特殊休息日列表中
-      const isMomRest = this.momRestDays.includes(targetDateStr);
-      // 检查孩子今天是否在假期列表中
-      const isSisterHoliday = this.sisterHolidays.includes(targetDateStr);
-      const isBrotherHoliday = this.brotherHolidays.includes(targetDateStr);
+      // 使用 some 和日期范围判断
+      const isMomRest = this.momRestDays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
+      const isSisterHoliday = this.sisterHolidays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
+      const isBrotherHoliday = this.brotherHolidays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
 
       const result = [];
 
@@ -636,42 +639,42 @@ createApp({
       const idx = arr.indexOf(word);
       if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); }
     },
-    // 妈妈休息日操作
+    // 妈妈休息日操作（日期范围）
     addMomRestDay() {
-      if (!this.newMomRestDate) {
-        alert("请先选择休息日日期"); return;
+      const form = this.newMomRestForm;
+      if (!form.start || !form.end) {
+        alert("请选择开始和结束日期"); return;
       }
-      if (this.momRestDays.includes(this.newMomRestDate)) {
-        alert("该日期已经是休息日了"); return;
+      if (form.start > form.end) {
+        alert("开始日期不能晚于结束日期"); return;
       }
-      this.momRestDays.push(this.newMomRestDate);
-      this.newMomRestDate = ''; 
+      this.momRestDays.push({ name: '休息日', start: form.start, end: form.end });
+      this.newMomRestForm = { start: '', end: '' };
     },
-    removeMomRestDay(day) {
-      const idx = this.momRestDays.indexOf(day);
-      if (idx > -1) {
-        this.momRestDays.splice(idx, 1);
-      }
+    removeMomRestDay(index) {
+      this.momRestDays.splice(index, 1);
     },
-    // 孩子假期操作
+    // 孩子假期操作（日期范围）
     addHoliday(person) {
-      const dateVal = this.newHolidayDate[person];
-      if (!dateVal) {
-        alert("请先选择日期"); return;
+      const form = this.newHolidayForm[person];
+      if (!form.start || !form.end) {
+        alert("请选择开始和结束日期"); return;
+      }
+      if (form.start > form.end) {
+        alert("开始日期不能晚于结束日期"); return;
       }
       const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
-      if (targetArray.includes(dateVal)) {
-        alert("该日期已经是假期了"); return;
-      }
-      targetArray.push(dateVal);
-      this.newHolidayDate[person] = ''; 
+      targetArray.push({
+        name: form.name || '假期/请假',
+        start: form.start,
+        end: form.end
+      });
+      // 重置表单
+      this.newHolidayForm[person] = { name: '', start: '', end: '' };
     },
-    removeHoliday(person, day) {
+    removeHoliday(person, index) {
       const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
-      const idx = targetArray.indexOf(day);
-      if (idx > -1) {
-        targetArray.splice(idx, 1);
-      }
+      targetArray.splice(index, 1);
     },
     getMemberName(key){
       const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' };
