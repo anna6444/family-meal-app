@@ -842,7 +842,6 @@
     <div class="modal-box">
       <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
       <div style="width:100%;height:280px;margin-top:10px;position: relative;">
-        <!-- 修复：使用唯一的 canvas ref -->
         <canvas ref="chartCanvasRef" id="trendChartCanvas"></canvas>
       </div>
       <button class="btn secondary" style="width:100%;margin-top:16px" @click="closeChartModal">关闭</button>
@@ -1141,7 +1140,7 @@ createApp({
       if (!key) { alert("请输入有效的 Key"); return; }
       this.apiKey = key;
       localStorage.setItem('ai_api_key', this.apiKey);
-      alert("✅ API Key 保存成功！下次打开就不需要再输了。");
+      alert("✅ API Key 保存成功！");
     },
 
     clearKey() {
@@ -1170,42 +1169,56 @@ createApp({
 【常用厨具】电饭煲、陶瓷锅、微波炉、空气炸锅。
 【回答要求】格式清晰，包含食材和克数、做法步骤、分餐建议。字数300字以内，不要啰嗦。`;
 
-      try {
-        const targetUrl = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
-        // 保留代理，解决跨域
-        const proxyUrl = "https://corsproxy.io/?url=";
-        const finalUrl = proxyUrl + encodeURIComponent(targetUrl);
+      const targetUrl = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+      
+      // 改用更稳定的海外代理节点，并加入重试
+      const proxyList = [
+        "https://api.codetabs.com/v1/proxy?quest=",
+        "https://corsproxy.io/?url="
+      ];
 
-        const response = await fetch(finalUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${this.apiKey}`
-          },
-          body: JSON.stringify({
-            model: "glm-4-flash",
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userText }
-            ],
-            temperature: 0.7
-          })
-        });
+      let success = false;
+      let errorMsg = "";
 
-        if (!response.ok) {
-           // 如果 403，可能是实名认证还没同步完，或者模型权限未开通
-           throw new Error(`请求失败，状态码: ${response.status}。请确认已实名认证并开通了 glm-4-flash 模型。`);
+      for (let proxy of proxyList) {
+        try {
+          const finalUrl = proxy + encodeURIComponent(targetUrl);
+          const response = await fetch(finalUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${this.apiKey}`
+            },
+            body: JSON.stringify({
+              model: "glm-4-flash",
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userText }
+              ],
+              temperature: 0.7
+            })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            const aiReply = data.choices[0].message.content;
+            this.chatHistory.push({ role: 'assistant', content: aiReply });
+            success = true;
+            break;
+          } else {
+            errorMsg = `请求失败，状态码: ${response.status}`;
+          }
+        } catch (e) {
+          errorMsg = e.message;
         }
-
-        const data = await response.json();
-        const aiReply = data.choices[0].message.content;
-        this.chatHistory.push({ role: 'assistant', content: aiReply });
-      } catch (error) {
-        this.chatHistory.push({ role: 'assistant', content: `出错了：${error.message}。` });
-      } finally {
-        this.isTyping = false;
-        this.scrollToBottom();
       }
+
+      if (!success) {
+        this.chatHistory.push({ role: 'assistant', content: `出错了：${errorMsg}。可能是免费代理服务不稳定，请稍后再试。` });
+      }
+      
+      this.isTyping = false;
+      this.scrollToBottom();
     },
 
     scrollToBottom() {
@@ -1324,7 +1337,7 @@ createApp({
         this.weekMenuData.next = newWeekMenu;
         this.recalculateShoppingList();
         this.generatePrepTasks();
-        if (!isInit) alert("✅ 下周食谱已生成！\n采购清单已同步更新。");
+        if (!isInit) alert("✅ 下周食谱已生成！");
       }
     },
 
@@ -1562,18 +1575,12 @@ createApp({
       this.chartModal.title = nameMap[personKey];
       this.chartModal.show = true;
       
-      // 强制延迟 200ms，等待 DOM 完全挂载完毕
-      setTimeout(() => {
-        this.renderSingleChart(personKey);
-      }, 200);
+      setTimeout(() => { this.renderSingleChart(personKey); }, 200);
     },
     
     closeChartModal(){
       this.chartModal.show = false;
-      if(this.currentChart) {
-        this.currentChart.destroy();
-        this.currentChart = null;
-      }
+      if(this.currentChart) { this.currentChart.destroy(); this.currentChart = null; }
     },
     
     renderSingleChart(person){
@@ -1581,11 +1588,7 @@ createApp({
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       
-      // 防御性销毁
-      if(this.currentChart) {
-        this.currentChart.destroy();
-        this.currentChart = null;
-      }
+      if(this.currentChart) { this.currentChart.destroy(); this.currentChart = null; }
       
       const data = this.historyData[person];
       if(!data || !data.labels) return;
@@ -1611,7 +1614,6 @@ createApp({
           }
         };
       } else {
-        // 强制转换为数字
         const weightData = data.weight.map(Number);
         const heightData = data.height.map(Number);
         
