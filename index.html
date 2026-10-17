@@ -35,6 +35,7 @@
     .btn.small { padding: 9px 14px; font-size: 14px; border-radius: 12px; }
     .tag { display: inline-block; background: #f4ece3; color: #b06237; border-radius: 20px; padding: 5px 10px; font-size: 13px; margin: 3px; }
     .tag.green { background: #eaf6ec; color: #2b703b; }
+    .tag.blue { background: #e6f0fa; color: #2b579b; }
     .tag.orange { background: #fff1e6; color: #c46838; }
     .tag.red { background: #fce8e8; color: #d14a4a; }
 
@@ -108,8 +109,13 @@
     
     .expire-warning { color: #d14a4a; font-size: 12px; margin-left: 6px; font-weight: 600; }
     
-    /* 替换按钮样式 */
     .replace-btn { background: #f0f0f0; color: #666; border: none; border-radius: 8px; padding: 4px 8px; font-size: 12px; cursor: pointer; margin-left: 8px; }
+    
+    /* 工具和时间标签 */
+    .tool-time-row { display: flex; gap: 10px; margin-top: 8px; }
+    .tool-tag, .time-tag { font-size: 12px; padding: 4px 8px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; }
+    .tool-tag { background: #e6f0fa; color: #2b579b; }
+    .time-tag { background: #fdf3d8; color: #b6862c; }
   </style>
 </head>
 <body>
@@ -165,10 +171,18 @@
             <div class="menu-preview-row"><span>👨‍👩‍👧‍👦 全家：</span>{{ homeCurrentDayDishes.dinner.map(d => d.name).join('、') || '暂无安排' }}</div>
             <div class="menu-preview-row" style="color:#c46838"><span>👦 弟弟专属：</span>肉丸/菜肴中混入菠菜碎+胡萝卜碎（隐形蔬菜）</div>
           </div>
+          
+          <!-- 汤羹/加餐 -->
+          <div class="menu-preview-section" v-if="homeCurrentDayDishes.soup && homeCurrentDayDishes.soup.length > 0">
+            <div class="menu-preview-title">🍲 炖汤/甜品</div>
+            <div class="menu-preview-row" v-for="soup in homeCurrentDayDishes.soup" :key="soup.id">
+              <span>👉 {{soup.name}}（{{soup.tool}} {{soup.time}}）</span>
+            </div>
+          </div>
         </div>
         
         <div v-else class="empty-text">
-          暂无菜单数据，请先到「周菜谱」点击“一键生成下周食谱”。
+          暂无菜单数据，请先到「周菜谱」点击“一键生成”食谱。
         </div>
       </div>
 
@@ -207,7 +221,10 @@
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
         <h2>{{ viewWeekMode === 'current' ? '本周菜单' : '下周菜单' }}</h2>
-        <button class="btn small" @click="generateNextWeekPlan" v-if="viewWeekMode === 'next'">🪄 一键生成</button>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn small secondary" @click="openAddRecipeModal">➕ 添加菜谱</button>
+          <button class="btn small" @click="generateWeekPlan(viewWeekMode)">🪄 一键生成</button>
+        </div>
       </div>
       
       <!-- 日期选择器 -->
@@ -231,14 +248,18 @@
             </div>
             <span class="tag green">{{dish.tag}}</span>
           </div>
-          <div class="card-subtitle">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+          <div class="tool-time-row">
+            <span class="tool-tag">🛠️ {{dish.tool}}</span>
+            <span class="time-tag">⏱️ {{dish.time}}</span>
+          </div>
+          <div class="card-subtitle" style="margin-top: 10px;">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
           
           <div class="portion-box" v-if="dish.portions">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议（克数）</div>
-            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}g（减脂/低草酸）</span></div>
-            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}g（补气血/控糖）</span></div>
-            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}g（长高/避激素）</span></div>
-            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}g（隐藏蔬菜/防呛噎）</span></div>
+            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}（减脂/低草酸）</span></div>
+            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}（补气血/控糖）</span></div>
+            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}（长高/避激素）</span></div>
+            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}（隐藏蔬菜/防呛噎）</span></div>
           </div>
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;">
@@ -268,14 +289,18 @@
             </div>
             <span class="tag green">{{dish.tag}}</span>
           </div>
-          <div class="card-subtitle">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+          <div class="tool-time-row">
+            <span class="tool-tag">🛠️ {{dish.tool}}</span>
+            <span class="time-tag">⏱️ {{dish.time}}</span>
+          </div>
+          <div class="card-subtitle" style="margin-top: 10px;">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
           
           <div class="portion-box" v-if="dish.portions">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议（克数）</div>
-            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}g（减脂/低草酸）</span></div>
-            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}g（补气血/控糖）</span></div>
-            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}g（长高/避激素）</span></div>
-            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}g（隐藏蔬菜/防呛噎）</span></div>
+            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}（减脂/低草酸）</span></div>
+            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}（补气血/控糖）</span></div>
+            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}（长高/避激素）</span></div>
+            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}（隐藏蔬菜/防呛噎）</span></div>
           </div>
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;">
@@ -305,14 +330,18 @@
             </div>
             <span class="tag green">{{dish.tag}}</span>
           </div>
-          <div class="card-subtitle">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+          <div class="tool-time-row">
+            <span class="tool-tag">🛠️ {{dish.tool}}</span>
+            <span class="time-tag">⏱️ {{dish.time}}</span>
+          </div>
+          <div class="card-subtitle" style="margin-top: 10px;">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
           
           <div class="portion-box" v-if="dish.portions">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议（克数）</div>
-            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}g（减脂/低草酸）</span></div>
-            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}g（补气血/控糖）</span></div>
-            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}g（长高/避激素）</span></div>
-            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}g（隐藏蔬菜/防呛噎）</span></div>
+            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}（减脂/低草酸）</span></div>
+            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}（补气血/控糖）</span></div>
+            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}（长高/避激素）</span></div>
+            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}（隐藏蔬菜/防呛噎）</span></div>
           </div>
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;">
@@ -328,6 +357,34 @@
             <div class="feedback-btn" :class="{selected: dish.feedback === 'love'}" @click="setDishFeedback(dish, 'love')">😋 爱吃</div>
             <div class="feedback-btn" :class="{selected: dish.feedback === 'ok'}" @click="setDishFeedback(dish, 'ok')">🙂 一般</div>
             <div class="feedback-btn" :class="{selected: dish.feedback === 'dislike'}" @click="setDishFeedback(dish, 'dislike')">😐 不爱吃</div>
+          </div>
+        </div>
+        
+        <!-- 汤羹/甜品 -->
+        <div class="meal-title">🍲 炖汤/甜品</div>
+        <div v-if="!currentDayDishes.soup || currentDayDishes.soup.length === 0" class="empty-text" style="padding: 10px;">暂无汤羹安排</div>
+        <div v-for="(dish, idx) in currentDayDishes.soup" :key="dish.id" class="dish-card">
+          <div class="dish-header">
+            <div>
+              <b>{{dish.name}}</b>
+              <button class="replace-btn" @click="openReplaceModal('soup', idx)">🔄 替换</button>
+            </div>
+            <span class="tag blue">{{dish.tag}}</span>
+          </div>
+          <div class="tool-time-row">
+            <span class="tool-tag">🛠️ {{dish.tool}}</span>
+            <span class="time-tag">⏱️ {{dish.time}}</span>
+          </div>
+          <div class="card-subtitle" style="margin-top: 10px;">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+          
+          <div style="font-size:14px;line-height:1.7;margin-top:8px;">
+            <b>小白做法：</b><br/>
+            <span v-for="(step, sIdx) in dish.steps" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
+          </div>
+          <div style="margin-top:14px; display: flex; gap: 10px;">
+            <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
+              {{dish.completed ? '✅ 已完成制作' : '确认制作完成'}}
+            </button>
           </div>
         </div>
       </div>
@@ -515,6 +572,48 @@
     </div>
   </div>
 
+  <!-- 自定义添加菜谱弹窗 -->
+  <div class="modal-mask" v-if="addRecipeModal.show" @click.self="addRecipeModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">添加自定义菜谱</h3>
+      <div class="input-wrap">
+        <label>菜名</label>
+        <input v-model="addRecipeModal.name" placeholder="例如：小红书同款番茄肥牛" />
+      </div>
+      <div class="input-wrap">
+        <label>添加到哪一餐</label>
+        <select v-model="addRecipeModal.type">
+          <option value="breakfast">早餐</option>
+          <option value="lunch">午餐</option>
+          <option value="dinner">晚餐</option>
+          <option value="soup">炖汤/甜品</option>
+        </select>
+      </div>
+      <div class="input-wrap" style="display:flex;gap:10px;">
+        <div style="flex:1">
+          <label>使用工具</label>
+          <input v-model="addRecipeModal.tool" placeholder="如：空气炸锅" />
+        </div>
+        <div style="flex:1">
+          <label>预计耗时</label>
+          <input v-model="addRecipeModal.time" placeholder="如：20分钟" />
+        </div>
+      </div>
+      <div class="input-wrap">
+        <label>核心食材 (用逗号分隔，可不写克数)</label>
+        <input v-model="addRecipeModal.ingredientsText" placeholder="如：肥牛卷, 番茄, 金针菇" />
+      </div>
+      <div class="input-wrap">
+        <label>做法步骤 (直接复制粘贴文字)</label>
+        <textarea v-model="addRecipeModal.stepsText" rows="3" placeholder="1. 肥牛焯水..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="addRecipeModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveCustomRecipe">保存菜谱</button>
+      </div>
+    </div>
+  </div>
+
   <!-- 替换菜品弹窗 -->
   <div class="modal-mask" v-if="replaceModal.show" @click.self="replaceModal.show=false">
     <div class="modal-box">
@@ -525,7 +624,7 @@
              style="border: 1px solid #eee; padding: 12px; border-radius: 12px; cursor: pointer;"
              @click="doReplaceDish(recipe)">
           <div style="font-weight: 600; color: #c46838; margin-bottom: 4px;">{{recipe.name}}</div>
-          <div style="font-size: 13px; color: #888;">{{recipe.tag}}</div>
+          <div style="font-size: 13px; color: #888;">{{recipe.tag}} | {{recipe.tool}}</div>
         </div>
       </div>
       <button class="btn secondary" style="width:100%;margin-top:16px" @click="replaceModal.show=false">取消</button>
@@ -704,7 +803,7 @@ createApp({
       view: 'home',
       homeDate: new Date().toISOString().split('T')[0],
       selDateIdx: 0,
-      viewWeekMode: 'current', // 'current' 或 'next'
+      viewWeekMode: 'current',
       ingTab: 'raw',
       searchIng: '',
       scheduleConfig: {
@@ -731,7 +830,7 @@ createApp({
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
       addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
       
-      // 替换菜品弹窗控制
+      addRecipeModal: { show: false, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '' },
       replaceModal: { show: false, mealType: '', dishIdx: -1, currentName: '' },
 
       historyData: {
@@ -768,57 +867,52 @@ createApp({
         { name: "虾滑", weight: 200, expireDay: 90 }
       ],
       
-      // 分成本周与下周
       weekMenuData: {
         current: [
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] }
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] }
         ],
         next: [
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] },
-          { breakfast: [], lunch: [], dinner: [] }
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] },
+          { breakfast: [], lunch: [], dinner: [], soup: [] }
         ]
       },
       
       recipeLibrary: {
         breakfast: [
-          { name: "燕麦牛奶粥+水煮蛋", tag: "碳水·高钙·优质蛋白", ingredients: [{name:'燕麦', weight:200}, {name:'牛奶', weight:1000}, {name:'鸡蛋', weight:300}], steps: ['燕麦加水煮开', '倒入牛奶，小火煮3分钟', '鸡蛋冷水下锅，水开煮8分钟'], portions: { dad: '燕麦40g+奶250ml+蛋1个', mom: '燕麦40g+奶250ml+蛋1个', sister: '燕麦40g+奶250ml+蛋1个', brother: '燕麦30g+奶250ml+蛋1个' } },
-          { name: "全麦面包+无糖酸奶+坚果", tag: "快手早餐·优质脂肪", ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], steps: ['面包加热', '搭配酸奶', '坚果碾碎撒入'], portions: { dad: '面包2片+酸奶100g+核桃10g', mom: '面包2片+酸奶100g+核桃10g', sister: '面包2片+酸奶100g+核桃10g', brother: '面包1片+酸奶100g+核桃粉5g' } },
-          { name: "红薯小米粥+蒸蛋羹", tag: "养胃·易消化", ingredients: [{name:'红薯', weight:300}, {name:'小米', weight:100}, {name:'鸡蛋', weight:200}], steps: ['红薯切块和小米同煮', '鸡蛋打散加水蒸10分钟'], portions: { dad: '粥1碗+蛋羹1个', mom: '粥1碗+蛋羹1个', sister: '粥1碗+蛋羹1个', brother: '粥1碗+蛋羹1个' } }
+          { name: "燕麦牛奶粥+水煮蛋", tag: "碳水·高钙", tool: "电饭煲/奶锅", time: "10分钟", ingredients: [{name:'燕麦', weight:200}, {name:'牛奶', weight:1000}, {name:'鸡蛋', weight:300}], steps: ['燕麦加水煮开', '倒入牛奶小火煮3分钟', '鸡蛋冷水下锅煮8分钟'], portions: { dad: '燕麦40g+奶250ml+蛋1个', mom: '燕麦40g+奶250ml+蛋1个', sister: '燕麦40g+奶250ml+蛋1个', brother: '燕麦30g+奶250ml+蛋1个' } },
+          { name: "全麦面包+无糖酸奶+坚果", tag: "快手·优质脂肪", tool ": "微波炉", time: "5分钟", ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], steps: ['面包微波加热30秒', '搭配酸奶', '坚果碾碎撒入'], portions: { dad: '面包2片+酸奶100g+核桃10g', mom: '面包2片+酸奶100g+核桃10g', sister: '面包2片+酸奶100g+核桃10g', brother: '面包1片+酸奶100g+核桃粉5g' } }
         ],
         lunch: [
-          { name: "番茄炖瘦牛腩+杂粮饭+清炒西兰花", tag: "补铁·高蛋白·膳食纤维", ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:600}, {name:'杂粮米', weight:300}, {name:'西兰花', weight:300}, {name:'姜', weight:10}], steps: ['牛腩焯水，番茄切块，一起炖煮40分钟', '杂粮饭煮熟', '西兰花焯水后清炒'], portions: { dad: '牛腩80g+饭100g+菜150g', mom: '牛腩100g+饭80g+菜150g', sister: '牛腩60g+饭100g+菜100g', brother: '牛腩50g+饭80g+菜50g(切碎)' } },
-          { name: "清蒸鲈鱼+菌菇汤+炒青菜", tag: "优质蛋白·低脂·维生素", ingredients: [{name:'鲈鱼', weight:700}, {name:'菌菇', weight:200}, {name:'青菜', weight:300}, {name:'姜', weight:15}], steps: ['鱼洗净，水开蒸8分钟', '菌菇煮汤', '青菜蒜蓉炒'], portions: { dad: '鱼100g+菜150g+汤1碗', mom: '鱼100g+菜150g+汤1碗', sister: '鱼80g+菜100g+汤1碗', brother: '鱼50g+菜50g+汤1碗' } }
+          { name: "番茄炖瘦牛腩+杂粮饭", tag: "补铁·高蛋白", tool: "陶瓷锅/电饭煲", time: "50分钟", ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:600}, {name:'杂粮米', weight:300}], steps: ['牛腩焯水，番茄切块', '入陶瓷锅炖煮40分钟', '电饭煲提前煮好杂粮饭'], portions: { dad: '牛腩80g+饭100g', mom: '牛腩100g+饭80g', sister: '牛腩60g+饭100g', brother: '牛腩50g+饭80g(切碎)' } },
+          { name: "清蒸鲈鱼+清炒西兰花", tag: "优质蛋白·低脂", tool: "蒸锅/炒锅", time: "20分钟", ingredients: [{name:'鲈鱼', weight:700}, {name:'西兰花', weight:300}], steps: ['鱼洗净，水开蒸8分钟', '西兰花焯水后清炒'], portions: { dad: '鱼100g+菜150g', mom: '鱼100g+菜150g', sister: '鱼80g+菜100g', brother: '鱼50g+菜50g' } }
         ],
         dinner: [
-          { name: "蔬菜鸡肉丸子+娃娃菜豆腐汤+蒸玉米", tag: "隐形蔬菜·清淡好消化", ingredients: [{name:'鸡肉丸子', weight:200}, {name:'娃娃菜', weight:150}, {name:'嫩豆腐', weight:100}, {name:'玉米', weight:400}], steps: ['丸子煮5分钟', '加入娃娃菜豆腐煮3分钟', '玉米蒸15分钟'], portions: { dad: '丸子100g+菜150g+玉米半根', mom: '丸子80g+菜150g+玉米半根', sister: '丸子80g+菜100g+玉米1根', brother: '丸子50g+菜50g+玉米半根' } },
-          { name: "番茄鸡蛋面+清炒时蔬", tag: "快手·营养均衡", ingredients: [{name:'番茄', weight:300}, {name:'鸡蛋', weight:150}, {name:'面条', weight:300}, {name:'时蔬', weight:200}], steps: ['番茄炒出汁', '加水烧开，下面条和鸡蛋', '时蔬清炒'], portions: { dad: '面1碗+菜100g', mom: '面1碗+菜100g', sister: '面1碗+菜80g', brother: '面半碗+菜50g' } }
+          { name: "空气炸锅鸡翅+娃娃菜豆腐汤", tag: "少油·高蛋白", tool: "空气炸锅/炒锅", time: "25分钟", ingredients: [{name:'鸡翅', weight:500}, {name:'娃娃菜', weight:150}, {name:'嫩豆腐', weight:100}], steps: ['鸡翅腌制后放入空气炸锅200度15分钟', '娃娃菜豆腐煮汤'], portions: { dad: '鸡翅2个+汤1碗', mom: '鸡翅2个+汤1碗', sister: '鸡翅1个+汤1碗', brother: '鸡翅1个(去皮)+汤1碗' } },
+          { name: "番茄鸡蛋面+清炒时蔬", tag: "快手·营养均衡", tool: "炒锅", time: "15分钟", ingredients: [{name:'番茄', weight:300}, {name:'鸡蛋', weight:150}, {name:'面条', weight:300}, {name:'时蔬', weight:200}], steps: ['番茄炒出汁', '加水烧开，下面条和鸡蛋', '时蔬清炒'], portions: { dad: '面1碗+菜100g', mom: '面1碗+菜100g', sister: '面1碗+菜80g', brother: '面半碗+菜50g' } }
+        ],
+        soup: [
+          { name: "妈妈专属五红汤", tag: "补气血·暖宫", tool: "电饭煲/陶瓷锅", time: "40分钟", ingredients: [{name:'红枣', weight:30}, {name:'红豆', weight:50}, {name:'红皮花生', weight:30}, {name:'枸杞', weight:10}], steps: ['红豆提前泡2小时', '所有食材放入电饭煲，加水至最高水位', '按煮粥键炖煮40分钟'], portions: {} },
+          { name: "儿童冰糖炖雪梨", tag: "润肺止咳·清甜", tool: "陶瓷锅/蒸锅", time: "30分钟", ingredients: [{name:'雪梨', weight:200}, {name:'冰糖', weight:10}], steps: ['雪梨去核切块', '放入陶瓷锅，加冰糖和少许水', '小火慢炖30分钟'], portions: {} }
         ]
       },
       
       shoppingList: [
-        { id: 1, name: "全麦面包", weight: 600, category: "weekend", bought: false },
-        { id: 2, name: "瘦牛腩", weight: 1500, category: "weekend", bought: false },
-        { id: 3, name: "番茄", weight: 2400, category: "daily", bought: false },
-        { id: 4, name: "杂粮米", weight: 900, category: "weekend", bought: false },
-        { id: 5, name: "西兰花", weight: 720, category: "daily", bought: false },
-        { id: 6, name: "姜", weight: 90, category: "weekend", bought: false },
-        { id: 7, name: "鸡肉丸子", weight: 600, category: "weekend", bought: false },
-        { id: 8, name: "娃娃菜", weight: 250, category: "daily", bought: false }
+        { id: 1, name:全麦面包", weight: 600, category: "weekend", bought: false },
+        { id: 2, name: "瘦牛腩", weight: 1500, category: "weekend", bought: false }
       ],
       prepTasks: [
-        { title: "制作一批蔬菜鸡肉丸子", desc: "将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟后冷冻保存。" },
-        { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜等洗净焯水，沥干冷藏。" }
+        { title: "制作一批蔬菜鸡肉丸子", desc: "将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟后冷冻保存。" }
       ],
       
       thisWeekDates: [],
@@ -827,6 +921,9 @@ createApp({
   },
   created() {
     this.getCurrentWeekDates();
+    this.loadCustomRecipes(); // 加载本地保存的自定义菜谱
+    // 默认给本周生成一点数据，避免空白
+    this.generateWeekPlan('current', true);
   },
   computed: {
     filteredRawList(){
@@ -859,7 +956,6 @@ createApp({
       return this.shoppingList.some(i => !i.bought);
     },
     
-    // 当前显示哪一周的日期列表
     displayWeekDates() {
       return this.viewWeekMode === 'current' ? this.thisWeekDates : this.nextWeekDates;
     },
@@ -869,19 +965,16 @@ createApp({
       return today && today.status.includes('早班');
     },
     
-    // 获取需要替换时的同类菜谱列表
     availableReplacements() {
       if (!this.replaceModal.mealType) return [];
       const list = this.recipeLibrary[this.replaceModal.mealType];
       return list.filter(r => r.name !== this.replaceModal.currentName);
     },
     
-    // 首页菜单匹配
     homeCurrentDayDishes() {
       if (!this.homeDate) return null;
       const targetDate = new Date(this.homeDate);
       
-      // 判断选中的日期是在本周还是下周
       const tDateStr = this.homeDate;
       const isNextWeek = this.nextWeekDates.some(d => d.dateStr === tDateStr);
       
@@ -892,10 +985,9 @@ createApp({
       return weekMenu[idx];
     },
     
-    // 周菜谱当前选中天
     currentDayDishes() {
       const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
-      return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [] };
+      return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [], soup: [] };
     },
     
     dailySnackRecommendations(){
@@ -997,6 +1089,17 @@ createApp({
     }
   },
   methods:{
+    // 从本地加载自定义菜谱
+    loadCustomRecipes() {
+      const saved = localStorage.getItem('customRecipes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        Object.keys(parsed).forEach(key => {
+          this.recipeLibrary[key].push(...parsed[key]);
+        });
+      }
+    },
+
     getCurrentWeekDates() {
       let now = new Date();
       let day = now.getDay() || 7;
@@ -1027,54 +1130,99 @@ createApp({
       this.nextWeekDates = nextWeek;
     },
 
-    calcBMI(heightCm, weightKg){ if(!heightCm || !weightKg) return "-"; const h = heightCm / 100; return (weightKg / (h*h)).toFixed(1); },
-    toggleTaboo(person, word){ const arr = this.memberTaboo[person]; const idx = arr.indexOf(word); if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); } },
-    
-    getMealName(type) {
-      return type === 'breakfast' ? '早餐' : (type === 'lunch' ? '午餐' : '晚餐');
+    // 打开添加自定义菜谱
+    openAddRecipeModal() {
+      this.addRecipeModal = { show: true, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '' };
     },
 
-    // 打开替换弹窗
-    openReplaceModal(mealType, dishIdx) {
-      const dish = this.currentDayDishes[mealType][dishIdx];
-      this.replaceModal = {
-        show: true,
-        mealType: mealType,
-        dishIdx: dishIdx,
-        currentName: dish.name
+    // 保存自定义菜谱并持久化到 localStorage
+    saveCustomRecipe() {
+      const { name, type, tool, time, ingredientsText, stepsText } = this.addRecipeModal;
+      if (!name || !tool || !time) { alert("请填写菜名、工具和时间"); return; }
+
+      // 简单把逗号分隔的食材转换为对象
+      const ingredients = ingredientsText.split(/[,，]/).map(s => {
+        let text = s.trim();
+        return { name: text, weight: 100 }; // 默认假设100g，方便后续计算
+      }).filter(i => i.name);
+
+      // 把按行分隔的步骤转换为数组
+      const steps = stepsText.split('\n').map(s => s.trim()).filter(s => s);
+
+      const newRecipe = {
+        name, tag: '自定义', tool, time,
+        ingredients: ingredients.length ? ingredients : [{name:'自定义食材', weight:100}],
+        steps: steps.length ? steps : ['按自己习惯操作'],
+        portions: {} // 自定义菜谱暂不细分人群份量
       };
+
+      // 加入内存
+      this.recipeLibrary[type].push(newRecipe);
+
+      // 存入本地缓存
+      let customRecipes = JSON.parse(localStorage.getItem('customRecipes') || '{"breakfast":[],"lunch":[],"dinner":[],"soup":[]}');
+      customRecipes[type].push(newRecipe);
+      localStorage.setItem('customRecipes', JSON.stringify(customRecipes));
+
+      this.addRecipeModal.show = false;
+      alert(`✅ 【${name}】已加入菜谱库，以后一键生成和替换时都能看到啦！`);
     },
 
-    // 执行替换
-    doReplaceDish(newRecipe) {
-      const { mealType, dishIdx } = this.replaceModal;
-      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
-      const dayMenu = weekMenu[this.selDateIdx];
+    // 生成食谱（支持生成本周或下周）
+    generateWeekPlan(mode, isInit = false) {
+      let idCounter = 1;
+      let newWeekMenu = [];
       
-      // 替换为新的菜谱数据
-      dayMenu[mealType][dishIdx] = {
-        id: Date.now(), // 生成新ID
-        name: newRecipe.name,
-        tag: newRecipe.tag,
-        ingredients: newRecipe.ingredients,
-        steps: newRecipe.steps,
-        portions: newRecipe.portions,
-        completed: false,
-        feedback: ''
-      };
+      for (let day = 0; day < 7; day++) {
+        let dayMenu = { breakfast: [], lunch: [], dinner: [], soup: [] };
+        
+        // 早餐1个
+        let bfRecipe = this.recipeLibrary.breakfast[Math.floor(Math.random() * this.recipeLibrary.breakfast.length)];
+        dayMenu.breakfast.push({ id: idCounter++, ...bfRecipe, completed: false, feedback: '' });
+        
+        // 午餐1个
+        let lunchRecipe = this.recipeLibrary.lunch[Math.floor(Math.random() * this.recipeLibrary.lunch.length)];
+        dayMenu.lunch.push({ id: idCounter++, ...lunchRecipe, completed: false, feedback: '' });
+        
+        // 晚餐1个
+        let dinnerRecipe = this.recipeLibrary.dinner[Math.floor(Math.random() * this.recipeLibrary.dinner.length)];
+        dayMenu.dinner.push({ id: idCounter++, ...dinnerRecipe, completed: false, feedback: '' });
+        
+        // 汤羹：每周二、四、六安排
+        if ([1, 3, 5].includes(day)) {
+          let soupRecipe = this.recipeLibrary.soup[Math.floor(Math.random() * this.recipeLibrary.soup.length)];
+          dayMenu.soup.push({ id: idCounter++, ...soupRecipe, completed: false, feedback: '' });
+        }
+        
+        newWeekMenu.push(dayMenu);
+      }
       
-      this.replaceModal.show = false;
-      this.recalculateShoppingList(); // 替换后重新计算采购清单
-      alert(`已替换为【${newRecipe.name}】，采购清单已同步更新！`);
+      if (mode === 'current') {
+        this.weekMenuData.current = newWeekMenu;
+        if (!isInit) alert("✅ 本周食谱已重新生成！");
+      } else {
+        this.weekMenuData.next = newWeekMenu;
+        this.recalculateShoppingList(); // 只有生下周食谱才重新算采购
+        this.generatePrepTasks(); // 生下周任务
+        if (!isInit) alert("✅ 下周食谱已生成！\n采购清单已同步更新，请到「待操作」查看。");
+      }
     },
 
-    // 提取重新计算采购清单的方法，方便替换时调用
+    generatePrepTasks() {
+      this.prepTasks = [
+        { title: "制作一批蔬菜肉丸/肉饼", desc: "根据食谱，将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟或煎熟后冷冻，工作日可直接拿出来热。" },
+        { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜、生菜等洗净，西兰花菠菜需焯水30秒，沥干冷藏。" },
+        { title: "分装杂粮饭", desc: "煮一大锅杂粮饭，按每顿分量分装冷冻，吃之前微波炉加热即可。" },
+        { title: "处理坚果（弟弟专用）", desc: "将核桃、南瓜子等打成粉末，装入密封罐冷藏，每天拌入弟弟的酸奶中。" }
+      ];
+    },
+
     recalculateShoppingList() {
       let neededMap = {};
-      const nextMenu = this.weekMenuData.next; // 采购清单通常针对下周
+      const nextMenu = this.weekMenuData.next;
 
       nextMenu.forEach(dayMenu => {
-        ['breakfast', 'lunch', 'dinner'].forEach(meal => {
+        ['breakfast', 'lunch', 'dinner', 'soup'].forEach(meal => {
           dayMenu[meal].forEach(dish => {
             dish.ingredients.forEach(ing => {
               if (!neededMap[ing.name]) neededMap[ing.name] = 0;
@@ -1098,7 +1246,7 @@ createApp({
         
         if (buyWeight > 0) {
           let category = 'weekend';
-          const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬'];
+          const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬', '雪梨'];
           if (dailyKeywords.some(k => name.includes(k))) {
             category = 'daily';
           }
@@ -1114,45 +1262,30 @@ createApp({
       this.shoppingList = newShoppingList;
     },
 
-    generateNextWeekPlan() {
-      let idCounter = 1;
-      let newWeekMenu = [];
+    getMealName(type) {
+      return type === 'breakfast' ? '早餐' : (type === 'lunch' ? '午餐' : (type === 'dinner' ? '晚餐' : '汤羹'));
+    },
+
+    openReplaceModal(mealType, dishIdx) {
+      const dish = this.currentDayDishes[mealType][dishIdx];
+      this.replaceModal = { show: true, mealType: mealType, dishIdx: dishIdx, currentName: dish.name };
+    },
+
+    doReplaceDish(newRecipe) {
+      const { mealType, dishIdx } = this.replaceModal;
+      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      const dayMenu = weekMenu[this.selDateIdx];
       
-      for (let day = 0; day < 7; day++) {
-        let dayMenu = { breakfast: [], lunch: [], dinner: [] };
-        
-        let bfRecipe = this.recipeLibrary.breakfast[Math.floor(Math.random() * this.recipeLibrary.breakfast.length)];
-        dayMenu.breakfast.push({
-          id: idCounter++, name: bfRecipe.name, tag: bfRecipe.tag, ingredients: bfRecipe.ingredients, steps: bfRecipe.steps, portions: bfRecipe.portions, completed: false, feedback: ''
-        });
-        
-        let lunchRecipe = this.recipeLibrary.lunch[Math.floor(Math.random() * this.recipeLibrary.lunch.length)];
-        dayMenu.lunch.push({
-          id: idCounter++, name: lunchRecipe.name, tag: lunchRecipe.tag, ingredients: lunchRecipe.ingredients, steps: lunchRecipe.steps, portions: lunchRecipe.portions, completed: false, feedback: ''
-        });
-        
-        let dinnerRecipe = this.recipeLibrary.dinner[Math.floor(Math.random() * this.recipeLibrary.dinner.length)];
-        dayMenu.dinner.push({
-          id: idCounter++, name: dinnerRecipe.name, tag: dinnerRecipe.tag, ingredients: dinnerRecipe.ingredients, steps: dinnerRecipe.steps, portions: dinnerRecipe.portions, completed: false, feedback: ''
-        });
-        
-        newWeekMenu.push(dayMenu);
-      }
+      dayMenu[mealType][dishIdx] = {
+        id: Date.now(),
+        ...newRecipe,
+        completed: false,
+        feedback: ''
+      };
       
-      // 只覆盖下周的数据
-      this.weekMenuData.next = newWeekMenu;
-      
-      this.recalculateShoppingList();
-      
-      this.prepTasks = [
-        { title: "制作一批蔬菜肉丸/肉饼", desc: "根据食谱，将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟或煎熟后冷冻，工作日可直接拿出来热。" },
-        { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜、生菜等洗净，西兰花菠菜需焯水30秒，沥干冷藏。" },
-        { title: "分装杂粮饭", desc: "煮一大锅杂粮饭，按每顿分量分装冷冻，吃之前微波炉加热即可。" },
-        { title: "处理坚果（弟弟专用）", desc: "将核桃、南瓜子等打成粉末，装入密封罐冷藏，每天拌入弟弟的酸奶中。" }
-      ];
-      
-      alert("✅ 下周食谱已生成！\n\n当前停留在“下周”视图，本周数据已保留。\n采购清单和预处理任务已同步更新，请到「待操作」查看。");
-      this.viewWeekMode = 'next'; // 自动切到下周
+      this.replaceModal.show = false;
+      if (this.viewWeekMode === 'next') this.recalculateShoppingList(); 
+      alert(`已替换为【${newRecipe.name}】，采购清单已同步更新！`);
     },
     
     setDishFeedback(dish, type) { dish.feedback = type; },
