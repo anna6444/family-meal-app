@@ -107,6 +107,9 @@
     .rest-day-tag span { margin-left: 6px; cursor: pointer; color: #999; font-weight: bold; }
     
     .expire-warning { color: #d14a4a; font-size: 12px; margin-left: 6px; font-weight: 600; }
+    
+    /* 替换按钮样式 */
+    .replace-btn { background: #f0f0f0; color: #666; border: none; border-radius: 8px; padding: 4px 8px; font-size: 12px; cursor: pointer; margin-left: 8px; }
   </style>
 </head>
 <body>
@@ -134,7 +137,7 @@
         </div>
       </div>
 
-      <!-- 菜单预览（动态渲染，与周菜谱同步） -->
+      <!-- 菜单预览 -->
       <div class="card">
         <h2>🍽️ 菜单预览</h2>
         
@@ -196,24 +199,36 @@
 
     <!-- 周菜谱 -->
     <div v-if="view === 'weekMenu'">
+      <!-- 增加：本周/下周切换 -->
+      <div class="tab-switch" style="margin-bottom: 14px;">
+        <div class="switch-btn" :class="{active:viewWeekMode==='current'}" @click="viewWeekMode='current'">📅 本周食谱</div>
+        <div class="switch-btn" :class="{active:viewWeekMode==='next'}" @click="viewWeekMode='next'">🪄 下周食谱</div>
+      </div>
+
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
-        <h2>每周菜谱</h2>
-        <button class="btn small" @click="generateNextWeekPlan">🪄 一键生成下周食谱</button>
+        <h2>{{ viewWeekMode === 'current' ? '本周菜单' : '下周菜单' }}</h2>
+        <button class="btn small" @click="generateNextWeekPlan" v-if="viewWeekMode === 'next'">🪄 一键生成</button>
       </div>
       
+      <!-- 日期选择器 -->
       <div class="date-scroll">
-        <div v-for="d in weekDateList" class="date-item" :class="{active:selDateIdx===d.idx}" @click="selDateIdx=d.idx">
+        <div v-for="d in displayWeekDates" class="date-item" :class="{active:selDateIdx===d.idx}" @click="selDateIdx=d.idx">
           <div style="font-size:13px">{{d.week}}</div>
           <div style="font-size:19px">{{d.day}}</div>
         </div>
       </div>
       
+      <!-- 显示当天菜单 -->
       <div v-if="currentDayDishes">
+        <!-- 早餐 -->
         <div class="meal-title">🌅 早餐</div>
         <div v-if="currentDayDishes.breakfast.length === 0" class="empty-text" style="padding: 10px;">暂无早餐安排</div>
-        <div v-for="dish in currentDayDishes.breakfast" :key="dish.id" class="dish-card">
+        <div v-for="(dish, idx) in currentDayDishes.breakfast" :key="dish.id" class="dish-card">
           <div class="dish-header">
-            <div><b>{{dish.name}}</b></div>
+            <div>
+              <b>{{dish.name}}</b>
+              <button class="replace-btn" @click="openReplaceModal('breakfast', idx)">🔄 替换</button>
+            </div>
             <span class="tag green">{{dish.tag}}</span>
           </div>
           <div class="card-subtitle">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
@@ -228,7 +243,7 @@
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;">
             <b>小白做法：</b><br/>
-            <span v-for="(step, idx) in dish.steps" :key="idx">{{idx+1}}.{{step}}<br/></span>
+            <span v-for="(step, sIdx) in dish.steps" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
           </div>
           <div style="margin-top:14px; display: flex; gap: 10px;">
             <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
@@ -242,11 +257,15 @@
           </div>
         </div>
 
+        <!-- 午餐 -->
         <div class="meal-title">☀️ 午餐</div>
         <div v-if="currentDayDishes.lunch.length === 0" class="empty-text" style="padding: 10px;">暂无午餐安排</div>
-        <div v-for="dish in currentDayDishes.lunch" :key="dish.id" class="dish-card">
+        <div v-for="(dish, idx) in currentDayDishes.lunch" :key="dish.id" class="dish-card">
           <div class="dish-header">
-            <div><b>{{dish.name}}</b></div>
+            <div>
+              <b>{{dish.name}}</b>
+              <button class="replace-btn" @click="openReplaceModal('lunch', idx)">🔄 替换</button>
+            </div>
             <span class="tag green">{{dish.tag}}</span>
           </div>
           <div class="card-subtitle">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
@@ -261,7 +280,7 @@
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;">
             <b>小白做法：</b><br/>
-            <span v-for="(step, idx) in dish.steps" :key="idx">{{idx+1}}.{{step}}<br/></span>
+            <span v-for="(step, sIdx) in dish.steps" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
           </div>
           <div style="margin-top:14px; display: flex; gap: 10px;">
             <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
@@ -275,11 +294,15 @@
           </div>
         </div>
 
+        <!-- 晚餐 -->
         <div class="meal-title">🌙 晚餐</div>
         <div v-if="currentDayDishes.dinner.length === 0" class="empty-text" style="padding: 10px;">暂无晚餐安排</div>
-        <div v-for="dish in currentDayDishes.dinner" :key="dish.id" class="dish-card">
+        <div v-for="(dish, idx) in currentDayDishes.dinner" :key="dish.id" class="dish-card">
           <div class="dish-header">
-            <div><b>{{dish.name}}</b></div>
+            <div>
+              <b>{{dish.name}}</b>
+              <button class="replace-btn" @click="openReplaceModal('dinner', idx)">🔄 替换</button>
+            </div>
             <span class="tag green">{{dish.tag}}</span>
           </div>
           <div class="card-subtitle">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
@@ -294,7 +317,7 @@
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;">
             <b>小白做法：</b><br/>
-            <span v-for="(step, idx) in dish.steps" :key="idx">{{idx+1}}.{{step}}<br/></span>
+            <span v-for="(step, sIdx) in dish.steps" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
           </div>
           <div style="margin-top:14px; display: flex; gap: 10px;">
             <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
@@ -314,7 +337,7 @@
     <div v-if="view === 'todo'">
       <div class="card">
         <h2>🛒 周末大采购（耐储存）</h2>
-        <p class="card-subtitle">根据下周食谱自动汇总，并已扣除当前食材库库存。建议周末一次性买齐。</p>
+        <p class="card-subtitle">根据下周食谱自动汇总，建议周末一次性买齐。</p>
         <div v-if="weekendShoppingList.length === 0" class="empty-text">暂无周末采购需求。</div>
         <div v-for="item in weekendShoppingList" :key="item.id" class="list-row">
           <div>{{item.name}} {{item.weight}}g</div>
@@ -492,6 +515,23 @@
     </div>
   </div>
 
+  <!-- 替换菜品弹窗 -->
+  <div class="modal-mask" v-if="replaceModal.show" @click.self="replaceModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">替换 {{getMealName(replaceModal.mealType)}} 菜品</h3>
+      <div style="font-size: 14px; color: #666; margin-bottom: 12px;">当前：{{replaceModal.currentName}}</div>
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div v-for="recipe in availableReplacements" :key="recipe.name" 
+             style="border: 1px solid #eee; padding: 12px; border-radius: 12px; cursor: pointer;"
+             @click="doReplaceDish(recipe)">
+          <div style="font-weight: 600; color: #c46838; margin-bottom: 4px;">{{recipe.name}}</div>
+          <div style="font-size: 13px; color: #888;">{{recipe.tag}}</div>
+        </div>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:16px" @click="replaceModal.show=false">取消</button>
+    </div>
+  </div>
+
   <!-- 临时状态与忌口弹窗 -->
   <div class="modal-mask" v-if="tempStatusModal.show" @click.self="tempStatusModal.show=false">
     <div class="modal-box">
@@ -664,6 +704,7 @@ createApp({
       view: 'home',
       homeDate: new Date().toISOString().split('T')[0],
       selDateIdx: 0,
+      viewWeekMode: 'current', // 'current' 或 'next'
       ingTab: 'raw',
       searchIng: '',
       scheduleConfig: {
@@ -690,6 +731,9 @@ createApp({
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
       addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
       
+      // 替换菜品弹窗控制
+      replaceModal: { show: false, mealType: '', dishIdx: -1, currentName: '' },
+
       historyData: {
         dad: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [92, 91.5, 91, 90.5, 90, 90] },
         mom: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [52, 51.5, 51, 50.5, 50, 50] },
@@ -724,15 +768,27 @@ createApp({
         { name: "虾滑", weight: 200, expireDay: 90 }
       ],
       
-      weekMenu: [
-        { breakfast: [], lunch: [], dinner: [] },
-        { breakfast: [], lunch: [], dinner: [] },
-        { breakfast: [], lunch: [], dinner: [] },
-        { breakfast: [], lunch: [], dinner: [] },
-        { breakfast: [], lunch: [], dinner: [] },
-        { breakfast: [], lunch: [], dinner: [] },
-        { breakfast: [], lunch: [], dinner: [] }
-      ],
+      // 分成本周与下周
+      weekMenuData: {
+        current: [
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] }
+        ],
+        next: [
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] },
+          { breakfast: [], lunch: [], dinner: [] }
+        ]
+      },
       
       recipeLibrary: {
         breakfast: [
@@ -765,7 +821,8 @@ createApp({
         { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜等洗净焯水，沥干冷藏。" }
       ],
       
-      weekDateList: []
+      thisWeekDates: [],
+      nextWeekDates: []
     }
   },
   created() {
@@ -802,23 +859,43 @@ createApp({
       return this.shoppingList.some(i => !i.bought);
     },
     
+    // 当前显示哪一周的日期列表
+    displayWeekDates() {
+      return this.viewWeekMode === 'current' ? this.thisWeekDates : this.nextWeekDates;
+    },
+
     momIsMorningShift() {
       const today = this.todayMembers.find(m => m.key === 'mom');
       return today && today.status.includes('早班');
     },
     
-    // 首页当前选中日期的菜单
-    homeCurrentDayDishes() {
-      if (!this.homeDate || this.weekMenu.length === 0) return null;
-      const targetDate = new Date(this.homeDate);
-      const dayOfWeek = targetDate.getDay(); // 0是周日, 1是周一
-      const idx = (dayOfWeek + 6) % 7; // 转换为 0-6 (周一=0, 周日=6)
-      return this.weekMenu[idx];
+    // 获取需要替换时的同类菜谱列表
+    availableReplacements() {
+      if (!this.replaceModal.mealType) return [];
+      const list = this.recipeLibrary[this.replaceModal.mealType];
+      return list.filter(r => r.name !== this.replaceModal.currentName);
     },
     
+    // 首页菜单匹配
+    homeCurrentDayDishes() {
+      if (!this.homeDate) return null;
+      const targetDate = new Date(this.homeDate);
+      
+      // 判断选中的日期是在本周还是下周
+      const tDateStr = this.homeDate;
+      const isNextWeek = this.nextWeekDates.some(d => d.dateStr === tDateStr);
+      
+      const weekMenu = isNextWeek ? this.weekMenuData.next : this.weekMenuData.current;
+      
+      const dayOfWeek = targetDate.getDay(); 
+      const idx = (dayOfWeek + 6) % 7; 
+      return weekMenu[idx];
+    },
+    
+    // 周菜谱当前选中天
     currentDayDishes() {
-      if (this.weekMenu.length === 0) return null;
-      return this.weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [] };
+      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [] };
     },
     
     dailySnackRecommendations(){
@@ -925,69 +1002,78 @@ createApp({
       let day = now.getDay() || 7;
       let monday = new Date(now.getTime() - (day - 1) * 86400000);
       
-      let arr = [];
+      let thisWeek = [];
       for (let i = 0; i < 7; i++) {
         let d = new Date(monday.getTime() + i * 86400000);
-        arr.push({
+        thisWeek.push({
           idx: i,
           week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()],
           day: d.getDate(),
           dateStr: d.toISOString().split('T')[0]
         });
       }
-      this.weekDateList = arr;
+      this.thisWeekDates = thisWeek;
+
+      let nextWeek = [];
+      for (let i = 0; i < 7; i++) {
+        let d = new Date(monday.getTime() + (i + 7) * 86400000);
+        nextWeek.push({
+          idx: i,
+          week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()],
+          day: d.getDate(),
+          dateStr: d.toISOString().split('T')[0]
+        });
+      }
+      this.nextWeekDates = nextWeek;
     },
 
     calcBMI(heightCm, weightKg){ if(!heightCm || !weightKg) return "-"; const h = heightCm / 100; return (weightKg / (h*h)).toFixed(1); },
     toggleTaboo(person, word){ const arr = this.memberTaboo[person]; const idx = arr.indexOf(word); if(idx>-1){ arr.splice(idx,1); }else{ arr.push(word); } },
     
-    generateNextWeekPlan() {
-      let idCounter = 1;
-      let newWeekMenu = [];
+    getMealName(type) {
+      return type === 'breakfast' ? '早餐' : (type === 'lunch' ? '午餐' : '晚餐');
+    },
+
+    // 打开替换弹窗
+    openReplaceModal(mealType, dishIdx) {
+      const dish = this.currentDayDishes[mealType][dishIdx];
+      this.replaceModal = {
+        show: true,
+        mealType: mealType,
+        dishIdx: dishIdx,
+        currentName: dish.name
+      };
+    },
+
+    // 执行替换
+    doReplaceDish(newRecipe) {
+      const { mealType, dishIdx } = this.replaceModal;
+      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      const dayMenu = weekMenu[this.selDateIdx];
       
-      for (let day = 0; day < 7; day++) {
-        let dayMenu = { breakfast: [], lunch: [], dinner: [] };
-        
-        let bfRecipe = this.recipeLibrary.breakfast[Math.floor(Math.random() * this.recipeLibrary.breakfast.length)];
-        dayMenu.breakfast.push({
-          id: idCounter++,
-          name: bfRecipe.name,
-          tag: bfRecipe.tag,
-          ingredients: bfRecipe.ingredients,
-          steps: bfRecipe.steps,
-          portions: bfRecipe.portions,
-          completed: false, feedback: ''
-        });
-        
-        let lunchRecipe = this.recipeLibrary.lunch[Math.floor(Math.random() * this.recipeLibrary.lunch.length)];
-        dayMenu.lunch.push({
-          id: idCounter++,
-          name: lunchRecipe.name,
-          tag: lunchRecipe.tag,
-          ingredients: lunchRecipe.ingredients,
-          steps: lunchRecipe.steps,
-          portions: lunchRecipe.portions,
-          completed: false, feedback: ''
-        });
-        
-        let dinnerRecipe = this.recipeLibrary.dinner[Math.floor(Math.random() * this.recipeLibrary.dinner.length)];
-        dayMenu.dinner.push({
-          id: idCounter++,
-          name: dinnerRecipe.name,
-          tag: dinnerRecipe.tag,
-          ingredients: dinnerRecipe.ingredients,
-          steps: dinnerRecipe.steps,
-          portions: dinnerRecipe.portions,
-          completed: false, feedback: ''
-        });
-        
-        newWeekMenu.push(dayMenu);
-      }
+      // 替换为新的菜谱数据
+      dayMenu[mealType][dishIdx] = {
+        id: Date.now(), // 生成新ID
+        name: newRecipe.name,
+        tag: newRecipe.tag,
+        ingredients: newRecipe.ingredients,
+        steps: newRecipe.steps,
+        portions: newRecipe.portions,
+        completed: false,
+        feedback: ''
+      };
       
-      this.weekMenu = newWeekMenu;
-      
+      this.replaceModal.show = false;
+      this.recalculateShoppingList(); // 替换后重新计算采购清单
+      alert(`已替换为【${newRecipe.name}】，采购清单已同步更新！`);
+    },
+
+    // 提取重新计算采购清单的方法，方便替换时调用
+    recalculateShoppingList() {
       let neededMap = {};
-      newWeekMenu.forEach(dayMenu => {
+      const nextMenu = this.weekMenuData.next; // 采购清单通常针对下周
+
+      nextMenu.forEach(dayMenu => {
         ['breakfast', 'lunch', 'dinner'].forEach(meal => {
           dayMenu[meal].forEach(dish => {
             dish.ingredients.forEach(ing => {
@@ -1016,7 +1102,6 @@ createApp({
           if (dailyKeywords.some(k => name.includes(k))) {
             category = 'daily';
           }
-          
           newShoppingList.push({ id: itemId++, name: name, weight: buyWeight, category: category, bought: false });
         }
       }
@@ -1027,6 +1112,37 @@ createApp({
       if (snackStock < 500) newShoppingList.push({ id: itemId++, name: "坚果/酸奶", weight: 500 - snackStock, category: 'weekend', bought: false });
       
       this.shoppingList = newShoppingList;
+    },
+
+    generateNextWeekPlan() {
+      let idCounter = 1;
+      let newWeekMenu = [];
+      
+      for (let day = 0; day < 7; day++) {
+        let dayMenu = { breakfast: [], lunch: [], dinner: [] };
+        
+        let bfRecipe = this.recipeLibrary.breakfast[Math.floor(Math.random() * this.recipeLibrary.breakfast.length)];
+        dayMenu.breakfast.push({
+          id: idCounter++, name: bfRecipe.name, tag: bfRecipe.tag, ingredients: bfRecipe.ingredients, steps: bfRecipe.steps, portions: bfRecipe.portions, completed: false, feedback: ''
+        });
+        
+        let lunchRecipe = this.recipeLibrary.lunch[Math.floor(Math.random() * this.recipeLibrary.lunch.length)];
+        dayMenu.lunch.push({
+          id: idCounter++, name: lunchRecipe.name, tag: lunchRecipe.tag, ingredients: lunchRecipe.ingredients, steps: lunchRecipe.steps, portions: lunchRecipe.portions, completed: false, feedback: ''
+        });
+        
+        let dinnerRecipe = this.recipeLibrary.dinner[Math.floor(Math.random() * this.recipeLibrary.dinner.length)];
+        dayMenu.dinner.push({
+          id: idCounter++, name: dinnerRecipe.name, tag: dinnerRecipe.tag, ingredients: dinnerRecipe.ingredients, steps: dinnerRecipe.steps, portions: dinnerRecipe.portions, completed: false, feedback: ''
+        });
+        
+        newWeekMenu.push(dayMenu);
+      }
+      
+      // 只覆盖下周的数据
+      this.weekMenuData.next = newWeekMenu;
+      
+      this.recalculateShoppingList();
       
       this.prepTasks = [
         { title: "制作一批蔬菜肉丸/肉饼", desc: "根据食谱，将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟或煎熟后冷冻，工作日可直接拿出来热。" },
@@ -1035,8 +1151,8 @@ createApp({
         { title: "处理坚果（弟弟专用）", desc: "将核桃、南瓜子等打成粉末，装入密封罐冷藏，每天拌入弟弟的酸奶中。" }
       ];
       
-      alert("✅ 下周食谱已生成！\n\n已按天分类，可点击日期查看每天的三餐。\n采购清单已分为“周末大采购”和“提前1-2天买”，请到「待操作」查看。");
-      this.view = 'weekMenu';
+      alert("✅ 下周食谱已生成！\n\n当前停留在“下周”视图，本周数据已保留。\n采购清单和预处理任务已同步更新，请到「待操作」查看。");
+      this.viewWeekMode = 'next'; // 自动切到下周
     },
     
     setDishFeedback(dish, type) { dish.feedback = type; },
