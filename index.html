@@ -33,6 +33,7 @@
     .btn { background: #e6703b; color: #fff; border: none; border-radius: 14px; padding: 12px 16px; cursor: pointer; font-size: 15px; }
     .btn.secondary { background: #f1ede4; color: #333; }
     .btn.small { padding: 9px 14px; font-size: 14px; border-radius: 12px; }
+    .btn.ai-btn { background: #4A90E2; color: white; }
     .tag { display: inline-block; background: #f4ece3; color: #b06237; border-radius: 20px; padding: 5px 10px; font-size: 13px; margin: 3px; }
     .tag.green { background: #eaf6ec; color: #2b703b; }
     .tag.blue { background: #e6f0fa; color: #2b579b; }
@@ -75,7 +76,6 @@
     .portion-title { font-size: 13px; font-weight: 600; color: #c46838; margin-bottom: 6px; }
     .portion-row { display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 4px; }
 
-    /* 新增：健康预警框 */
     .health-alert { background: #fff8f8; border: 1px dashed #fce8e8; border-radius: 12px; padding: 12px; margin-top: 12px; color: #d14a4a; font-size: 13px; font-weight: 500; display: flex; align-items: flex-start; gap: 8px; }
 
     .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
@@ -101,6 +101,23 @@
     .tool-tag, .time-tag { font-size: 12px; padding: 4px 8px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; }
     .tool-tag { background: #e6f0fa; color: #2b579b; }
     .time-tag { background: #fdf3d8; color: #b6862c; }
+
+    /* AI 悬浮球与聊天界面 */
+    .ai-float-btn { position: fixed; bottom: 95px; right: 20px; width: 60px; height: 60px; background: #4A90E2; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; box-shadow: 0 4px 12px rgba(74, 144, 226, 0.4); z-index: 100; cursor: pointer; transition: transform 0.2s; }
+    .ai-float-btn:active { transform: scale(0.9); }
+    .ai-float-icon { font-size: 28px; line-height: 1; }
+
+    .chat-wrapper { position: fixed; inset: 0; background: #f4f1ea; z-index: 150; display: flex; flex-direction: column; padding-bottom: 76px; }
+    .chat-header { background: #fff; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
+    .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 15px; }
+    .chat-messages { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+    .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; margin-bottom: 12px; font-size: 15px; line-height: 1.6; word-wrap: break-word; white-space: pre-wrap; }
+    .chat-user { background: #e6703b; color: #fff; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; }
+    .chat-ai { background: #fff; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .chat-input-area { display: flex; gap: 10px; background: #fff; padding: 10px; border-radius: 16px; margin-top: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .chat-input-area input { flex: 1; border: none; outline: none; font-size: 15px; background: transparent; }
+    .chat-input-area button { padding: 8px 16px; border-radius: 10px; background: #4A90E2; color: #fff; border: none; font-weight: 600; }
+    .api-mask { position: absolute; inset: 0; background: #f4f1ea; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; padding: 20px; text-align: center; }
   </style>
 </head>
 <body>
@@ -210,7 +227,6 @@
             <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}</span></div>
           </div>
 
-          <!-- 菜谱专属健康提示 -->
           <div v-if="getDishWarning(dish).length > 0" class="health-alert">
             <div>
               <div v-for="(warn, wIdx) in getDishWarning(dish)" :key="wIdx">🚨 {{ warn }}</div>
@@ -257,7 +273,6 @@
             <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}</span></div>
           </div>
 
-          <!-- 菜谱专属健康提示 -->
           <div v-if="getDishWarning(dish).length > 0" class="health-alert">
             <div>
               <div v-for="(warn, wIdx) in getDishWarning(dish)" :key="wIdx">🚨 {{ warn }}</div>
@@ -304,7 +319,6 @@
             <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}</span></div>
           </div>
 
-          <!-- 菜谱专属健康提示 -->
           <div v-if="getDishWarning(dish).length > 0" class="health-alert">
             <div>
               <div v-for="(warn, wIdx) in getDishWarning(dish)" :key="wIdx">🚨 {{ warn }}</div>
@@ -343,7 +357,6 @@
           </div>
           <div class="card-subtitle" style="margin-top: 10px;">食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
           
-          <!-- 菜谱专属健康提示 -->
           <div v-if="getDishWarning(dish).length > 0" class="health-alert">
             <div>
               <div v-for="(warn, wIdx) in getDishWarning(dish)" :key="wIdx">🚨 {{ warn }}</div>
@@ -515,8 +528,14 @@
 
   </div>
 
+  <!-- 悬浮 AI 按钮（只在非 AI 页面显示） -->
+  <div class="ai-float-btn" v-if="view !== 'ai'" @click="view='ai'">
+    <span class="ai-float-icon">🤖</span>
+    <span style="font-size: 10px; font-weight: 600; margin-top: 2px;">AI 营养师</span>
+  </div>
+
   <!-- 底部导航 -->
-  <div class="tab-bar">
+  <div class="tab-bar" v-if="view !== 'ai'">
     <div class="tab-item" :class="{active:view==='home'}" @click="view='home'">
       <span class="tab-icon">🏠</span>
       <span class="tab-label">首页</span>
@@ -543,6 +562,50 @@
   </div>
 
   <!-- ========== 各种弹窗 ========== -->
+
+  <!-- AI 聊天全屏页面 -->
+  <div class="chat-wrapper" v-if="view === 'ai'">
+    <div class="api-mask" v-if="!apiKey">
+      <h3 style="color:#4A90E2; margin-bottom: 10px;">请配置 AI 接口</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 15px;">填入实名认证后的智谱 API Key</p>
+      <input v-model="tempKey" placeholder="在此粘贴你的 API Key" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:10px; font-size:15px;" />
+      <button class="btn ai-btn" @click="saveApiKey" style="width:100%; padding: 12px;">保存并开始对话</button>
+      <button class="btn secondary" @click="view='home'" style="width:100%; margin-top:10px; background:none;">返回首页</button>
+    </div>
+
+    <div v-else style="display:flex; flex-direction:column; height:100%;">
+      <div class="chat-header">
+        <h3 style="color: #4A90E2; display: flex; align-items: center; gap: 8px;">🤖 专属营养师</h3>
+        <div style="display:flex; gap: 8px;">
+          <button class="btn secondary small" @click="clearKey">重置Key</button>
+          <button class="btn secondary small" @click="view='home'">关闭</button>
+        </div>
+      </div>
+      
+      <div class="chat-container">
+        <div class="chat-messages" id="chatMsgBox">
+          <div class="chat-bubble chat-ai">
+            你好！我是你的专属家庭营养师 🤖。我已经掌握了你们全家的身体情况。
+            <br><br>你可以直接问我：
+            <br>👉 “我想吃番茄炖牛腩，怎么做？”
+            <br>👉 “今晚有什么快手菜推荐？最好能用空气炸锅。”
+          </div>
+          
+          <div v-for="(msg, idx) in chatHistory" :key="idx" class="chat-bubble" :class="msg.role === 'user' ? 'chat-user' : 'chat-ai'">
+            {{ msg.content }}
+          </div>
+          <div v-if="isTyping" class="chat-bubble chat-ai" style="color: #999;">
+            AI 正在思考中，请稍候...
+          </div>
+        </div>
+
+        <div class="chat-input-area">
+          <input v-model="chatInput" @keyup.enter="sendMessage" placeholder="输入你想吃的菜或需求..." />
+          <button @click="sendMessage">发送</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- 添加自定义菜谱弹窗 -->
   <div class="modal-mask" v-if="addRecipeModal.show" @click.self="addRecipeModal.show=false">
@@ -779,7 +842,8 @@
     <div class="modal-box">
       <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
       <div style="width:100%;height:280px;margin-top:10px;position: relative;">
-        <canvas ref="chartCanvasRef"></canvas>
+        <!-- 修复：使用唯一的 canvas ref -->
+        <canvas ref="chartCanvasRef" id="trendChartCanvas"></canvas>
       </div>
       <button class="btn secondary" style="width:100%;margin-top:16px" @click="closeChartModal">关闭</button>
     </div>
@@ -799,6 +863,12 @@ createApp({
       ingTab: 'raw',
       searchIng: '',
       
+      apiKey: localStorage.getItem('ai_api_key') || '',
+      tempKey: '',
+      chatInput: '',
+      chatHistory: [],
+      isTyping: false,
+
       scheduleConfig: {
         dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 },
         mom: { startDate: '2026-10-16', firstShift: 'morning' }
@@ -1006,7 +1076,6 @@ createApp({
       return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [], soup: [] };
     },
     
-    // 新增：全局健康预警
     globalHealthAlerts() {
       let alerts = [];
       if (this.memberTempStatus.sister === 'sick') alerts.push('姐姐生病中，本周食谱请尽量清淡，避开生冷、油炸，可以给她单独煮点软烂的面条或白粥。');
@@ -1067,18 +1136,94 @@ createApp({
     }
   },
   methods:{
-    // 动态获取每道菜的警告
+    saveApiKey() {
+      const key = this.tempKey.trim();
+      if (!key) { alert("请输入有效的 Key"); return; }
+      this.apiKey = key;
+      localStorage.setItem('ai_api_key', this.apiKey);
+      alert("✅ API Key 保存成功！下次打开就不需要再输了。");
+    },
+
+    clearKey() {
+      if(confirm("确定要重置 API Key 吗？")) {
+        localStorage.removeItem('ai_api_key');
+        this.apiKey = '';
+        this.tempKey = '';
+      }
+    },
+
+    async sendMessage() {
+      if (!this.chatInput.trim() || this.isTyping) return;
+      
+      const userText = this.chatInput;
+      this.chatInput = '';
+      this.chatHistory.push({ role: 'user', content: userText });
+      this.isTyping = true;
+      this.scrollToBottom();
+
+      const systemPrompt = `你现在是一个非常专业的家庭营养师。请遵循以下家庭特殊情况和规则来回答用户的问题。
+【家庭成员情况】
+1. 爸爸：轻微脂肪肝，肾结石。必须低脂，高草酸蔬菜必须提醒焯水。不吃内脏。
+2. 妈妈：气血不足，需要补铁和优质蛋白，减脂。经期不能吃寒凉食物。
+3. 姐姐：8岁，避激素食物，需要补钙长高。
+4. 弟弟：5岁，不爱吃青菜，需将蔬菜切碎做成肉丸或蛋饼。坚果必须打粉。
+【常用厨具】电饭煲、陶瓷锅、微波炉、空气炸锅。
+【回答要求】格式清晰，包含食材和克数、做法步骤、分餐建议。字数300字以内，不要啰嗦。`;
+
+      try {
+        const targetUrl = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+        // 保留代理，解决跨域
+        const proxyUrl = "https://corsproxy.io/?url=";
+        const finalUrl = proxyUrl + encodeURIComponent(targetUrl);
+
+        const response = await fetch(finalUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${this.apiKey}`
+          },
+          body: JSON.stringify({
+            model: "glm-4-flash",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userText }
+            ],
+            temperature: 0.7
+          })
+        });
+
+        if (!response.ok) {
+           // 如果 403，可能是实名认证还没同步完，或者模型权限未开通
+           throw new Error(`请求失败，状态码: ${response.status}。请确认已实名认证并开通了 glm-4-flash 模型。`);
+        }
+
+        const data = await response.json();
+        const aiReply = data.choices[0].message.content;
+        this.chatHistory.push({ role: 'assistant', content: aiReply });
+      } catch (error) {
+        this.chatHistory.push({ role: 'assistant', content: `出错了：${error.message}。` });
+      } finally {
+        this.isTyping = false;
+        this.scrollToBottom();
+      }
+    },
+
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const box = document.getElementById('chatMsgBox');
+        if (box) box.scrollTop = box.scrollHeight;
+      });
+    },
+
     getDishWarning(dish) {
       let warnings = [];
-      // 姐姐生病时的警告
       if (this.memberTempStatus.sister === 'sick') {
         if (dish.tag.includes('少油') || dish.tag.includes('油炸') || dish.tag.includes('补铁')) {
-          warnings.push(`姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的（如清汤面、小米粥）。`);
+          warnings.push(`姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的。`);
         } else if (dish.name.includes('凉拌') || dish.name.includes('雪梨')) {
           warnings.push(`姐姐生病中，注意避开生冷食物。`);
         }
       }
-      // 爸爸生病的警告
       if (this.memberTempStatus.dad === 'sick') {
         if (dish.name.includes('炸锅') || dish.tag.includes('油腻')) {
           warnings.push(`爸爸生病中，建议避开高脂食物。`);
@@ -1090,8 +1235,6 @@ createApp({
     parseRawText() {
       let text = this.addRecipeModal.rawText;
       if (!text) { alert("请先粘贴提取的文字"); return; }
-
-      let cleanText = text.replace(/\s+/g, ' ').trim();
 
       let nameMatch = text.split('\n')[0].substring(0, 20);
       this.addRecipeModal.name = nameMatch || '新菜谱';
@@ -1110,39 +1253,21 @@ createApp({
       lines.forEach(line => {
         line = line.trim();
         if (!line) return;
-
-        if (/做法|步骤|烹饪|操作/.test(line)) {
-          isStepSection = true;
-          return;
-        }
-
+        if (/做法|步骤|烹饪|操作/.test(line)) { isStepSection = true; return; }
         if (!isStepSection) {
           if (/克|g|ml|个|颗|勺|瓣|片|适量|少许|半/.test(line) && line.length < 20) {
             let ingName = line.replace(/[0-9]/g, '').replace(/克|g|ml|个|颗|勺|瓣|片|适量|少许|半|、|,|，/g, '').trim();
-            if (ingName && !ingredientsArr.includes(ingName)) {
-              ingredientsArr.push(ingName);
-            }
+            if (ingName && !ingredientsArr.includes(ingName)) ingredientsArr.push(ingName);
           }
         } else {
-          if (line.length > 5 && !/第|步/.test(line.substring(0,2))) {
-            stepsArr.push(line);
-          }
+          if (line.length > 5 && !/第|步/.test(line.substring(0,2))) stepsArr.push(line);
         }
       });
 
-      if (ingredientsArr.length === 0) {
-        ingredientsArr = ['根据实际情况准备食材'];
-      }
-
+      if (ingredientsArr.length === 0) ingredientsArr = ['根据实际情况准备食材'];
       this.addRecipeModal.ingredientsText = ingredientsArr.join('，');
-      
-      if (stepsArr.length > 0) {
-        this.addRecipeModal.stepsText = stepsArr.join('\n');
-      } else {
-        this.addRecipeModal.stepsText = text.substring(text.length / 2).trim();
-      }
-
-      alert("✨ 智能拆分完成！请核对下方的内容，如果有偏差可以手动修改一下。");
+      this.addRecipeModal.stepsText = stepsArr.length > 0 ? stepsArr.join('\n') : text.substring(text.length / 2).trim();
+      alert("✨ 智能拆分完成！请核对下方的内容。");
     },
 
     shuffleArray(array) {
@@ -1194,21 +1319,19 @@ createApp({
       
       if (mode === 'current') {
         this.weekMenuData.current = newWeekMenu;
-        if (!isInit) alert("✅ 本周食谱已重新生成（已屏蔽高油解馋菜谱）！");
+        if (!isInit) alert("✅ 本周食谱已重新生成！");
       } else {
         this.weekMenuData.next = newWeekMenu;
         this.recalculateShoppingList();
         this.generatePrepTasks();
-        if (!isInit) alert("✅ 下周食谱已生成！\n采购清单已同步更新，请到「待操作」查看。");
+        if (!isInit) alert("✅ 下周食谱已生成！\n采购清单已同步更新。");
       }
     },
 
     generatePrepTasks() {
       this.prepTasks = [
-        { title: "制作一批蔬菜肉丸/肉饼", desc: "根据食谱，将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟或煎熟后冷冻，工作日可直接拿出来热。" },
-        { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜、生菜等洗净，西兰花菠菜需焯水30秒，沥干冷藏。" },
-        { title: "分装杂粮饭", desc: "煮一大锅杂粮饭，按每顿分量分装冷冻，吃之前微波炉加热即可。" },
-        { title: "处理坚果（弟弟专用）", desc: "将核桃、南瓜子等打成粉末，装入密封罐冷藏，每天拌入弟弟的酸奶中。" }
+        { title: "制作一批蔬菜肉丸/肉饼", desc: "根据食谱，将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟或煎熟后冷冻。" },
+        { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜等洗净焯水，沥干冷藏。" }
       ];
     },
 
@@ -1242,9 +1365,7 @@ createApp({
         if (buyWeight > 0) {
           let category = 'weekend';
           const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬', '雪梨'];
-          if (dailyKeywords.some(k => name.includes(k))) {
-            category = 'daily';
-          }
+          if (dailyKeywords.some(k => name.includes(k))) category = 'daily';
           newShoppingList.push({ id: itemId++, name: name, weight: buyWeight, category: category, bought: false });
         }
       }
@@ -1276,24 +1397,14 @@ createApp({
       let thisWeek = [];
       for (let i = 0; i < 7; i++) {
         let d = new Date(monday.getTime() + i * 86400000);
-        thisWeek.push({
-          idx: i,
-          week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()],
-          day: d.getDate(),
-          dateStr: d.toISOString().split('T')[0]
-        });
+        thisWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: d.toISOString().split('T')[0] });
       }
       this.thisWeekDates = thisWeek;
 
       let nextWeek = [];
       for (let i = 0; i < 7; i++) {
         let d = new Date(monday.getTime() + (i + 7) * 86400000);
-        nextWeek.push({
-          idx: i,
-          week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()],
-          day: d.getDate(),
-          dateStr: d.toISOString().split('T')[0]
-        });
+        nextWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: d.toISOString().split('T')[0] });
       }
       this.nextWeekDates = nextWeek;
     },
@@ -1306,16 +1417,11 @@ createApp({
       const { name, type, tool, time, ingredientsText, stepsText, isHealthy } = this.addRecipeModal;
       if (!name || !tool || !time) { alert("请填写菜名、工具和时间"); return; }
 
-      const ingredients = ingredientsText.split(/[,，]/).map(s => {
-        let text = s.trim();
-        return { name: text, weight: 100 };
-      }).filter(i => i.name);
-
+      const ingredients = ingredientsText.split(/[,，]/).map(s => ({ name: s.trim(), weight: 100 })).filter(i => i.name);
       const steps = stepsText.split('\n').map(s => s.trim()).filter(s => s);
 
       const newRecipe = {
-        name, tag: isHealthy ? '自定义·健康' : '自定义·解馋', 
-        tool, time, isHealthy,
+        name, tag: isHealthy ? '自定义·健康' : '自定义·解馋', tool, time, isHealthy,
         ingredients: ingredients.length ? ingredients : [{name:'自定义食材', weight:100}],
         steps: steps.length ? steps : ['按自己习惯操作'],
         portions: {} 
@@ -1331,7 +1437,7 @@ createApp({
       localStorage.setItem('customRecipes', JSON.stringify(customRecipes));
 
       this.addRecipeModal.show = false;
-      alert(`✅ 【${name}】已加入菜谱库（${isHealthy ? '常规健康' : '偶尔解馋'}）！`);
+      alert(`✅ 【${name}】已加入菜谱库！`);
     },
 
     getMealName(type) {
@@ -1348,20 +1454,14 @@ createApp({
       const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
       const dayMenu = weekMenu[this.selDateIdx];
       
-      dayMenu[mealType][dishIdx] = {
-        id: Date.now(),
-        ...newRecipe,
-        completed: false,
-        feedback: ''
-      };
+      dayMenu[mealType][dishIdx] = { id: Date.now(), ...newRecipe, completed: false, feedback: '' };
       
       this.replaceModal.show = false;
       if (this.viewWeekMode === 'next') this.recalculateShoppingList(); 
-      alert(`已替换为【${newRecipe.name}】，采购清单已同步更新！`);
+      alert(`已替换为【${newRecipe.name}】`);
     },
     
     setDishFeedback(dish, type) { dish.feedback = type; },
-
     openTempStatusModal(key){ this.tempStatusModal.key = key; this.tempStatusModal.show = true; },
     getStatusText(status, person){
       if (person === 'mom') {
@@ -1389,25 +1489,20 @@ createApp({
       if (dish.completed) return;
       let deductedList = [];
       dish.ingredients.forEach(ing => {
-        let target = this.rawIngList.find(i => i.name === ing.name);
-        if (!target) target = this.fruitList.find(i => i.name === ing.name);
-        if (!target) target = this.snackList.find(i => i.name === ing.name);
-        if (!target) target = this.preIngList.find(i => i.name === ing.name);
+        let target = this.rawIngList.find(i => i.name === ing.name) || this.fruitList.find(i => i.name === ing.name) || this.snackList.find(i => i.name === ing.name) || this.preIngList.find(i => i.name === ing.name);
         
         if (target) {
           if (target.weight >= ing.weight) {
             target.weight -= ing.weight;
             deductedList.push(`${ing.name} ${ing.weight}g`);
           } else {
-            deductedList.push(`${ing.name} 库存不足（需${ing.weight}g，现有${target.weight}g，已扣为0）`);
+            deductedList.push(`${ing.name} 库存不足（已扣为0）`);
             target.weight = 0;
           }
-        } else {
-          deductedList.push(`${ing.name} 未找到`);
         }
       });
       dish.completed = true;
-      alert(`【${dish.name}】已完成制作！\n系统已自动扣减食材：\n${deductedList.join('\n')}`);
+      alert(`【${dish.name}】已完成制作！\n已自动扣减食材：\n${deductedList.join('\n')}`);
     },
     
     openStockModal(item, source){
@@ -1431,10 +1526,10 @@ createApp({
       if (!name || !weight || !expireDay) { alert("请填写完整信息"); return; }
       const newItem = { name, weight: Number(weight), expireDay: Number(expireDay), icon: '🍽️' };
       
-      if (type === 'raw') { this.rawIngList.push(newItem); } 
-      else if (type === 'fruit') { this.fruitList.push(newItem); } 
-      else if (type === 'snack') { this.snackList.push(newItem); } 
-      else { this.preIngList.push(newItem); }
+      if (type === 'raw') this.rawIngList.push(newItem); 
+      else if (type === 'fruit') this.fruitList.push(newItem); 
+      else if (type === 'snack') this.snackList.push(newItem); 
+      else this.preIngList.push(newItem);
       
       this.addIngModal.show = false;
       alert(`【${name}】已成功入库！`);
@@ -1442,7 +1537,6 @@ createApp({
     addMomRestDay() {
       const form = this.newMomRestForm;
       if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
-      if (form.start > form.end) { alert("开始日期不能晚于结束日期"); return; }
       this.momRestDays.push({ name: '休息日', start: form.start, end: form.end });
       this.newMomRestForm = { start: '', end: '' };
     },
@@ -1450,7 +1544,6 @@ createApp({
     addHoliday(person) {
       const form = this.newHolidayForm[person];
       if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
-      if (form.start > form.end) { alert("开始日期不能晚于结束日期"); return; }
       const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
       targetArray.push({ name: form.name || '假期/请假', start: form.start, end: form.end });
       this.newHolidayForm[person] = { name: '', start: '', end: '' };
@@ -1463,31 +1556,38 @@ createApp({
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
     saveMemberEdit(){ alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`); this.memberEditModal.show = false; },
     
-    // 修复图表：加入 setTimeout 确保 Canvas 渲染完毕
     openChartModal(personKey){
       this.chartModal.target = personKey;
       const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}
       this.chartModal.title = nameMap[personKey];
       this.chartModal.show = true;
       
-      // 延迟一点渲染，防止弹窗没出来导致 canvas 为空
+      // 强制延迟 200ms，等待 DOM 完全挂载完毕
       setTimeout(() => {
         this.renderSingleChart(personKey);
-      }, 100);
+      }, 200);
     },
+    
     closeChartModal(){
       this.chartModal.show = false;
-      if(this.currentChart) this.currentChart.destroy();
-      this.currentChart = null;
+      if(this.currentChart) {
+        this.currentChart.destroy();
+        this.currentChart = null;
+      }
     },
+    
     renderSingleChart(person){
       const canvas = this.$refs.chartCanvasRef;
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
-      if(this.currentChart) this.currentChart.destroy();
+      
+      // 防御性销毁
+      if(this.currentChart) {
+        this.currentChart.destroy();
+        this.currentChart = null;
+      }
       
       const data = this.historyData[person];
-      // 检查数据是否存在，防止报错
       if(!data || !data.labels) return;
 
       let chartData, chartOptions;
@@ -1508,11 +1608,10 @@ createApp({
           scales: {
             x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
             y: { beginAtZero: false, title: { display: true, text: '体重 (kg)' } }
-          },
-          plugins: { tooltip: { callbacks: { title: function(context) { return '日期：' + context[0].label; } } } }
+          }
         };
       } else {
-        // 确保数据是数字数组
+        // 强制转换为数字
         const weightData = data.weight.map(Number);
         const heightData = data.height.map(Number);
         
@@ -1528,15 +1627,16 @@ createApp({
           scales: {
             x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
             y: { type: 'linear', display: true, position: 'left', title: { display: true, text: '身高 (cm)' } },
-            y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '体重 (kg)' }, 
-                  min: Math.floor(Math.min(...weightData) - 2), 
-                  max: Math.ceil(Math.max(...weightData) + 2) }
-          },
-          plugins: { tooltip: { callbacks: { title: function(context) { return '日期：' + context[0].label; } } } }
+            y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '体重 (kg)' }, min: Math.floor(Math.min(...weightData) - 2), max: Math.ceil(Math.max(...weightData) + 2) }
+          }
         };
       }
       
-      this.currentChart = new Chart(ctx, { type: 'line', data: chartData, options: chartOptions });
+      try {
+        this.currentChart = new Chart(ctx, { type: 'line', data: chartData, options: chartOptions });
+      } catch(e) {
+        console.error("图表渲染失败", e);
+      }
     },
     toggleBought(item){ item.bought = !item.bought; }
   }
