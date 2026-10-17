@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>家庭膳食工作台</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
     body { background-color: #f9f6ef; color: #333; padding-bottom: 100px; font-size: 15px; }
     .container { max-width: 740px; margin: 0 auto; padding: 18px; }
 
-    /* 底部导航 (恢复原样) */
+    /* 底部导航 */
     .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #ece7dc; display: flex; z-index: 99; height: 76px; align-items: center; justify-content: space-around; padding-bottom: env(safe-area-inset-bottom); }
     .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 8px 0; position: relative; }
     .tab-icon { font-size: 22px; filter: grayscale(1); opacity: 0.6; transition: all 0.2s; }
@@ -37,7 +36,6 @@
     .tag { display: inline-block; background: #f4ece3; color: #b06237; border-radius: 20px; padding: 5px 10px; font-size: 13px; margin: 3px; }
     .tag.green { background: #eaf6ec; color: #2b703b; }
 
-    /* 日期与菜单 */
     .date-picker-wrapper { display: flex; align-items: center; justify-content: space-between; background: #fff5ef; border-radius: 14px; padding: 10px 16px; border: 1px solid #fce8df; margin-bottom:14px;}
     .date-picker-wrapper label { font-size: 15px; color: #c46838; font-weight: 600; margin: 0; }
     .date-picker-wrapper input[type="date"] { border: none; background: transparent; color: #333; font-size: 14px; font-weight: 500; outline: none; }
@@ -50,7 +48,7 @@
     .ai-float-btn:active { transform: scale(0.9); }
     .ai-float-icon { font-size: 28px; line-height: 1; }
 
-    /* AI 聊天界面样式 (全屏覆盖模式) */
+    /* AI 聊天界面样式 */
     .chat-wrapper { position: fixed; inset: 0; background: #f4f1ea; z-index: 150; display: flex; flex-direction: column; padding-bottom: 76px; }
     .chat-header { background: #fff; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; }
     .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 15px; }
@@ -63,7 +61,7 @@
     .chat-input-area button { padding: 8px 16px; border-radius: 10px; background: #e6703b; color: #fff; border: none; font-weight: 600; }
 
     /* 设置 Key 的遮罩 */
-    .api-mask { position: absolute; inset: 0; background: rgba(255,255,255,0.95); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; padding: 20px; text-align: center;}
+    .api-mask { position: absolute; inset: 0; background: #f4f1ea; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; padding: 20px; text-align: center; }
   </style>
 </head>
 <body>
@@ -72,7 +70,6 @@
 
     <!-- 首页 -->
     <div v-if="view === 'home'">
-      <!-- 首页顶部增加 AI 入口 -->
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 10px;">
         <h2 style="font-size: 19px; font-weight: 600;">🏠 家庭膳食</h2>
         <button class="btn small ai-btn" @click="view='ai'">🤖 问问营养师</button>
@@ -122,11 +119,10 @@
         <h2>📅 周菜谱</h2>
         <div style="display: flex; gap: 8px;">
           <button class="btn small ai-btn" @click="view='ai'">🤖 AI 找灵感</button>
-          <button class="btn small" @click="generateWeekPlan('current', true)">🪄 一键生成</button>
+          <button class="btn small" @click="generateWeekPlan">🪄 一键生成</button>
         </div>
       </div>
       
-      <!-- 简化的日期选择器 -->
       <div style="display: flex; gap: 10px; overflow-x: auto; padding: 6px 0 14px;">
         <div v-for="d in thisWeekDates" :key="d.idx" 
              :style="{minWidth: '70px', padding: '10px 0', textAlign: 'center', borderRadius: '14px', border: selDateIdx===d.idx ? '1px solid #e6703b' : '1px solid #e8e2d6', background: selDateIdx===d.idx ? '#f7e4d8' : '#fff', cursor:'pointer'}"
@@ -149,16 +145,12 @@
       </div>
     </div>
 
-    <!-- 待操作 (中间栏恢复) -->
+    <!-- 待操作 -->
     <div v-if="view === 'todo'">
       <div class="card">
         <h2>🛒 采购清单</h2>
         <p class="card-subtitle">根据下周食谱自动汇总。</p>
         <div class="empty-text">（此处保留了你之前的采购清单功能，暂略展示）</div>
-      </div>
-      <div class="card">
-        <h2>⏱️ 预处理清单</h2>
-        <div class="empty-text">（此处保留了你之前的预处理功能，暂略展示）</div>
       </div>
     </div>
 
@@ -182,47 +174,54 @@
 
     <!-- AI 聊天全屏页面 -->
     <div class="chat-wrapper" v-if="view === 'ai'">
-      <div class="chat-header">
-        <h3 style="color: #4A90E2; display: flex; align-items: center; gap: 8px;">🤖 专属家庭营养师</h3>
-        <button class="btn secondary small" @click="view='home'">关闭</button>
-      </div>
       
-      <div class="chat-container">
-        <div class="chat-messages" ref="chatMsgBox" id="chatMsgBox">
-          <div class="chat-bubble chat-ai">
-            你好！我是你的专属家庭营养师 🤖。我已经掌握了你们全家的身体情况。
-            <br><br>你可以直接问我：
-            <br>👉 “我想吃番茄炖牛腩，怎么做？”
-            <br>👉 “今晚有什么快手菜推荐？最好能用空气炸锅。”
-            <br>👉 “妈妈明天来例假，给她安排个暖宫汤。”
-          </div>
-          
-          <div v-for="(msg, idx) in chatHistory" :key="idx" class="chat-bubble" :class="msg.role === 'user' ? 'chat-user' : 'chat-ai'">
-            {{ msg.content }}
-          </div>
-          <div v-if="isTyping" class="chat-bubble chat-ai" style="color: #999;">
-            AI 正在思考中，请稍候...
+      <!-- 没填 Key 时的全屏提示 -->
+      <div class="api-mask" v-if="!apiKey">
+        <h3 style="color:#4A90E2; margin-bottom: 10px;">请配置 AI 接口</h3>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">推荐使用智谱清言免费 API (open.bigmodel.cn)</p>
+        <input v-model="tempKey" placeholder="在此粘贴你的 API Key" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:10px; font-size:15px;" />
+        <button class="btn ai-btn" @click="saveApiKey" style="width:100%; padding: 12px;">保存并开始对话</button>
+        <button class="btn secondary" @click="view='home'" style="width:100%; margin-top:10px; background:none;">返回首页</button>
+      </div>
+
+      <!-- 正常聊天界面 -->
+      <div v-else style="display:flex; flex-direction:column; height:100%;">
+        <div class="chat-header">
+          <h3 style="color: #4A90E2; display: flex; align-items: center; gap: 8px;">🤖 专属营养师</h3>
+          <div style="display:flex; gap: 8px;">
+            <button class="btn secondary small" @click="clearKey">重置Key</button>
+            <button class="btn secondary small" @click="view='home'">关闭</button>
           </div>
         </div>
+        
+        <div class="chat-container">
+          <div class="chat-messages" id="chatMsgBox">
+            <div class="chat-bubble chat-ai">
+              你好！我是你的专属家庭营养师 🤖。我已经掌握了你们全家的身体情况。
+              <br><br>你可以直接问我：
+              <br>👉 “我想吃番茄炖牛腩，怎么做？”
+              <br>👉 “今晚有什么快手菜推荐？最好能用空气炸锅。”
+            </div>
+            
+            <div v-for="(msg, idx) in chatHistory" :key="idx" class="chat-bubble" :class="msg.role === 'user' ? 'chat-user' : 'chat-ai'">
+              {{ msg.content }}
+            </div>
+            <div v-if="isTyping" class="chat-bubble chat-ai" style="color: #999;">
+              AI 正在思考中，请稍候...
+            </div>
+          </div>
 
-        <div class="chat-input-area">
-          <input v-model="chatInput" @keyup.enter="sendMessage" placeholder="输入你想吃的菜或需求..." />
-          <button @click="sendMessage">发送</button>
-        </div>
-
-        <!-- 没填 Key 时的遮罩 -->
-        <div class="api-mask" v-if="!apiKey">
-          <h3 style="color:#4A90E2; margin-bottom: 10px;">请先配置 AI 接口</h3>
-          <p style="font-size: 13px; color: #666; margin-bottom: 15px;">推荐使用智谱清言免费 API (open.bigmodel.cn)</p>
-          <input v-model="tempKey" placeholder="粘贴你的 API Key" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px; margin-bottom:10px;" />
-          <button class="btn ai-btn" @click="saveApiKey" style="width:100%;">保存并开始对话</button>
+          <div class="chat-input-area">
+            <input v-model="chatInput" @keyup.enter="sendMessage" placeholder="输入你想吃的菜或需求..." />
+            <button @click="sendMessage">发送</button>
+          </div>
         </div>
       </div>
     </div>
 
   </div>
 
-  <!-- 底部导航 (恢复原来的 5 个位置) -->
+  <!-- 底部导航 (5 个位置) -->
   <div class="tab-bar" v-if="view !== 'ai'">
     <div class="tab-item" :class="{active:view==='home'}" @click="view='home'">
       <span class="tab-icon">🏠</span>
@@ -260,23 +259,21 @@ createApp({
       homeDate: new Date().toISOString().split('T')[0],
       selDateIdx: 0,
       
-      // AI 相关数据
       apiKey: localStorage.getItem('ai_api_key') || '',
       tempKey: '',
       chatInput: '',
       chatHistory: [],
       isTyping: false,
       
-      // 基础模拟数据
       thisWeekDates: [
         { idx: 0, week: "周一", day: "12" }, { idx: 1, week: "周二", day: "13" },
         { idx: 2, week: "周三", day: "14" }, { idx: 3, week: "周四", day: "15" },
-        { idx: 4, week腩: "周五", day: "16" }, {', idx: 5, week weight: "周六", day: "17" },
+        { idx: 4, week: "周五", day: "16" }, { idx: 5, week: "周六", day: "17" },
         { idx: 6, week: "周日", day: "18" }
       ],
-:      weekMenu500Data: {
+      weekMenuData: {
         current: [
-          { breakfast: [{id:1, name:"燕麦牛奶粥+水煮蛋", tag:"高钙", ingredients:[{name:'燕麦', weight:200}], steps:['煮粥','煮蛋']}], lunch: [{id:2, name:"番茄牛腩", tag:"补铁", ingredients:[{name:'牛}], steps:['炖煮40分钟']}], dinner: [{id:3, name:"清蒸鲈鱼", tag:"低脂", ingredients:[{name:'鲈鱼', weight:700}], steps:['蒸8分钟']}] },
+          { breakfast: [{id:1, name:"燕麦牛奶粥+水煮蛋", tag:"高钙", ingredients:[{name:'燕麦', weight:200}], steps:['煮粥','煮蛋']}], lunch: [{id:2, name:"番茄牛腩", tag:"补铁", ingredients:[{name:'牛腩', weight:500}], steps:['炖煮40分钟']}], dinner: [{id:3, name:"清蒸鲈鱼", tag:"低脂", ingredients:[{name:'鲈鱼', weight:700}], steps:['蒸8分钟']}] },
           { breakfast: [], lunch: [], dinner: [] },
           { breakfast: [], lunch: [], dinner: [] },
           { breakfast: [], lunch: [], dinner: [] },
@@ -301,10 +298,23 @@ createApp({
   },
   methods:{
     saveApiKey() {
-      if (!this.tempKey.trim()) { alert("请输入有效的 Key"); return; }
-      this.apiKey = this.tempKey.trim();
-      localStorage.setItem('ai_api_key', this.apiKey);
-      alert("✅ API Key 保存成功！现在可以开始对话了。");
+      const key = this.tempKey.trim();
+      if (!key) { alert("请输入有效的 Key"); return; }
+      this.apiKey = key;
+      try {
+        localStorage.setItem('ai_api_key', this.apiKey);
+        alert("✅ API Key 保存成功！下次打开就不需要再输了。");
+      } catch (e) {
+        alert("❌ 保存失败：你的浏览器可能开启了隐私模式，请使用普通模式打开网页。");
+      }
+    },
+
+    clearKey() {
+      if(confirm("确定要重置 API Key 吗？")) {
+        localStorage.removeItem('ai_api_key');
+        this.apiKey = '';
+        this.tempKey = '';
+      }
     },
 
     async sendMessage() {
@@ -363,7 +373,7 @@ createApp({
     },
 
     generateWeekPlan() {
-      alert("这里保留了你之前一键生成周菜谱的功能。");
+      alert("这里保留了一键生成周菜谱的功能。");
     }
   }
 }).mount('#app')
