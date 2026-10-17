@@ -145,25 +145,24 @@
       </div>
     </div>
 
-    <!-- 待操作 -->
+    <!-- 待操作（略） -->
     <div v-if="view === 'todo'">
       <div class="card">
         <h2>🛒 采购清单</h2>
-        <p class="card-subtitle">根据下周食谱自动汇总。</p>
-        <div class="empty-text">（此处保留了你之前的采购清单功能，暂略展示）</div>
+        <div class="empty-text">（略展示）</div>
       </div>
     </div>
 
     <!-- 食材库（略） -->
     <div v-if="view === 'ingredientLib'">
       <h2>🥬 食材库</h2>
-      <div class="empty-text">（保留原有功能）</div>
+      <div class="empty-text">（略展示）</div>
     </div>
 
     <!-- 我的（略） -->
     <div v-if="view === 'setting'">
       <h2>👤 我的</h2>
-      <div class="empty-text">（保留原有功能）</div>
+      <div class="empty-text">（略展示）</div>
     </div>
 
     <!-- 悬浮 AI 按钮（只在非 AI 页面显示） -->
@@ -178,7 +177,7 @@
       <!-- 没填 Key 时的全屏提示 -->
       <div class="api-mask" v-if="!apiKey">
         <h3 style="color:#4A90E2; margin-bottom: 10px;">请配置 AI 接口</h3>
-        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">推荐使用智谱清言免费 API (open.bigmodel.cn)</p>
+        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">请填入新生成的 Key (注意不要带空格)</p>
         <input v-model="tempKey" placeholder="在此粘贴你的 API Key" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:10px; font-size:15px;" />
         <button class="btn ai-btn" @click="saveApiKey" style="width:100%; padding: 12px;">保存并开始对话</button>
         <button class="btn secondary" @click="view='home'" style="width:100%; margin-top:10px; background:none;">返回首页</button>
@@ -221,7 +220,7 @@
 
   </div>
 
-  <!-- 底部导航 (5 个位置) -->
+  <!-- 底部导航 -->
   <div class="tab-bar" v-if="view !== 'ai'">
     <div class="tab-item" :class="{active:view==='home'}" @click="view='home'">
       <span class="tab-icon">🏠</span>
@@ -336,7 +335,13 @@ createApp({
 【回答要求】格式清晰，包含食材和克数、做法步骤、分餐建议。字数300字以内，不要啰嗦。`;
 
       try {
-        const response = await fetch("https://open.bigmodel.cn/api/paas/v4/chat/completions", {
+        // 核心修改：使用 CORS 代理绕过浏览器的跨域限制
+        const targetUrl = "https://open.bigmodel.cn/api/paas/v4/chat/completions";
+        // corsproxy.io 是一个公开的免费代理，可以将请求转发过去
+        const proxyUrl = "https://corsproxy.io/?";
+        const finalUrl = proxyUrl + encodeURIComponent(targetUrl);
+
+        const response = await fetch(finalUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -352,13 +357,13 @@ createApp({
           })
         });
 
-        if (!response.ok) throw new Error("网络请求失败，请检查 API Key 是否有效。");
+        if (!response.ok) throw new Error(`请求失败，状态码: ${response.status}。请检查 API Key 是否正确。`);
 
         const data = await response.json();
         const aiReply = data.choices[0].message.content;
         this.chatHistory.push({ role: 'assistant', content: aiReply });
       } catch (error) {
-        this.chatHistory.push({ role: 'assistant', content: `出错了：${error.message}。请检查网络或 API 配置。` });
+        this.chatHistory.push({ role: 'assistant', content: `出错了：${error.message}。可能是因为网络不稳定，或者代理服务器繁忙，请稍后再试。` });
       } finally {
         this.isTyping = false;
         this.scrollToBottom();
