@@ -111,7 +111,6 @@
     
     .replace-btn { background: #f0f0f0; color: #666; border: none; border-radius: 8px; padding: 4px 8px; font-size: 12px; cursor: pointer; margin-left: 8px; }
     
-    /* 工具和时间标签 */
     .tool-time-row { display: flex; gap: 10px; margin-top: 8px; }
     .tool-tag, .time-tag { font-size: 12px; padding: 4px 8px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; }
     .tool-tag { background: #e6f0fa; color: #2b579b; }
@@ -143,12 +142,9 @@
         </div>
       </div>
 
-      <!-- 菜单预览 -->
       <div class="card">
         <h2>🍽️ 菜单预览</h2>
-        
         <div v-if="homeCurrentDayDishes">
-          <!-- 早餐 -->
           <div class="menu-preview-section">
             <div class="menu-preview-title">🌅 早餐</div>
             <div class="menu-preview-row"><span>👨‍👩‍👧‍👦 全家共享：</span>
@@ -157,7 +153,6 @@
             <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span>👩 妈妈（早班外带）：</span>前一晚备好装盒</div>
           </div>
 
-          <!-- 午餐 -->
           <div class="menu-preview-section">
             <div class="menu-preview-title">☀️ 午餐</div>
             <div class="menu-preview-row"><span>👧 姐姐（回家）：</span>{{ homeCurrentDayDishes.lunch.map(d => d.name).join('、') || '暂无安排' }}</div>
@@ -165,14 +160,12 @@
             <div class="menu-preview-row" style="color:#c46838" v-else><span>👩 妈妈（下午班）：</span>{{ homeCurrentDayDishes.lunch.map(d => d.name).join('、') || '暂无安排' }}</div>
           </div>
 
-          <!-- 晚餐 -->
           <div class="menu-preview-section">
             <div class="menu-preview-title">🌙 晚餐</div>
             <div class="menu-preview-row"><span>👨‍👩‍👧‍👦 全家：</span>{{ homeCurrentDayDishes.dinner.map(d => d.name).join('、') || '暂无安排' }}</div>
             <div class="menu-preview-row" style="color:#c46838"><span>👦 弟弟专属：</span>肉丸/菜肴中混入菠菜碎+胡萝卜碎（隐形蔬菜）</div>
           </div>
           
-          <!-- 汤羹/加餐 -->
           <div class="menu-preview-section" v-if="homeCurrentDayDishes.soup && homeCurrentDayDishes.soup.length > 0">
             <div class="menu-preview-title">🍲 炖汤/甜品</div>
             <div class="menu-preview-row" v-for="soup in homeCurrentDayDishes.soup" :key="soup.id">
@@ -180,21 +173,13 @@
             </div>
           </div>
         </div>
-        
-        <div v-else class="empty-text">
-          暂无菜单数据，请先到「周菜谱」点击“一键生成”食谱。
-        </div>
+        <div v-else class="empty-text">暂无菜单数据，请先到「周菜谱」点击生成。</div>
       </div>
 
-      <!-- 今日加餐推荐 -->
       <div class="card">
         <h2>🍎 今日加餐推荐</h2>
         <p class="card-subtitle">每天只推 1 种水果 + 1 种坚果/零食，优先消耗快过期的。</p>
-        
-        <div v-if="dailySnackRecommendations.length === 0" class="empty-text" style="padding: 20px;">
-          暂无水果或零食库存，请先去食材库添加。
-        </div>
-        
+        <div v-if="dailySnackRecommendations.length === 0" class="empty-text" style="padding: 20px;">暂无库存，请先去食材库添加。</div>
         <div class="snack-recommend-box">
           <div v-for="(rec, idx) in dailySnackRecommendations" :key="idx" class="snack-recommend-item" :class="{urgent: rec.urgent}">
             <span class="snack-icon">{{rec.icon}}</span>
@@ -204,7 +189,6 @@
             <span v-if="rec.urgent" class="tag red" style="font-size: 11px; margin-top: 4px;">快过期，优先吃</span>
           </div>
         </div>
-        
         <div style="margin-top: 14px; font-size: 13px; color: #888; line-height: 1.7;">
           <b>搭配原则：</b>水果和坚果安排在早餐或下午2点上学/上班前。坚果类5岁以下小朋友必须打成粉拌入酸奶，避免呛噎。
         </div>
@@ -213,7 +197,6 @@
 
     <!-- 周菜谱 -->
     <div v-if="view === 'weekMenu'">
-      <!-- 增加：本周/下周切换 -->
       <div class="tab-switch" style="margin-bottom: 14px;">
         <div class="switch-btn" :class="{active:viewWeekMode==='current'}" @click="viewWeekMode='current'">📅 本周食谱</div>
         <div class="switch-btn" :class="{active:viewWeekMode==='next'}" @click="viewWeekMode='next'">🪄 下周食谱</div>
@@ -227,7 +210,6 @@
         </div>
       </div>
       
-      <!-- 日期选择器 -->
       <div class="date-scroll">
         <div v-for="d in displayWeekDates" class="date-item" :class="{active:selDateIdx===d.idx}" @click="selDateIdx=d.idx">
           <div style="font-size:13px">{{d.week}}</div>
@@ -235,7 +217,6 @@
         </div>
       </div>
       
-      <!-- 显示当天菜单 -->
       <div v-if="currentDayDishes">
         <!-- 早餐 -->
         <div class="meal-title">🌅 早餐</div>
@@ -254,12 +235,12 @@
           </div>
           <div class="card-subtitle" style="margin-top: 10px;">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
           
-          <div class="portion-box" v-if="dish.portions">
+          <div class="portion-box" v-if="dish.portions && Object.keys(dish.portions).length > 0">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议（克数）</div>
-            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}（减脂/低草酸）</span></div>
-            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}（补气血/控糖）</span></div>
-            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}（长高/避激素）</span></div>
-            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}（隐藏蔬菜/防呛噎）</span></div>
+            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}</span></div>
+            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}</span></div>
+            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}</span></div>
+            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}</span></div>
           </div>
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;">
@@ -295,12 +276,12 @@
           </div>
           <div class="card-subtitle" style="margin-top: 10px;">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
           
-          <div class="portion-box" v-if="dish.portions">
+          <div class="portion-box" v-if="dish.portions && Object.keys(dish.portions).length > 0">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议（克数）</div>
-            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}（减脂/低草酸）</span></div>
-            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}（补气血/控糖）</span></div>
-            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}（长高/避激素）</span></div>
-            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}（隐藏蔬菜/防呛噎）</span></div>
+            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}</span></div>
+            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}</span></div>
+            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}</span></div>
+            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}</span></div>
           </div>
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;">
@@ -336,12 +317,12 @@
           </div>
           <div class="card-subtitle" style="margin-top: 10px;">总食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
           
-          <div class="portion-box" v-if="dish.portions">
+          <div class="portion-box" v-if="dish.portions && Object.keys(dish.portions).length > 0">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议（克数）</div>
-            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}（减脂/低草酸）</span></div>
-            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}（补气血/控糖）</span></div>
-            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}（长高/避激素）</span></div>
-            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}（隐藏蔬菜/防呛噎）</span></div>
+            <div class="portion-row" v-if="dish.portions.dad"><span>👨 爸爸：</span><span>{{dish.portions.dad}}</span></div>
+            <div class="portion-row" v-if="dish.portions.mom"><span>👩 妈妈：</span><span>{{dish.portions.mom}}</span></div>
+            <div class="portion-row" v-if="dish.portions.sister"><span>👧 姐姐：</span><span>{{dish.portions.sister}}</span></div>
+            <div class="portion-row" v-if="dish.portions.brother"><span>👦 弟弟：</span><span>{{dish.portions.brother}}</span></div>
           </div>
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;">
@@ -572,7 +553,7 @@
     </div>
   </div>
 
-  <!-- 自定义添加菜谱弹窗 -->
+  <!-- 添加自定义菜谱弹窗 -->
   <div class="modal-mask" v-if="addRecipeModal.show" @click.self="addRecipeModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">添加自定义菜谱</h3>
@@ -600,11 +581,11 @@
         </div>
       </div>
       <div class="input-wrap">
-        <label>核心食材 (用逗号分隔，可不写克数)</label>
+        <label>核心食材 (用逗号分隔)</label>
         <input v-model="addRecipeModal.ingredientsText" placeholder="如：肥牛卷, 番茄, 金针菇" />
       </div>
       <div class="input-wrap">
-        <label>做法步骤 (直接复制粘贴文字)</label>
+        <label>做法步骤</label>
         <textarea v-model="addRecipeModal.stepsText" rows="3" placeholder="1. 肥牛焯水..."></textarea>
       </div>
       <div style="display:flex;gap:10px;margin-top:16px">
@@ -891,7 +872,7 @@ createApp({
       recipeLibrary: {
         breakfast: [
           { name: "燕麦牛奶粥+水煮蛋", tag: "碳水·高钙", tool: "电饭煲/奶锅", time: "10分钟", ingredients: [{name:'燕麦', weight:200}, {name:'牛奶', weight:1000}, {name:'鸡蛋', weight:300}], steps: ['燕麦加水煮开', '倒入牛奶小火煮3分钟', '鸡蛋冷水下锅煮8分钟'], portions: { dad: '燕麦40g+奶250ml+蛋1个', mom: '燕麦40g+奶250ml+蛋1个', sister: '燕麦40g+奶250ml+蛋1个', brother: '燕麦30g+奶250ml+蛋1个' } },
-          { name: "全麦面包+无糖酸奶+坚果", tag: "快手·优质脂肪", tool ": "微波炉", time: "5分钟", ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], steps: ['面包微波加热30秒', '搭配酸奶', '坚果碾碎撒入'], portions: { dad: '面包2片+酸奶100g+核桃10g', mom: '面包2片+酸奶100g+核桃10g', sister: '面包2片+酸奶100g+核桃10g', brother: '面包1片+酸奶100g+核桃粉5g' } }
+          { name: "全麦面包+无糖酸奶+坚果", tag: "快手·优质脂肪", tool: "微波炉", time: "5分钟", ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], steps: ['面包微波加热30秒', '搭配酸奶', '坚果碾碎撒入'], portions: { dad: '面包2片+酸奶100g+核桃10g', mom: '面包2片+酸奶100g+核桃10g', sister: '面包2片+酸奶100g+核桃10g', brother: '面包1片+酸奶100g+核桃粉5g' } }
         ],
         lunch: [
           { name: "番茄炖瘦牛腩+杂粮饭", tag: "补铁·高蛋白", tool: "陶瓷锅/电饭煲", time: "50分钟", ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:600}, {name:'杂粮米', weight:300}], steps: ['牛腩焯水，番茄切块', '入陶瓷锅炖煮40分钟', '电饭煲提前煮好杂粮饭'], portions: { dad: '牛腩80g+饭100g', mom: '牛腩100g+饭80g', sister: '牛腩60g+饭100g', brother: '牛腩50g+饭80g(切碎)' } },
@@ -908,7 +889,7 @@ createApp({
       },
       
       shoppingList: [
-        { id: 1, name:全麦面包", weight: 600, category: "weekend", bought: false },
+        { id: 1, name: "全麦面包", weight: 600, category: "weekend", bought: false },
         { id: 2, name: "瘦牛腩", weight: 1500, category: "weekend", bought: false }
       ],
       prepTasks: [
@@ -921,8 +902,7 @@ createApp({
   },
   created() {
     this.getCurrentWeekDates();
-    this.loadCustomRecipes(); // 加载本地保存的自定义菜谱
-    // 默认给本周生成一点数据，避免空白
+    this.loadCustomRecipes(); 
     this.generateWeekPlan('current', true);
   },
   computed: {
@@ -1089,7 +1069,6 @@ createApp({
     }
   },
   methods:{
-    // 从本地加载自定义菜谱
     loadCustomRecipes() {
       const saved = localStorage.getItem('customRecipes');
       if (saved) {
@@ -1130,36 +1109,30 @@ createApp({
       this.nextWeekDates = nextWeek;
     },
 
-    // 打开添加自定义菜谱
     openAddRecipeModal() {
       this.addRecipeModal = { show: true, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '' };
     },
 
-    // 保存自定义菜谱并持久化到 localStorage
     saveCustomRecipe() {
       const { name, type, tool, time, ingredientsText, stepsText } = this.addRecipeModal;
       if (!name || !tool || !time) { alert("请填写菜名、工具和时间"); return; }
 
-      // 简单把逗号分隔的食材转换为对象
       const ingredients = ingredientsText.split(/[,，]/).map(s => {
         let text = s.trim();
-        return { name: text, weight: 100 }; // 默认假设100g，方便后续计算
+        return { name: text, weight: 100 };
       }).filter(i => i.name);
 
-      // 把按行分隔的步骤转换为数组
       const steps = stepsText.split('\n').map(s => s.trim()).filter(s => s);
 
       const newRecipe = {
         name, tag: '自定义', tool, time,
         ingredients: ingredients.length ? ingredients : [{name:'自定义食材', weight:100}],
         steps: steps.length ? steps : ['按自己习惯操作'],
-        portions: {} // 自定义菜谱暂不细分人群份量
+        portions: {} 
       };
 
-      // 加入内存
       this.recipeLibrary[type].push(newRecipe);
 
-      // 存入本地缓存
       let customRecipes = JSON.parse(localStorage.getItem('customRecipes') || '{"breakfast":[],"lunch":[],"dinner":[],"soup":[]}');
       customRecipes[type].push(newRecipe);
       localStorage.setItem('customRecipes', JSON.stringify(customRecipes));
@@ -1168,7 +1141,6 @@ createApp({
       alert(`✅ 【${name}】已加入菜谱库，以后一键生成和替换时都能看到啦！`);
     },
 
-    // 生成食谱（支持生成本周或下周）
     generateWeekPlan(mode, isInit = false) {
       let idCounter = 1;
       let newWeekMenu = [];
@@ -1176,19 +1148,15 @@ createApp({
       for (let day = 0; day < 7; day++) {
         let dayMenu = { breakfast: [], lunch: [], dinner: [], soup: [] };
         
-        // 早餐1个
         let bfRecipe = this.recipeLibrary.breakfast[Math.floor(Math.random() * this.recipeLibrary.breakfast.length)];
         dayMenu.breakfast.push({ id: idCounter++, ...bfRecipe, completed: false, feedback: '' });
         
-        // 午餐1个
         let lunchRecipe = this.recipeLibrary.lunch[Math.floor(Math.random() * this.recipeLibrary.lunch.length)];
         dayMenu.lunch.push({ id: idCounter++, ...lunchRecipe, completed: false, feedback: '' });
         
-        // 晚餐1个
         let dinnerRecipe = this.recipeLibrary.dinner[Math.floor(Math.random() * this.recipeLibrary.dinner.length)];
         dayMenu.dinner.push({ id: idCounter++, ...dinnerRecipe, completed: false, feedback: '' });
         
-        // 汤羹：每周二、四、六安排
         if ([1, 3, 5].includes(day)) {
           let soupRecipe = this.recipeLibrary.soup[Math.floor(Math.random() * this.recipeLibrary.soup.length)];
           dayMenu.soup.push({ id: idCounter++, ...soupRecipe, completed: false, feedback: '' });
@@ -1202,8 +1170,8 @@ createApp({
         if (!isInit) alert("✅ 本周食谱已重新生成！");
       } else {
         this.weekMenuData.next = newWeekMenu;
-        this.recalculateShoppingList(); // 只有生下周食谱才重新算采购
-        this.generatePrepTasks(); // 生下周任务
+        this.recalculateShoppingList();
+        this.generatePrepTasks();
         if (!isInit) alert("✅ 下周食谱已生成！\n采购清单已同步更新，请到「待操作」查看。");
       }
     },
