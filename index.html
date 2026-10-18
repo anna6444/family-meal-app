@@ -8,7 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background-color: #f9f6ef; color: #333; padding-bottom: 100px; font-size: 15px; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #f9f6ef; color: #333; padding-bottom: 100px; font-size: 15px; }
     .container { max-width: 740px; margin: 0 auto; padding: 18px; }
 
     /* 底部导航 */
@@ -123,63 +123,23 @@
     .chat-ai { background: #fff; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     
     /* 聊天底部输入区域 */
-    .chat-bottom-area {
-      background: #f4f1ea;
-      padding: 10px 15px;
-      padding-bottom: calc(10px + env(safe-area-inset-bottom));
-      flex-shrink: 0;
+    .chat-input-area { 
+      display: flex; align-items: center; gap: 8px; background: #fff; padding: 8px 12px; 
+      border-radius: 20px; margin-top: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); 
+      margin-bottom: calc(10px + env(safe-area-inset-bottom)); 
     }
-
-    .chat-input-box { 
-      display: flex; align-items: center; gap: 8px; background: #fff; 
-      padding: 8px; border-radius: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); 
-      position: relative;
-    }
-    
-    /* 切换按钮 (麦克风/键盘) */
-    .toggle-btn { 
-      background: transparent; color: #666; border: none; 
-      width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; 
-      font-size: 22px; cursor: pointer; flex-shrink: 0;
-    }
-    
-    /* 文字输入框 */
-    .text-input { 
+    .chat-input-area input { 
       flex: 1; border: none; outline: none; font-size: 15px; background: transparent; 
-      padding: 8px 4px; line-height: 1.5;
+      padding: 8px 4px; margin: 0; line-height: 1.5;
     }
-    
-    /* 语音长按钮 */
-    .voice-hold-btn {
-      flex: 1; background: #f1ede4; color: #333; border: none; border-radius: 14px;
-      padding: 10px 0; font-size: 15px; font-weight: 600; text-align: center;
-      user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
-      transition: background 0.2s; margin: 0 8px;
-    }
-    .voice-hold-btn:active, .voice-hold-btn.recording {
-      background: #e2ddd2; color: #e6703b;
-    }
-    
-    /* 发送按钮 */
     .chat-send-btn { padding: 8px 16px; border-radius: 14px; background: #e6703b; color: #fff; border: none; font-weight: 600; flex-shrink: 0; }
-    
-    /* 录音时全屏提示 */
-    .recording-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300;
-      display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;
-    }
-    .recording-wave { font-size: 60px; animation: pulse 1s infinite; margin-bottom: 20px; }
-    .recording-text { font-size: 18px; font-weight: 600; letter-spacing: 2px; }
-
-    @keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 0.8; } }
-
     .api-mask { position: absolute; inset: 0; background: #f4f1ea; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; padding: 20px; text-align: center; }
   </style>
 </head>
 <body>
 <div id="app">
   <div class="container">
-    <!-- 页面代码保持不变 -->
+
     <!-- 首页 -->
     <div v-if="view === 'home'">
       <div class="card">
@@ -653,50 +613,12 @@
         </div>
 
         <!-- 底部输入区域 -->
-        <div class="chat-bottom-area">
-          <div class="chat-input-box">
-            <!-- 切换到语音 / 切换到键盘 -->
-            <button class="toggle-btn" @click="toggleVoiceMode">
-              {{ isVoiceMode ? '⌨️' : '🎤' }}
-            </button>
-            
-            <!-- 文字输入 -->
-            <input 
-              v-if="!isVoiceMode" 
-              v-model="chatInput" 
-              @keyup.enter="sendMessage" 
-              placeholder="输入你想吃的菜或需求..." 
-              class="text-input"
-            />
-            
-            <!-- 语音长按钮 (按住说话) -->
-            <div 
-              v-else 
-              class="voice-hold-btn"
-              :class="{ recording: isRecording }"
-              @touchstart.prevent="startRecording"
-              @touchend.prevent="stopRecording"
-              @touchcancel.prevent="stopRecording"
-              @mousedown.prevent="startRecording"
-              @mouseup.prevent="stopRecording"
-              @mouseleave="stopRecording"
-            >
-              {{ isRecording ? '松开 识别' : '按住 说话' }}
-            </div>
-
-            <!-- 发送按钮 -->
-            <button v-if="!isVoiceMode" class="chat-send-btn" @click="sendMessage">发送</button>
-          </div>
+        <div class="chat-input-area">
+          <input v-model="chatInput" @keyup.enter="sendMessage" placeholder="输入你想吃的菜或需求..." />
+          <button class="chat-send-btn" @click="sendMessage">发送</button>
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- 录音全屏提示遮罩 -->
-  <div class="recording-overlay" v-if="isRecording">
-    <div class="recording-wave">🎙️</div>
-    <div class="recording-text">正在聆听，请说话...</div>
-    <div style="font-size: 13px; color: #ccc; margin-top: 10px;">松开手指识别文字</div>
   </div>
 
   <!-- 设置弹窗 -->
@@ -709,6 +631,7 @@
     </div>
   </div>
 
+  <!-- 其他弹窗（略） -->
 </div>
 
 <script>
@@ -729,23 +652,16 @@ createApp({
       chatHistory: [],
       isTyping: false,
       showSettingsModal: false,
-      
-      // 语音相关状态
-      isVoiceMode: false, 
-      isRecording: false, 
-      recognition: null,  
 
-      scheduleConfig: {
-        dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 },
-        mom: { startDate: '2026-10-16', firstShift: 'morning' }
-      },
+      // 数据 (确保完整)
+      scheduleConfig: { dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 }, mom: { startDate: '2026-10-16', firstShift: 'morning' } },
       momRestDays: [{ start: '2026-10-20', end: '2026-10-20', name: '休息日' }], 
       newMomRestForm: { start: '', end: '' },
       sisterHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
       brotherHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
       newHolidayForm: { sister: { name: '', start: '', end: '' }, brother: { name: '', start: '', end: '' } },
       
-      memberData:{
+      memberData: {
         dad:{age:35, height:176, weight:90, schedule:"4天在家4天不在", health:"轻微脂肪肝，肾结石", taboo:"高草酸蔬菜需焯水，不吃内脏"},
         mom:{age:35, height:150, weight:50, schedule:"早班/下午班交替", health:"气血不足，二胎后大肚腩", taboo:"无"},
         sister:{age:8, height:138, weight:31, schedule:"上学日", health:"有点性早熟，需避激素食物", taboo:"蜂王浆、花粉、滋补品"},
@@ -759,32 +675,137 @@ createApp({
       tempStatusModal: { show: false, key: 'dad' },
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
       addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
-      
       addRecipeModal: { show: false, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '', rawText: '', isHealthy: true },
       replaceModal: { show: false, mealType: '', dishIdx: -1, currentName: '' },
 
-      // 请确保你原有的代码里已经补全了下面这些数据
-      historyData: {},
-      rawIngList: [],
-      fruitList: [],
-      snackList: [],
-      preIngList: [],
-      weekMenuData: { current: [], next: [] },
-      recipeLibrary: { breakfast: [], lunchMeat: [], lunchVeg: [], dinnerMeat: [], dinnerVeg: [], soup: [] },
+      historyData: {
+        dad: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [92, 91.5, 91, 90.5, 90, 90] },
+        mom: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [52, 51.5, 51, 50.5, 50, 50] },
+        sister: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], height: [132, 134, 135, 136, 137, 138], weight: [28, 29, 29.5, 30, 30.5, 31] },
+        brother: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], height: [102, 103, 104, 105, 106, 107], weight: [17, 17.5, 18, 18.3, 18.6, 19] }
+      },
+      
+      rawIngList: [
+        { name: "鸡蛋", weight: 470, expireDay: 14 },
+        { name: "红薯", weight: 360, expireDay: 21 },
+        { name: "西兰花", weight: 180, expireDay: 5 },
+        { name: "龙利鱼柳", weight: 300, expireDay: 30 },
+        { name: "黑胡椒", weight: 50, expireDay: 180 },
+        { name: "娃娃菜", weight: 500, expireDay: 7 },
+        { name: "鸡肉丸子", weight: 400, expireDay: 90 },
+        { name: "嫩豆腐", weight: 200, expireDay: 3 }
+      ],
+      fruitList: [
+        { name: "苹果", weight: 1200, expireDay: 7, icon: "🍎" },
+        { name: "香蕉", weight: 750, expireDay: 2, icon: "🍌" },
+        { name: "橙子", weight: 1000, expireDay: 10, icon: "🍊" },
+        { name: "葡萄", weight: 500, expireDay: 3, icon: "🍇" }
+      ],
+      snackList: [
+        { name: "原味核桃", weight: 200, expireDay: 30, icon: "🌰" },
+        { name: "南瓜子", weight: 150, expireDay: 30, icon: "🎃" },
+        { name: "无糖酸奶", weight: 800, expireDay: 5, icon: "🥛" },
+        { name: "全麦饼干", weight: 300, expireDay: 20, icon: "🍪" }
+      ],
+      preIngList: [
+        { name: "蔬菜鸡肉丸子（预制）", weight: 320, expireDay: 90 },
+        { name: "虾滑", weight: 200, expireDay: 90 }
+      ],
+      
+      weekMenuData: {
+        current: Array(7).fill(null).map(() => ({ breakfast: [], lunch: [], dinner: [], soup: [] })),
+        next: Array(7).fill(null).map(() => ({ breakfast: [], lunch: [], dinner: [], soup: [] }))
+      },
+      
+      recipeLibrary: {
+        breakfast: [
+          { name: "燕麦牛奶粥+水煮蛋", tag: "高钙·快手", tool: "奶锅", time: "10分钟", ingredients: [{name:'燕麦', weight:200}, {name:'牛奶', weight:1000}, {name:'鸡蛋', weight:300}], steps: ['燕麦加水煮开', '倒入牛奶小火煮3分钟', '鸡蛋冷水下锅煮8分钟'], portions: { dad: '1碗+1个蛋', mom: '1碗+1个蛋', sister: '1碗+1个蛋', brother: '半碗+1个蛋' } },
+          { name: "全麦面包+无糖酸奶+坚果", tag: "快手·优质脂肪", tool: "微波炉", time: "5分钟", ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], steps: ['面包微波加热30秒', '搭配酸奶', '坚果碾碎撒入'], portions: { dad: '2片+100g酸奶', mom: '2片+100g酸奶', sister: '2片+100g酸奶', brother: '1片+100g酸奶' } },
+          { name: "紫薯小米粥+煎蛋", tag: "养胃·粗粮", tool: "电饭煲/平底锅", time: "25分钟", ingredients: [{name:'紫薯', weight:200}, {name:'小米', weight:100}, {name:'鸡蛋', weight:200}], steps: ['紫薯切块和小米同煮20分钟', '平底锅少油煎蛋'], portions: { dad: '1碗+1个蛋', mom: '1碗+1个蛋', sister: '1碗+1个蛋', brother: '半碗+1个蛋' } },
+          { name: "番茄鸡蛋面", tag: "营养均衡", tool: "炒锅", time: "15分钟", ingredients: [{name:'番茄', weight:200}, {name:'鸡蛋', weight:150}, {name:'面条', weight:250}], steps: ['番茄炒出汁', '加水烧开下面条', '淋入蛋液'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' } }
+        ],
+        lunchMeat: [
+          { name: "番茄炖瘦牛腩", tag: "补铁·高蛋白", tool: "陶瓷锅", time: "50分钟", ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:400}], steps: ['牛腩焯水', '番茄切块', '一起炖煮40分钟'], portions: { dad: '80g', mom: '100g', sister: '60g', brother: '50g(切碎)' } },
+          { name: "清蒸鲈鱼", tag: "优质蛋白·低脂", tool: "蒸锅", time: "15分钟", ingredients: [{name:'鲈鱼', weight:600}, {name:'姜葱', weight:20}], steps: ['鱼洗净', '水开蒸8分钟', '淋豉油'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g(挑刺)' } },
+          { name: "香菇蒸鸡", tag: "补气血·低脂", tool: "蒸锅", time: "20分钟", ingredients: [{name:'鸡腿肉', weight:400}, {name:'香菇', weight:100}], steps: ['鸡肉切块腌制', '香菇切片铺底', '蒸15分钟'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g' } },
+          { name: "芹菜炒肉丝", tag: "膳食纤维·下饭", tool: "炒锅", time: "15分钟", ingredients: [{name:'芹菜', weight:200}, {name:'瘦猪肉', weight:200}], steps: ['肉丝滑熟盛出', '芹菜炒断生', '混合翻炒'], portions: { dad: '80g肉+菜', mom: '80g肉+菜', sister: '50g肉+菜', brother: '50g(切极碎)' } },
+          { name: "虾仁滑蛋", tag: "高蛋白·易消化", tool: "炒锅", time: "10分钟", ingredients: [{name:'虾仁', weight:200}, {name:'鸡蛋', weight:200}], steps: ['虾仁焯水', '鸡蛋打散', '混合小火滑熟'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } }
+        ],
+        lunchVeg: [
+          { name: "清炒西兰花", tag: "维生素", tool: "炒锅", time: "10分钟", ingredients: [{name:'西兰花', weight:300}], steps: ['西兰花焯水', '蒜爆香', '翻炒出锅'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g' } },
+          { name: "蒜蓉生菜", tag: "膳食纤维", tool: "炒锅", time: "5分钟", ingredients: [{name:'生菜', weight:300}], steps: ['生菜洗净', '蒜爆香', '大火快炒'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g' } },
+          { name: "凉拌黄瓜木耳", tag: "爽口·低卡", tool: "无", time: "10分钟", ingredients: [{name:'黄瓜', weight:200}, {name:'木耳', weight:100}], steps: ['木耳泡发焯水', '黄瓜拍碎', '加生抽醋拌匀'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '少量' } },
+          { name: "胡萝卜炒鸡蛋", tag: "护眼·优质蛋白", tool: "炒锅", time: "10分钟", ingredients: [{name:'胡萝卜', weight:200}, {name:'鸡蛋', weight:150}], steps: ['鸡蛋炒熟', '胡萝卜擦丝炒软', '混合翻炒'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } }
+        ],
+        dinnerMeat: [
+          { name: "空气炸锅鸡翅", tag: "少油·解馋", tool: "空气炸锅", time: "20分钟", ingredients: [{name:'鸡翅', weight:500}], steps: ['腌制', '200度烤15分钟', '翻面再烤5分钟'], portions: { dad: '2个', mom: '2个', sister: '2个', brother: '1个(去皮)' } },
+          { name: "冬瓜肉丸汤", tag: "清淡·补水", tool: "陶瓷锅", time: "20分钟", ingredients: [{name:'冬瓜', weight:300}, {name:'猪肉丸', weight:200}], steps: ['水开下肉丸', '加冬瓜煮10分钟', '调味'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' } },
+          { name: "洋葱炒牛肉", tag: "强体·补铁", tool: "炒锅", time: "15分钟", ingredients: [{name:'洋葱', weight:150}, {name:'牛肉', weight:250}], steps: ['牛肉切片滑熟', '洋葱炒香', '混合加黑胡椒'], portions: { dad: '80g', mom: '80g', sister: '60g', brother: '50g(切碎)' } },
+          { name: "清蒸龙利鱼", tag: "无刺·健脑", tool: "蒸锅", time: "10分钟", ingredients: [{name:'龙利鱼柳', weight:300}], steps: ['解冻吸干水分', '姜丝铺底', '水开蒸8分钟'], portions: { dad: '100g', mom: '100g', sister: '100g', brother: '100g(随便吃)' } }
+        ],
+        dinnerVeg: [
+          { name: "上汤娃娃菜", tag: "清淡好消化", tool: "炒锅", time: "10分钟", ingredients: [{name:'娃娃菜', weight:300}, {name:'皮蛋', weight:50}], steps: ['蒜末爆香', '加水和皮蛋煮开', '下娃娃菜煮软'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } },
+          { name: "荷塘小炒", tag: "清脆爽口", tool: "炒锅", time: "15分钟", ingredients: [{name:'莲藕', weight:200}, {name:'荷兰豆', weight:100}], steps: ['食材切片焯水', '大火快炒', '加盐调味'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } },
+          { name: "番茄炒菜花", tag: "酸甜开胃", tool: "炒锅", time: "10分钟", ingredients: [{name:'番茄', weight:150}, {name:'菜花', weight:250}], steps: ['菜花焯水', '番茄炒出汁', '倒入菜花翻炒'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(切碎)' } }
+        ],
+        soup: [
+          { name: "妈妈专属五红汤", tag: "补气血·暖宫", tool: "电饭煲", time: "40分钟", ingredients: [{name:'红枣', weight:30}, {name:'红豆', weight:50}, {name:'红皮花生', weight:30}, {name:'枸杞', weight:10}], steps: ['红豆泡2小时', '食材全放入电饭煲', '按煮粥键炖40分钟'], portions: {} },
+          { name: "儿童冰糖炖雪梨", tag: "润肺止咳", tool: "陶瓷锅", time: "30分钟", ingredients: [{name:'雪梨', weight:200}, {name:'冰糖', weight:10}], steps: ['雪梨去核切块', '加冰糖小火炖30分钟'], portions: {} },
+          { name: "银耳莲子羹", tag: "润燥养颜", tool: "陶瓷锅/电饭煲", time: "45分钟", ingredients: [{name:'银耳', weight:50}, {name:'莲子', weight:30}, {name:'红枣', weight:20}], steps: ['银耳泡发撕碎', '和莲子红枣同煮40分钟出胶'], portions: {} },
+          { name: "萝卜丝煎蛋汤", tag: "清淡消食", tool: "炒锅", time: "15分钟", ingredients: [{name:'白萝卜', weight:200}, {name:'鸡蛋', weight:100}], steps: ['鸡蛋煎熟', '加开水下萝卜丝', '煮10分钟至汤变白'], portions: {} }
+        ]
+      },
+      
       shoppingList: [],
       prepTasks: [],
+      
       thisWeekDates: [],
       nextWeekDates: []
     }
   },
   created() {
-    this.initSpeechRecognition();
     this.getCurrentWeekDates();
     this.loadCustomRecipes(); 
     this.generateWeekPlan('current', true);
     this.generateWeekPlan('next', true);
   },
   computed: {
+    filteredRawList(){ const kw = this.searchIng.trim().toLowerCase(); if(!kw) return this.rawIngList; return this.rawIngList.filter(i => i.name.toLowerCase().includes(kw)); },
+    filteredFruitList(){ const kw = this.searchIng.trim().toLowerCase(); if(!kw) return this.fruitList; return this.fruitList.filter(i => i.name.toLowerCase().includes(kw)); },
+    filteredSnackList(){ const kw = this.searchIng.trim().toLowerCase(); if(!kw) return this.snackList; return this.snackList.filter(i => i.name.toLowerCase().includes(kw)); },
+    filteredPreList(){ const kw = this.searchIng.trim().toLowerCase(); if(!kw) return this.preIngList; return this.preIngList.filter(i => i.name.toLowerCase().includes(kw)); },
+    weekendShoppingList() { return this.shoppingList.filter(i => i.category === 'weekend'); },
+    dailyShoppingList() { return this.shoppingList.filter(i => i.category === 'daily'); },
+    hasUnfinishedTask(){ return this.shoppingList.some(i => !i.bought); },
+    
+    displayWeekDates() { return this.viewWeekMode === 'current' ? this.thisWeekDates : this.nextWeekDates; },
+    momIsMorningShift() { const today = this.todayMembers.find(m => m.key === 'mom'); return today && today.status.includes('早班'); },
+    
+    availableReplacements() {
+      if (!this.replaceModal.mealType) return [];
+      let pool = [];
+      if (this.replaceModal.mealType === 'lunch') pool = [...this.recipeLibrary.lunchMeat, ...this.recipeLibrary.lunchVeg];
+      else if (this.replaceModal.mealType === 'dinner') pool = [...this.recipeLibrary.dinnerMeat, ...this.recipeLibrary.dinnerVeg];
+      else pool = this.recipeLibrary[this.replaceModal.mealType] || [];
+      return pool.filter(r => r.name !== this.replaceModal.currentName);
+    },
+    
+    homeCurrentDayDishes() {
+      if (!this.homeDate) return null;
+      const targetDate = new Date(this.homeDate);
+      const tDateStr = this.homeDate;
+      const isNextWeek = this.nextWeekDates.some(d => d.dateStr === tDateStr);
+      const weekMenu = isNextWeek ? this.weekMenuData.next : this.weekMenuData.current;
+      const dayOfWeek = targetDate.getDay(); 
+      const idx = (dayOfWeek + 6) % 7; 
+      return weekMenu[idx];
+    },
+    
+    currentDayDishes() {
+      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [], soup: [] };
+    },
+    
     globalHealthAlerts() {
       let alerts = [];
       if (this.memberTempStatus.sister === 'sick') alerts.push('姐姐生病中，本周食谱请尽量清淡，避开生冷、油炸，可以给她单独煮点软烂的面条或白粥。');
@@ -794,71 +815,56 @@ createApp({
       if (this.memberTempStatus.mom === 'period') alerts.push('妈妈处于姨妈期，汤羹已自动避开寒凉食材，注意保暖。');
       return alerts;
     },
-    // 其他 computed 略
+
+    todayMembers(){
+      const targetDateStr = this.homeDate || new Date().toISOString().split('T')[0];
+      const targetDate = new Date(targetDateStr);
+      const dayOfWeek = targetDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+      const isMomRest = this.momRestDays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
+      const isSisterHoliday = this.sisterHolidays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
+      const isBrotherHoliday = this.brotherHolidays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
+
+      const result = [];
+      const dadConfig = this.scheduleConfig.dad;
+      const dadStart = new Date(dadConfig.startDate);
+      const dadDiffDays = Math.floor((targetDate - dadStart) / (1000 * 60 * 60 * 24));
+      const dadCycle = dadConfig.homeDays + dadConfig.awayDays;
+      const dadDayInCycle = ((dadDiffDays % dadCycle) + dadCycle) % dadCycle;
+      let dadMeals = []; let dadStatus = ""; let dadStatusClass = "";
+      if (dadDayInCycle === 0) { dadMeals = ['晚']; dadStatus = '下午回家'; dadStatusClass = 'status-rest'; } 
+      else if (dadDayInCycle >= 1 && dadDayInCycle <= 3) { dadMeals = ['早', '午', '晚']; dadStatus = '在家休息'; dadStatusClass = 'status-rest'; } 
+      else if (dadDayInCycle === 4) { dadMeals = ['早', '午']; dadStatus = '下午上班'; dadStatusClass = 'status-work'; } 
+      else { dadMeals = []; dadStatus = '全天上班'; dadStatusClass = 'status-work'; }
+      result.push({ key: 'dad', name: '爸爸', icon: '👨', status: dadStatus, statusClass: dadStatusClass, meals: dadMeals, dateStr: targetDateStr });
+
+      let momMeals = []; let momStatus = ""; let momStatusClass = "";
+      if (isMomRest) { momMeals = ['早', '午', '晚']; momStatus = '休息日'; momStatusClass = 'status-rest'; } 
+      else {
+        const momConfig = this.scheduleConfig.mom;
+        const momStart = new Date(momConfig.startDate);
+        const momDiffDays = Math.floor((targetDate - momStart) / (1000 * 60 * 60 * 24));
+        const momDayInCycle = ((momDiffDays % 2) + 2) % 2;
+        if (momDayInCycle === 0) { momMeals = ['早（外带）', '午', '晚']; momStatus = '早班 (外带)'; momStatusClass = 'status-work'; } 
+        else { momMeals = ['早', '午', '晚']; momStatus = '下午班'; momStatusClass = 'status-work'; }
+      }
+      result.push({ key: 'mom', name: '妈妈', icon: '👩', status: momStatus, statusClass: momStatusClass, meals: momMeals, isRest: isMomRest, dateStr: targetDateStr });
+
+      let sisterMeals = []; let sisterStatus = "";
+      if (isWeekend || isSisterHoliday) { sisterMeals = ['早', '午', '晚']; sisterStatus = isSisterHoliday ? '假期' : '休息日'; } 
+      else { sisterMeals = ['早', '午', '晚']; sisterStatus = '上学日'; }
+      result.push({ key: 'sister', name: '姐姐', icon: '👧', status: sisterStatus, statusClass: (isWeekend || isSisterHoliday) ? 'status-rest' : 'status-work', meals: sisterMeals, dateStr: targetDateStr });
+
+      let brotherMeals = []; let brotherStatus = "";
+      if (isWeekend || isBrotherHoliday) { brotherMeals = ['早', '午', '晚']; brotherStatus = isBrotherHoliday ? '假期' : '休息日'; } 
+      else { brotherMeals = ['早', '晚']; brotherStatus = '上学日'; }
+      result.push({ key: 'brother', name: '弟弟', icon: '👦', status: brotherStatus, statusClass: (isWeekend || isBrotherHoliday) ? 'status-rest' : 'status-work', meals: brotherMeals, dateStr: targetDateStr });
+
+      return result;
+    }
   },
   methods:{
-    toggleVoiceMode() {
-      this.isVoiceMode = !this.isVoiceMode;
-    },
-
-    initSpeechRecognition() {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-        this.recognition = new SpeechRecognition();
-        this.recognition.lang = 'zh-CN';
-        this.recognition.continuous = false;
-        this.recognition.interimResults = false;
-
-        this.recognition.onstart = () => {
-          this.isRecording = true;
-        };
-
-        this.recognition.onresult = (event) => {
-          const transcript = event.results[0][0].transcript;
-          if (transcript.trim()) {
-            // 🌟 兜底方案1：把识别出来的文字填入输入框，并切回文字模式，不自动发送！
-            this.chatInput = transcript;
-            this.isVoiceMode = false; 
-          }
-        };
-
-        this.recognition.onerror = (event) => {
-          this.isRecording = false;
-          if (event.error === 'not-allowed') {
-            alert("麦克风权限被拒绝，请在手机设置中允许浏览器访问麦克风。");
-          }
-        };
-
-        this.recognition.onend = () => {
-          this.isRecording = false;
-        };
-      }
-    },
-
-    startRecording(e) {
-      e.preventDefault();
-      if (!this.recognition) {
-        alert("您的浏览器不支持网页录音，请切换为键盘输入。");
-        this.isVoiceMode = false;
-        return;
-      }
-      if (this.isRecording) return;
-      
-      this.chatInput = ''; 
-      try {
-        this.recognition.start();
-      } catch (err) {
-        console.error("启动录音失败:", err);
-      }
-    },
-
-    stopRecording(e) {
-      if (e) e.preventDefault();
-      if (this.isRecording && this.recognition) {
-        this.recognition.stop(); 
-      }
-    },
-
     saveApiKey() {
       const key = this.tempKey.trim();
       if (!key) { alert("请输入有效的 Key"); return; }
@@ -866,7 +872,6 @@ createApp({
       localStorage.setItem('ai_api_key', this.apiKey);
       alert("✅ API Key 保存成功！");
     },
-
     confirmClearKey() {
       if (confirm("⚠️ 确定要重置 API Key 吗？\n重置后您需要重新输入才能继续对话。")) {
         localStorage.removeItem('ai_api_key');
@@ -875,7 +880,6 @@ createApp({
         this.showSettingsModal = false;
       }
     },
-
     async sendMessage() {
       if (!this.chatInput.trim() || this.isTyping) return;
       
@@ -885,7 +889,6 @@ createApp({
       this.isTyping = true;
       this.scrollToBottom();
 
-      // 🌟 兜底方案2：在提示词里告诉 AI，如果遇到错别字，请自己偷偷纠正，不要反问用户！
       const systemPrompt = `你现在是一个非常专业的家庭营养师。请遵循以下家庭特殊情况和规则来回答用户的问题。
 【家庭成员情况】
 1. 爸爸：轻微脂肪肝，肾结石。必须低脂，高草酸蔬菜必须提醒焯水。不吃内脏。
@@ -934,8 +937,420 @@ createApp({
         if (box) box.scrollTop = box.scrollHeight;
       });
     },
+
+    getDishWarning(dish) {
+      let warnings = [];
+      if (this.memberTempStatus.sister === 'sick') {
+        if (dish.tag.includes('少油') || dish.tag.includes('油炸') || dish.tag.includes('补铁')) {
+          warnings.push(`姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的。`);
+        } else if (dish.name.includes('凉拌') || dish.name.includes('雪梨')) {
+          warnings.push(`姐姐生病中，注意避开生冷食物。`);
+        }
+      }
+      if (this.memberTempStatus.dad === 'sick') {
+        if (dish.name.includes('炸锅') || dish.tag.includes('油腻')) {
+          warnings.push(`爸爸生病中，建议避开高脂食物。`);
+        }
+      }
+      return warnings;
+    },
+
+    parseRawText() {
+      let text = this.addRecipeModal.rawText;
+      if (!text) { alert("请先粘贴提取的文字"); return; }
+
+      let nameMatch = text.split('\n')[0].substring(0, 20);
+      this.addRecipeModal.name = nameMatch || '新菜谱';
+
+      let toolMatch = text.match(/空气炸锅|微波炉|电饭煲|陶瓷锅|蒸锅|炒锅|平底锅/);
+      this.addRecipeModal.tool = toolMatch ? toolMatch[0] : '炒锅';
+      
+      let timeMatch = text.match(/\d+分钟|\d+小时/);
+      this.addRecipeModal.time = timeMatch ? timeMatch[0] : '约20分钟';
+
+      let lines = text.split('\n');
+      let ingredientsArr = [];
+      let stepsArr = [];
+      let isStepSection = false;
+
+      lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+        if (/做法|步骤|烹饪|操作/.test(line)) { isStepSection = true; return; }
+        if (!isStepSection) {
+          if (/克|g|ml|个|颗|勺|瓣|片|适量|少许|半/.test(line) && line.length < 20) {
+            let ingName = line.replace(/[0-9]/g, '').replace(/克|g|ml|个|颗|勺|瓣|片|适量|少许|半|、|,|，/g, '').trim();
+            if (ingName && !ingredientsArr.includes(ingName)) ingredientsArr.push(ingName);
+          }
+        } else {
+          if (line.length > 5 && !/第|步/.test(line.substring(0,2))) stepsArr.push(line);
+        }
+      });
+
+      if (ingredientsArr.length === 0) ingredientsArr = ['根据实际情况准备食材'];
+      this.addRecipeModal.ingredientsText = ingredientsArr.join('，');
+      this.addRecipeModal.stepsText = stepsArr.length > 0 ? stepsArr.join('\n') : text.substring(text.length / 2).trim();
+      alert("✨ 智能拆分完成！请核对下方的内容。");
+    },
+
+    shuffleArray(array) {
+      let currentIndex = array.length, randomIndex;
+      while (currentIndex != 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+      }
+      return array;
+    },
+
+    generateWeekPlan(mode, isInit = false) {
+      let idCounter = 1;
+      let newWeekMenu = [];
+      
+      const filterHealthy = (arr) => arr.filter(item => item.isHealthy !== false);
+
+      const bfPool = this.shuffleArray(filterHealthy([...this.recipeLibrary.breakfast]));
+      const lmPool = this.shuffleArray(filterHealthy([...this.recipeLibrary.lunchMeat]));
+      const lvPool = this.shuffleArray(filterHealthy([...this.recipeLibrary.lunchVeg]));
+      const dmPool = this.shuffleArray(filterHealthy([...this.recipeLibrary.dinnerMeat]));
+      const dvPool = this.shuffleArray(filterHealthy([...this.recipeLibrary.dinnerVeg]));
+      const soupPool = this.shuffleArray(filterHealthy([...this.recipeLibrary.soup]));
+
+      for (let day = 0; day < 7; day++) {
+        let dayMenu = { breakfast: [], lunch: [], dinner: [], soup: [] };
+        
+        let bfRecipe = bfPool[day % bfPool.length];
+        dayMenu.breakfast.push({ id: idCounter++, ...bfRecipe, completed: false, feedback: '' });
+        
+        let lmRecipe = lmPool[day % lmPool.length];
+        let lvRecipe = lvPool[day % lvPool.length];
+        dayMenu.lunch.push({ id: idCounter++, ...lmRecipe, completed: false, feedback: '' });
+        dayMenu.lunch.push({ id: idCounter++, ...lvRecipe, completed: false, feedback: '' });
+        
+        let dmRecipe = dmPool[day % dmPool.length];
+        let dvRecipe = dvPool[day % dvPool.length];
+        dayMenu.dinner.push({ id: idCounter++, ...dmRecipe, completed: false, feedback: '' });
+        dayMenu.dinner.push({ id: idCounter++, ...dvRecipe, completed: false, feedback: '' });
+        
+        if ([1, 3, 5].includes(day)) {
+          let soupRecipe = soupPool[Math.floor(day/2) % soupPool.length];
+          dayMenu.soup.push({ id: idCounter++, ...soupRecipe, completed: false, feedback: '' });
+        }
+        
+        newWeekMenu.push(dayMenu);
+      }
+      
+      if (mode === 'current') {
+        this.weekMenuData.current = newWeekMenu;
+        if (!isInit) alert("✅ 本周食谱已重新生成！");
+      } else {
+        this.weekMenuData.next = newWeekMenu;
+        this.recalculateShoppingList();
+        this.generatePrepTasks();
+        if (!isInit) alert("✅ 下周食谱已生成！");
+      }
+    },
+
+    generatePrepTasks() {
+      this.prepTasks = [
+        { title: "制作一批蔬菜肉丸/肉饼", desc: "根据食谱，将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟或煎熟后冷冻。" },
+        { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜等洗净焯水，沥干冷藏。" }
+      ];
+    },
+
+    recalculateShoppingList() {
+      let neededMap = {};
+      const nextMenu = this.weekMenuData.next;
+
+      nextMenu.forEach(dayMenu => {
+        ['breakfast', 'lunch', 'dinner', 'soup'].forEach(meal => {
+          dayMenu[meal].forEach(dish => {
+            dish.ingredients.forEach(ing => {
+              if (!neededMap[ing.name]) neededMap[ing.name] = 0;
+              neededMap[ing.name] += ing.weight;
+            });
+          });
+        });
+      });
+      
+      let newShoppingList = [];
+      let itemId = 1;
+      
+      for (let [name, totalWeight] of Object.entries(neededMap)) {
+        let stock = this.rawIngList.find(i => i.name === name) || 
+                    this.preIngList.find(i => i.name === name) ||
+                    this.fruitList.find(i => i.name === name) ||
+                    this.snackList.find(i => i.name === name);
+        
+        let stockWeight = stock ? stock.weight : 0;
+        let buyWeight = totalWeight - stockWeight;
+        
+        if (buyWeight > 0) {
+          let category = 'weekend';
+          const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬', '雪梨'];
+          if (dailyKeywords.some(k => name.includes(k))) category = 'daily';
+          newShoppingList.push({ id: itemId++, name: name, weight: buyWeight, category: category, bought: false });
+        }
+      }
+      
+      let fruitStock = this.fruitList.reduce((sum, item) => sum + item.weight, 0);
+      let snackStock = this.snackList.reduce((sum, item) => sum + item.weight, 0);
+      if (fruitStock < 2000) newShoppingList.push({ id: itemId++, name: "应季水果", weight: 2000 - fruitStock, category: 'daily', bought: false });
+      if (snackStock < 500) newShoppingList.push({ id: itemId++, name: "坚果/酸奶", weight: 500 - snackStock, category: 'weekend', bought: false });
+      
+      this.shoppingList = newShoppingList;
+    },
+
+    loadCustomRecipes() {
+      const saved = localStorage.getItem('customRecipes');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if(parsed.breakfast) this.recipeLibrary.breakfast.push(...parsed.breakfast);
+        if(parsed.lunch) this.recipeLibrary.lunchMeat.push(...parsed.lunch);
+        if(parsed.dinner) this.recipeLibrary.dinnerMeat.push(...parsed.dinner);
+        if(parsed.soup) this.recipeLibrary.soup.push(...parsed.soup);
+      }
+    },
+
+    getCurrentWeekDates() {
+      let now = new Date();
+      let day = now.getDay() || 7;
+      let monday = new Date(now.getTime() - (day - 1) * 86400000);
+      
+      let thisWeek = [];
+      for (let i = 0; i < 7; i++) {
+        let d = new Date(monday.getTime() + i * 86400000);
+        thisWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: d.toISOString().split('T')[0] });
+      }
+      this.thisWeekDates = thisWeek;
+
+      let nextWeek = [];
+      for (let i = 0; i < 7; i++) {
+        let d = new Date(monday.getTime() + (i + 7) * 86400000);
+        nextWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: d.toISOString().split('T')[0] });
+      }
+      this.nextWeekDates = nextWeek;
+    },
+
+    openAddRecipeModal() {
+      this.addRecipeModal = { show: true, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '', rawText: '', isHealthy: true };
+    },
+
+    saveCustomRecipe() {
+      const { name, type, tool, time, ingredientsText, stepsText, isHealthy } = this.addRecipeModal;
+      if (!name || !tool || !time) { alert("请填写菜名、工具和时间"); return; }
+
+      const ingredients = ingredientsText.split(/[,，]/).map(s => ({ name: s.trim(), weight: 100 })).filter(i => i.name);
+      const steps = stepsText.split('\n').map(s => s.trim()).filter(s => s);
+
+      const newRecipe = {
+        name, tag: isHealthy ? '自定义·健康' : '自定义·解馋', tool, time, isHealthy,
+        ingredients: ingredients.length ? ingredients : [{name:'自定义食材', weight:100}],
+        steps: steps.length ? steps : ['按自己习惯操作'],
+        portions: {} 
+      };
+
+      if(type === 'breakfast') this.recipeLibrary.breakfast.push(newRecipe);
+      else if(type === 'lunch') this.recipeLibrary.lunchMeat.push(newRecipe);
+      else if(type === 'dinner') this.recipeLibrary.dinnerMeat.push(newRecipe);
+      else if(type === 'soup') this.recipeLibrary.soup.push(newRecipe);
+
+      let customRecipes = JSON.parse(localStorage.getItem('customRecipes') || '{"breakfast":[],"lunch":[],"dinner":[],"soup":[]}');
+      customRecipes[type].push(newRecipe);
+      localStorage.setItem('customRecipes', JSON.stringify(customRecipes));
+
+      this.addRecipeModal.show = false;
+      alert(`✅ 【${name}】已加入菜谱库！`);
+    },
+
+    getMealName(type) {
+      return type === 'breakfast' ? '早餐' : (type === 'lunch' ? '午餐' : (type === 'dinner' ? '晚餐' : '汤羹'));
+    },
+
+    openReplaceModal(mealType, dishIdx) {
+      const dish = this.currentDayDishes[mealType][dishIdx];
+      this.replaceModal = { show: true, mealType: mealType, dishIdx: dishIdx, currentName: dish.name };
+    },
+
+    doReplaceDish(newRecipe) {
+      const { mealType, dishIdx } = this.replaceModal;
+      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      const dayMenu = weekMenu[this.selDateIdx];
+      
+      dayMenu[mealType][dishIdx] = { id: Date.now(), ...newRecipe, completed: false, feedback: '' };
+      
+      this.replaceModal.show = false;
+      if (this.viewWeekMode === 'next') this.recalculateShoppingList(); 
+      alert(`已替换为【${newRecipe.name}】`);
+    },
     
-    // 其他方法（省略）
+    setDishFeedback(dish, type) { dish.feedback = type; },
+    openTempStatusModal(key){ this.tempStatusModal.key = key; this.tempStatusModal.show = true; },
+    getStatusText(status, person){
+      if (person === 'mom') {
+        if (status === 'period') return '姨妈期';
+        if (status === 'sick') return '生病';
+        return '正常';
+      }
+      return status === 'sick' ? '生病' : '正常';
+    },
+    getStatusClass(status){
+      if (status === 'sick' || status === 'period') return 'status-sick';
+      return 'status-rest';
+    },
+    getTabooOptions(person){
+      const options = {
+        dad: ['生冷', '辛辣', '油腻', '海鲜'],
+        mom: ['生冷', '辛辣', '寒凉水果', '浓茶咖啡'],
+        sister: ['生冷', '油炸', '甜食', '海鲜'],
+        brother: ['生冷', '油炸', '甜食', '海鲜']
+      };
+      return options[person] || [];
+    },
+    
+    completeDish(dish) {
+      if (dish.completed) return;
+      let deductedList = [];
+      dish.ingredients.forEach(ing => {
+        let target = this.rawIngList.find(i => i.name === ing.name) || this.fruitList.find(i => i.name === ing.name) || this.snackList.find(i => i.name === ing.name) || this.preIngList.find(i => i.name === ing.name);
+        
+        if (target) {
+          if (target.weight >= ing.weight) {
+            target.weight -= ing.weight;
+            deductedList.push(`${ing.name} ${ing.weight}g`);
+          } else {
+            deductedList.push(`${ing.name} 库存不足（已扣为0）`);
+            target.weight = 0;
+          }
+        }
+      });
+      dish.completed = true;
+      alert(`【${dish.name}】已完成制作！\n已自动扣减食材：\n${deductedList.join('\n')}`);
+    },
+    
+    openStockModal(item, source){
+      this.stockModal.item = item;
+      this.stockModal.source = source;
+      this.stockModal.inputGram = null;
+      this.stockModal.show = true;
+    },
+    changeStockByModal(delta){
+      const gram = Number(this.stockModal.inputGram);
+      if(!gram || gram <= 0) return;
+      const newWeight = this.stockModal.item.weight + delta * gram;
+      if(newWeight >= 0){
+        this.stockModal.item.weight = newWeight;
+        this.stockModal.show = false;
+      }
+    },
+    openAddIngModal() { this.addIngModal = { show: true, name: '', type: 'raw', weight: null, expireDay: null }; },
+    saveNewIngredient() {
+      const { name, type, weight, expireDay } = this.addIngModal;
+      if (!name || !weight || !expireDay) { alert("请填写完整信息"); return; }
+      const newItem = { name, weight: Number(weight), expireDay: Number(expireDay), icon: '🍽️' };
+      
+      if (type === 'raw') this.rawIngList.push(newItem); 
+      else if (type === 'fruit') this.fruitList.push(newItem); 
+      else if (type === 'snack') this.snackList.push(newItem); 
+      else this.preIngList.push(newItem);
+      
+      this.addIngModal.show = false;
+      alert(`【${name}】已成功入库！`);
+    },
+    addMomRestDay() {
+      const form = this.newMomRestForm;
+      if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
+      this.momRestDays.push({ name: '休息日', start: form.start, end: form.end });
+      this.newMomRestForm = { start: '', end: '' };
+    },
+    removeMomRestDay(index) { this.momRestDays.splice(index, 1); },
+    addHoliday(person) {
+      const form = this.newHolidayForm[person];
+      if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
+      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
+      targetArray.push({ name: form.name || '假期/请假', start: form.start, end: form.end });
+      this.newHolidayForm[person] = { name: '', start: '', end: '' };
+    },
+    removeHoliday(person, index) {
+      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
+      targetArray.splice(index, 1);
+    },
+    getMemberName(key){ const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' }; return map[key] || ''; },
+    openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
+    saveMemberEdit(){ alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`); this.memberEditModal.show = false; },
+    
+    openChartModal(personKey){
+      this.chartModal.target = personKey;
+      const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}
+      this.chartModal.title = nameMap[personKey];
+      this.chartModal.show = true;
+      
+      setTimeout(() => { this.renderSingleChart(personKey); }, 200);
+    },
+    
+    closeChartModal(){
+      this.chartModal.show = false;
+      if(this.currentChart) { this.currentChart.destroy(); this.currentChart = null; }
+    },
+    
+    renderSingleChart(person){
+      const canvas = this.$refs.chartCanvasRef;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      
+      if(this.currentChart) { this.currentChart.destroy(); this.currentChart = null; }
+      
+      const data = this.historyData[person];
+      if(!data || !data.labels) return;
+
+      let chartData, chartOptions;
+
+      if (person === 'dad' || person === 'mom') {
+        chartData = {
+          labels: data.labels,
+          datasets: [{
+            label: person === 'dad' ? '爸爸体重(kg)' : '妈妈体重(kg)',
+            data: data.weight,
+            borderColor: '#e6703b',
+            backgroundColor: 'rgba(230, 112, 59, 0.1)',
+            fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#e6703b', borderWidth: 2
+          }]
+        };
+        chartOptions = {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+            y: { beginAtZero: false, title: { display: true, text: '体重 (kg)' } }
+          }
+        };
+      } else {
+        const weightData = data.weight.map(Number);
+        const heightData = data.height.map(Number);
+        
+        chartData = {
+          labels: data.labels,
+          datasets: [
+            { label: '身高(cm)', data: heightData, borderColor: '#2b9954', backgroundColor: 'rgba(43, 153, 84, 0.1)', fill: false, tension: 0.3, yAxisID: 'y', pointRadius: 4, pointBackgroundColor: '#2b9954', borderWidth: 2 },
+            { label: '体重(kg)', data: weightData, borderColor: '#c46838', backgroundColor: 'rgba(196, 104, 56, 0.1)', fill: false, tension: 0.3, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#c46838', borderWidth: 2 }
+          ]
+        };
+        chartOptions = {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+            y: { type: 'linear', display: true, position: 'left', title: { display: true, text: '身高 (cm)' } },
+            y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '体重 (kg)' }, min: Math.floor(Math.min(...weightData) - 2), max: Math.ceil(Math.max(...weightData) + 2) }
+          }
+        };
+      }
+      
+      try {
+        this.currentChart = new Chart(ctx, { type: 'line', data: chartData, options: chartOptions });
+      } catch(e) {
+        console.error("图表渲染失败", e);
+      }
+    },
+    toggleBought(item){ item.bought = !item.bought; }
   }
 }).mount('#app')
 </script>
