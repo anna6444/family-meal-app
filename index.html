@@ -1811,7 +1811,7 @@ createApp({
     },
 
     // 💡 严格安全的提示词生成器
-    openAiPromptModal() {
+        openAiPromptModal() {
       this.aiPromptModal = {
         show: true,
         scope: 'week',
@@ -1825,17 +1825,19 @@ createApp({
       this.showMoreActions = false;
     },
 
-    generateAndCopyPrompt() {
+       generateAndCopyPrompt() {
       const m = this.aiPromptModal;
+      const targetWeekText = this.viewWeekMode === 'current' ? '本周' : '下周';
+      
       let prompt = "你现在是家庭高级营养师。请为我的家庭制定食谱。\n";
       
       prompt += "家庭情况：妈妈减脂（气血不足），需要高蛋白低脂；姐姐8岁长身体需补钙；弟弟5岁不爱吃青菜（需切碎隐藏）；爸爸有轻微脂肪肝和肾结石（需焯水高草酸蔬菜，不吃内脏）。\n";
       
       if (m.scope === 'week') {
-        prompt += "请制定【下周（周一至周日）】的食谱。\n";
+        prompt += "请制定【" + targetWeekText + "（周一至周日）】的食谱。\n";
       } else {
         const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-        prompt += "请制定【下周" + days[m.dayIdx] + "】的单天食谱。\n";
+        prompt += "请制定【" + targetWeekText + days[m.dayIdx] + "】的单天食谱。\n";
       }
       
       let specialStatus = [];
@@ -1853,7 +1855,6 @@ createApp({
         prompt += "\n【其他额外要求】：" + m.extraNote.trim() + "\n";
       }
 
-      // 安全拼接 JSON，不包含反引号
       if (m.scope === 'week') {
         prompt += "\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，千万不要包含任何解释文字，不要使用代码块标记。你必须严格按照以下结构输出（包含7个对象，dayIdx 0代表周一，6代表周日）：\n";
         prompt += "[\n  {\n    \"dayIdx\": 0,\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"soup\": []\n  }\n]\n";
@@ -1870,7 +1871,7 @@ createApp({
       textArea.select();
       try {
         document.execCommand('copy');
-        alert("✅ 定制提示词已复制！\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
+        alert("✅ 定制提示词已复制！\n本次目标：【" + targetWeekText + "】\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
         this.aiPromptModal.show = false;
       } catch (err) {
         alert("复制失败，请长按手动复制");
@@ -1878,7 +1879,8 @@ createApp({
       document.body.removeChild(textArea);
     },
 
-    doBatchImport() {
+    
+        doBatchImport() {
       let rawText = this.batchImportModal.text.trim();
       if (!rawText) { alert("请先粘贴内容"); return; }
       
@@ -1896,6 +1898,7 @@ createApp({
 
         let idCounter = Date.now();
         const targetWeekData = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+        const targetWeekText = this.viewWeekMode === 'current' ? '本周' : '下周';
         
         for (let day = 0; day < 7; day++) {
           const dayData = parsedData.find(d => d.dayIdx === day);
@@ -1930,12 +1933,12 @@ createApp({
           this.recalculateShoppingList();
         }
         
-        alert("✅ 导入成功！");
+        alert("✅ 导入成功！已完美覆盖【" + targetWeekText + "】的菜单排期。");
 
       } catch (e) {
         alert("❌ 解析失败！\n\n可能原因：\n1. 复制不完整（请确保以 [ 开头，以 ] 结尾）\n2. 格式不是严格 JSON。\n\n系统报错：" + e.message);
       }
-    }
+    },
   }
 }).mount('#app')
 </script>
