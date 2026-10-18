@@ -33,6 +33,7 @@
     .btn { background: #e6703b; color: #fff; border: none; border-radius: 14px; padding: 12px 16px; cursor: pointer; font-size: 15px; }
     .btn.secondary { background: #f1ede4; color: #333; }
     .btn.small { padding: 9px 14px; font-size: 14px; border-radius: 12px; }
+    .btn.ai-btn { background: #4A90E2; color: white; }
     .tag { display: inline-block; background: #f4ece3; color: #b06237; border-radius: 20px; padding: 5px 10px; font-size: 13px; margin: 3px; }
     .tag.green { background: #eaf6ec; color: #2b703b; }
     .tag.blue { background: #e6f0fa; color: #2b579b; }
@@ -120,20 +121,25 @@
     .chat-messages { flex: 1; overflow-y: auto; padding-bottom: 20px; }
     .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; margin-bottom: 12px; font-size: 15px; line-height: 1.6; word-wrap: break-word; white-space: pre-wrap; }
     .chat-user { background: #e6703b; color: #fff; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; }
-    .chat-ai { background: #fff; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .chat-ai { background: #fff; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; }
     
+    /* 导入按钮 */
+    .import-btn { display: inline-block; margin-top: 10px; padding: 6px 12px; background: #eaf6ec; color: #2b703b; border: 1px solid #cce5d2; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
+    .import-btn:active { background: #d1ead7; }
+
     /* 聊天底部输入区域 */
     .chat-input-area { 
       display: flex; align-items: center; gap: 8px; background: #fff; padding: 8px 12px; 
       border-radius: 20px; margin-top: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); 
       margin-bottom: calc(10px + env(safe-area-inset-bottom)); 
     }
-    .chat-input-area input { 
-      flex: 1; border: none; outline: none; font-size: 15px; background: transparent; 
-      padding: 8px 4px; margin: 0; line-height: 1.5;
-    }
+    .chat-input-area input { flex: 1; border: none; outline: none; font-size: 15px; background: transparent; padding: 8px 4px; margin: 0; line-height: 1.5; }
     .chat-send-btn { padding: 8px 16px; border-radius: 14px; background: #e6703b; color: #fff; border: none; font-weight: 600; flex-shrink: 0; }
     .api-mask { position: absolute; inset: 0; background: #f4f1ea; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; padding: 20px; text-align: center; }
+
+    /* 快捷食材按钮 */
+    .quick-btn { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 4px 8px; font-size: 13px; color: #555; cursor: pointer; }
+    .quick-btn:active { background: #f0f0f0; }
   </style>
 </head>
 <body>
@@ -150,6 +156,11 @@
         
         <div v-if="globalHealthAlerts.length > 0" class="health-alert" style="margin-bottom: 14px; flex-direction: column;">
           <div v-for="(alert, idx) in globalHealthAlerts" :key="idx">🚨 {{ alert }}</div>
+        </div>
+
+        <!-- 今晚备忘提醒 -->
+        <div v-if="tonightPrepReminder" class="health-alert" style="background: #fdf3d8; border-color: #fce8b2; color: #b6862c; margin-bottom: 14px;">
+          💡 <div><b>今晚备忘：</b>{{ tonightPrepReminder }}</div>
         </div>
 
         <div class="card-subtitle" style="margin-top: 14px;">今日就餐人员</div>
@@ -441,45 +452,54 @@
         <input v-model="searchIng" placeholder="🔍 搜索食材，输入关键字筛选"/>
       </div>
       
+      <!-- 快捷增减 -->
       <div v-if="ingTab==='raw'">
-        <div v-for="item in filteredRawList" class="list-row" style="cursor:pointer">
+        <div v-for="item in filteredRawList" class="list-row">
           <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span>库存：{{item.weight}}g</span>
-            <button class="btn small" @click="openStockModal(item, 'raw')">调整</button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
+            <button class="quick-btn" @click="quickAdjustStock(item, -50)">-50g</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, 50)">+50g</button>
+            <button class="btn small secondary" @click="openStockModal(item, 'raw')">✏️</button>
           </div>
         </div>
         <div v-if="filteredRawList.length===0" class="empty-text">无匹配食材</div>
       </div>
 
       <div v-if="ingTab==='fruit'">
-        <div v-for="item in filteredFruitList" class="list-row" style="cursor:pointer">
+        <div v-for="item in filteredFruitList" class="list-row">
           <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span>库存：{{item.weight}}g</span>
-            <button class="btn small" @click="openStockModal(item, 'fruit')">调整</button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
+            <button class="quick-btn" @click="quickAdjustStock(item, -50)">-50g</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, 50)">+50g</button>
+            <button class="btn small secondary" @click="openStockModal(item, 'fruit')">✏️</button>
           </div>
         </div>
         <div v-if="filteredFruitList.length===0" class="empty-text">暂无水果库存</div>
       </div>
 
       <div v-if="ingTab==='snack'">
-        <div v-for="item in filteredSnackList" class="list-row" style="cursor:pointer">
+        <div v-for="item in filteredSnackList" class="list-row">
           <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span>库存：{{item.weight}}g</span>
-            <button class="btn small" @click="openStockModal(item, 'snack')">调整</button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
+            <button class="quick-btn" @click="quickAdjustStock(item, -50)">-50g</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, 50)">+50g</button>
+            <button class="btn small secondary" @click="openStockModal(item, 'snack')">✏️</button>
           </div>
         </div>
         <div v-if="filteredSnackList.length===0" class="empty-text">暂无零食库存</div>
       </div>
 
       <div v-if="ingTab==='pre'">
-        <div v-for="item in filteredPreList" class="list-row" style="cursor:pointer">
+        <div v-for="item in filteredPreList" class="list-row">
           <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span>库存：{{item.weight}}g</span>
-            <button class="btn small" @click="openStockModal(item, 'pre')">调整</button>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
+            <button class="quick-btn" @click="quickAdjustStock(item, -50)">-50g</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, 50)">+50g</button>
+            <button class="btn small secondary" @click="openStockModal(item, 'pre')">✏️</button>
           </div>
         </div>
         <div v-if="filteredPreList.length===0" class="empty-text">无匹配食材</div>
@@ -606,6 +626,10 @@
           
           <div v-for="(msg, idx) in chatHistory" :key="idx" class="chat-bubble" :class="msg.role === 'user' ? 'chat-user' : 'chat-ai'">
             {{ msg.content }}
+            <!-- AI回复下的导入按钮 -->
+            <div v-if="msg.role === 'assistant' && !msg.content.includes('出错') && !msg.content.includes('正在思考')" style="margin-top: 12px; border-top: 1px dashed #eee; padding-top: 10px;">
+              <span class="import-btn" @click="importAiToRecipe(msg.content)">📥 导入到我的菜谱库</span>
+            </div>
           </div>
           <div v-if="isTyping" class="chat-bubble chat-ai" style="color: #999;">
             AI 正在思考中，请稍候...
@@ -631,7 +655,247 @@
     </div>
   </div>
 
-  <!-- 其他弹窗（略） -->
+  <!-- 添加自定义菜谱弹窗 -->
+  <div class="modal-mask" v-if="addRecipeModal.show" @click.self="addRecipeModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">添加自定义菜谱</h3>
+      
+      <div style="background: #eaf6ec; padding: 12px; border-radius: 12px; margin-bottom: 16px;">
+        <label style="color: #2b703b; font-weight: 600;">✨ 智能解析粘贴板</label>
+        <p style="font-size: 12px; color: #666; margin-bottom: 8px;">把提取的菜谱文字（或 AI 的回复）粘贴到这里，系统帮你自动拆分！</p>
+        <textarea v-model="addRecipeModal.rawText" rows="4" placeholder="把小红书提取的文字全部粘贴到这里..."></textarea>
+        <button class="btn small" style="width: 100%; margin-top: 8px; background: #2b703b;" @click="parseRawText">🪄 一键智能拆分</button>
+      </div>
+
+      <div class="input-wrap">
+        <label>菜名</label>
+        <input v-model="addRecipeModal.name" placeholder="例如：小红书同款番茄肥牛" />
+      </div>
+      <div class="input-wrap">
+        <label>添加到哪一餐</label>
+        <select v-model="addRecipeModal.type">
+          <option value="breakfast">早餐</option>
+          <option value="lunch">午餐</option>
+          <option value="dinner">晚餐</option>
+          <option value="soup">炖汤/甜品</option>
+        </select>
+      </div>
+      
+      <div class="input-wrap" style="background: #fff8f8; padding: 12px; border-radius: 12px; border: 1px solid #fce8e8;">
+        <label style="color: #d14a4a; font-weight: 600;">🛡️ 健康评级（非常重要）</label>
+        <select v-model="addRecipeModal.isHealthy" style="border-color: #fce8e8;">
+          <option :value="true">家庭常规（健康减脂，自动排入下周）</option>
+          <option :value="false">偶尔解馋（高油/高糖，不自动排餐，仅手动替换）</option>
+        </select>
+      </div>
+
+      <div class="input-wrap" style="display:flex;gap:10px;">
+        <div style="flex:1">
+          <label>使用工具</label>
+          <input v-model="addRecipeModal.tool" placeholder="如：空气炸锅" />
+        </div>
+        <div style="flex:1">
+          <label>预计耗时</label>
+          <input v-model="addRecipeModal.time" placeholder="如：20分钟" />
+        </div>
+      </div>
+      <div class="input-wrap">
+        <label>核心食材 (用逗号分隔)</label>
+        <input v-model="addRecipeModal.ingredientsText" placeholder="如：肥牛卷, 番茄, 金针菇" />
+      </div>
+      <div class="input-wrap">
+        <label>做法步骤</label>
+        <textarea v-model="addRecipeModal.stepsText" rows="3" placeholder="1. 肥牛焯水..."></textarea>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="addRecipeModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveCustomRecipe">保存菜谱</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 替换菜品弹窗 -->
+  <div class="modal-mask" v-if="replaceModal.show" @click.self="replaceModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">替换 {{getMealName(replaceModal.mealType)}} 菜品</h3>
+      <div style="font-size: 14px; color: #666; margin-bottom: 12px;">当前：{{replaceModal.currentName}}</div>
+      <div style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;">
+        <div v-for="recipe in availableReplacements" :key="recipe.name" 
+             style="border: 1px solid #eee; padding: 12px; border-radius: 12px; cursor: pointer;"
+             @click="doReplaceDish(recipe)">
+          <div style="font-weight: 600; color: #c46838; margin-bottom: 4px;">
+            {{recipe.name}} 
+            <span v-if="recipe.isHealthy === false" style="font-size: 11px; background: #fce8e8; color: #d14a4a; padding: 2px 4px; border-radius: 4px;">高油解馋</span>
+          </div>
+          <div style="font-size: 13px; color: #888;">{{recipe.tag}} | {{recipe.tool}}</div>
+        </div>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:16px" @click="replaceModal.show=false">取消</button>
+    </div>
+  </div>
+
+  <!-- 临时状态与忌口弹窗 -->
+  <div class="modal-mask" v-if="tempStatusModal.show" @click.self="tempStatusModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">设置 {{getMemberName(tempStatusModal.key)}} 的状态与忌口</h3>
+      <div class="member-block" v-if="tempStatusModal.key">
+        <div class="input-wrap">
+          <label>当前状态</label>
+          <select v-model="memberTempStatus[tempStatusModal.key]">
+            <option value="normal">正常</option>
+            <option value="sick">生病</option>
+            <option v-if="tempStatusModal.key === 'mom'" value="period">姨妈期</option>
+          </select>
+        </div>
+        <label>忌口选择</label>
+        <div>
+          <span v-for="word in getTabooOptions(tempStatusModal.key)" :key="word"
+                class="pre-taboo-tag"
+                :class="{active:memberTaboo[tempStatusModal.key].includes(word)}"
+                @click="toggleTaboo(tempStatusModal.key, word)">
+            {{word}}
+          </span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn" style="flex:1" @click="tempStatusModal.show=false">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成员编辑弹窗 -->
+  <div class="modal-mask" v-if="memberEditModal.show" @click.self="memberEditModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">编辑 {{getMemberName(memberEditModal.key)}} 信息</h3>
+      <div class="member-block" v-if="memberEditModal.key">
+        <div class="two-col-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="input-wrap"><label>年龄</label><input v-model.number="memberData[memberEditModal.key].age" type="number"/></div>
+          <div class="input-wrap"><label>身高cm</label><input v-model.number="memberData[memberEditModal.key].height" type="number"/></div>
+        </div>
+        <div class="two-col-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="input-wrap"><label>体重kg</label><input v-model.number="memberData[memberEditModal.key].weight" type="number"/></div>
+          <div class="input-wrap"><label>排班/上学状态</label><input v-model="memberData[memberEditModal.key].schedule" placeholder="例如：4天在家4天不在"/></div>
+        </div>
+        <div class="input-wrap"><label>身体情况</label><textarea v-model="memberData[memberEditModal.key].health" rows="1"></textarea></div>
+        <div class="input-wrap"><label>基础忌口</label><input v-model="memberData[memberEditModal.key].taboo"/></div>
+        
+        <div v-if="memberEditModal.key === 'dad' || memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">📅 排班周期设置</h4>
+          <div v-if="memberEditModal.key === 'dad'">
+            <div class="input-wrap"><label>起始日期</label><input type="date" v-model="scheduleConfig.dad.startDate"/></div>
+            <div class="input-wrap"><label>在家天数</label><input type="number" v-model.number="scheduleConfig.dad.homeDays"/></div>
+            <div class="input-wrap"><label>不在家天数</label><input type="number" v-model.number="scheduleConfig.dad.awayDays"/></div>
+          </div>
+          <div v-if="memberEditModal.key === 'mom'">
+            <div class="input-wrap"><label>起始日期</label><input type="date" v-model="scheduleConfig.mom.startDate"/></div>
+            <div class="input-wrap"><label>起始班次</label>
+              <select v-model="scheduleConfig.mom.firstShift"><option value="morning">早班</option><option value="afternoon">下午班</option></select>
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 特殊休息日设置</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="date" v-model="newMomRestForm.start" style="flex: 1; min-height: 44px;" />
+              <span>至</span>
+              <input type="date" v-model="newMomRestForm.end" style="flex: 1; min-height: 44px;" />
+            </div>
+            <button class="btn small" style="width: 100%;" @click="addMomRestDay">添加休息日</button>
+          </div>
+          <div v-if="momRestDays.length > 0">
+            <div><span v-for="(h, idx) in momRestDays" :key="idx" class="rest-day-tag">{{h.start}} 至 {{h.end}} <span @click="removeMomRestDay(idx)">✕</span></span></div>
+          </div>
+        </div>
+        
+        <div v-if="memberEditModal.key === 'sister' || memberEditModal.key === 'brother'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 节假日/请假设置</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+            <input type="text" v-model="newHolidayForm[memberEditModal.key].name" placeholder="假期名称" style="width: 100%;" />
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="date" v-model="newHolidayForm[memberEditModal.key].start" style="flex: 1; min-height: 44px;" />
+              <span>至</span>
+              <input type="date" v-model="newHolidayForm[memberEditModal.key].end" style="flex: 1; min-height: 44px;" />
+            </div>
+            <button class="btn small" style="width: 100%;" @click="addHoliday(memberEditModal.key)">添加假期</button>
+          </div>
+          <div v-if="(memberEditModal.key === 'sister' && sisterHolidays.length > 0) || (memberEditModal.key === 'brother' && brotherHolidays.length > 0)">
+            <div>
+              <span v-for="(h, idx) in (memberEditModal.key === 'sister' ? sisterHolidays : brotherHolidays)" :key="idx" class="rest-day-tag">
+                {{h.name}}：{{h.start}} 至 {{h.end}} <span @click="removeHoliday(memberEditModal.key, idx)">✕</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="memberEditModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveMemberEdit">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 食材库存修改弹窗 -->
+  <div class="modal-mask" v-if="stockModal.show" @click.self="stockModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">{{stockModal.item.name}}</h3>
+      <div class="card-subtitle" style="margin-bottom:14px">当前库存：{{stockModal.item.weight}}g</div>
+      <div class="input-wrap">
+        <label>填写克数</label>
+        <input v-model.number="stockModal.inputGram" type="number" placeholder="例如：50"/>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="changeStockByModal(-1)">减少库存</button>
+        <button class="btn" style="flex:1" @click="changeStockByModal(1)">增加库存</button>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:10px" @click="stockModal.show=false">取消</button>
+    </div>
+  </div>
+
+  <!-- 新增食材弹窗 -->
+  <div class="modal-mask" v-if="addIngModal.show" @click.self="addIngModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">新增食材入库</h3>
+      <div class="input-wrap">
+        <label>食材名称</label>
+        <input v-model="addIngModal.name" placeholder="例如：苹果、核桃" />
+      </div>
+      <div class="input-wrap">
+        <label>类型</label>
+        <select v-model="addIngModal.type">
+          <option value="raw">原材料</option>
+          <option value="fruit">水果</option>
+          <option value="snack">零食</option>
+          <option value="pre">预制菜</option>
+        </select>
+      </div>
+      <div class="input-wrap">
+        <label>初始重量（g）</label>
+        <input v-model.number="addIngModal.weight" type="number" placeholder="例如：500" />
+      </div>
+      <div class="input-wrap">
+        <label>保质期（天）</label>
+        <input v-model.number="addIngModal.expireDay" type="number" placeholder="例如：5" />
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="addIngModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveNewIngredient">保存入库</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 趋势图弹窗 -->
+  <div class="modal-mask" v-if="chartModal.show" @click.self="closeChartModal">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
+      <div style="width:100%;height:280px;margin-top:10px;position: relative;">
+        <canvas ref="chartCanvasRef" id="trendChartCanvas"></canvas>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:16px" @click="closeChartModal">关闭</button>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -653,15 +917,17 @@ createApp({
       isTyping: false,
       showSettingsModal: false,
 
-      // 数据 (确保完整)
-      scheduleConfig: { dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 }, mom: { startDate: '2026-10-16', firstShift: 'morning' } },
+      scheduleConfig: {
+        dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 },
+        mom: { startDate: '2026-10-16', firstShift: 'morning' }
+      },
       momRestDays: [{ start: '2026-10-20', end: '2026-10-20', name: '休息日' }], 
       newMomRestForm: { start: '', end: '' },
       sisterHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
       brotherHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
       newHolidayForm: { sister: { name: '', start: '', end: '' }, brother: { name: '', start: '', end: '' } },
       
-      memberData: {
+      memberData:{
         dad:{age:35, height:176, weight:90, schedule:"4天在家4天不在", health:"轻微脂肪肝，肾结石", taboo:"高草酸蔬菜需焯水，不吃内脏"},
         mom:{age:35, height:150, weight:50, schedule:"早班/下午班交替", health:"气血不足，二胎后大肚腩", taboo:"无"},
         sister:{age:8, height:138, weight:31, schedule:"上学日", health:"有点性早熟，需避激素食物", taboo:"蜂王浆、花粉、滋补品"},
@@ -675,6 +941,7 @@ createApp({
       tempStatusModal: { show: false, key: 'dad' },
       stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
       addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
+      
       addRecipeModal: { show: false, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '', rawText: '', isHealthy: true },
       replaceModal: { show: false, mealType: '', dishIdx: -1, currentName: '' },
 
@@ -805,6 +1072,25 @@ createApp({
       const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
       return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [], soup: [] };
     },
+
+    // 今晚备忘提示逻辑
+    tonightPrepReminder() {
+      if (!this.currentDayDishes) return '';
+      let reminders = [];
+      // 检查冷冻肉类
+      const allDishes = [...this.currentDayDishes.breakfast, ...this.currentDayDishes.lunch, ...this.currentDayDishes.dinner];
+      allDishes.forEach(dish => {
+        dish.ingredients.forEach(ing => {
+          if (['牛腩', '鸡翅', '龙利鱼柳', '虾仁', '猪肉丸'].some(m => ing.name.includes(m))) {
+            reminders.push(ing.name);
+          }
+        });
+      });
+      if (reminders.length > 0) {
+        return `请把明天要用的 ${[...new Set(reminders)].join('、')} 从冷冻室拿到冷藏室解冻。`;
+      }
+      return '';
+    },
     
     globalHealthAlerts() {
       let alerts = [];
@@ -880,6 +1166,27 @@ createApp({
         this.showSettingsModal = false;
       }
     },
+
+    // 快捷加减库存
+    quickAdjustStock(item, gram) {
+      const newWeight = item.weight + gram;
+      if (newWeight >= 0) {
+        item.weight = newWeight;
+      } else {
+        item.weight = 0;
+      }
+    },
+
+    // 将 AI 的内容导入菜谱
+    importAiToRecipe(content) {
+      this.addRecipeModal.rawText = content;
+      this.addRecipeModal.show = true;
+      this.addRecipeModal.name = ''; // 留给系统解析
+      this.addRecipeModal.ingredientsText = '';
+      this.addRecipeModal.stepsText = '';
+      this.view = 'weekMenu'; // 为了让你能看到弹窗，把背景切到周菜谱
+    },
+
     async sendMessage() {
       if (!this.chatInput.trim() || this.isTyping) return;
       
@@ -1211,21 +1518,35 @@ createApp({
     completeDish(dish) {
       if (dish.completed) return;
       let deductedList = [];
+      let missingList = [];
+      
       dish.ingredients.forEach(ing => {
-        let target = this.rawIngList.find(i => i.name === ing.name) || this.fruitList.find(i => i.name === ing.name) || this.snackList.find(i => i.name === ing.name) || this.preIngList.find(i => i.name === ing.name);
+        // 在所有4个库中查找
+        let target = this.rawIngList.find(i => i.name === ing.name);
+        if (!target) target = this.fruitList.find(i => i.name === ing.name);
+        if (!target) target = this.snackList.find(i => i.name === ing.name);
+        if (!target) target = this.preIngList.find(i => i.name === ing.name);
         
         if (target) {
           if (target.weight >= ing.weight) {
             target.weight -= ing.weight;
             deductedList.push(`${ing.name} ${ing.weight}g`);
           } else {
-            deductedList.push(`${ing.name} 库存不足（已扣为0）`);
+            deductedList.push(`${ing.name} 扣减了现有全部 ${target.weight}g（需${ing.weight}g）`);
             target.weight = 0;
           }
+        } else {
+          missingList.push(ing.name);
         }
       });
+      
       dish.completed = true;
-      alert(`【${dish.name}】已完成制作！\n已自动扣减食材：\n${deductedList.join('\n')}`);
+      
+      let msg = `【${dish.name}】已完成制作！\n`;
+      if (deductedList.length > 0) msg += `\n已自动扣减库存：\n${deductedList.join('\n')}`;
+      if (missingList.length > 0) msg += `\n\n注意：以下食材未在库中找到，未扣减：\n${missingList.join('、')}`;
+      
+      alert(msg);
     },
     
     openStockModal(item, source){
