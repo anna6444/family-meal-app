@@ -30,7 +30,8 @@
     .card { background: #fff; border-radius: 22px; padding: 22px; margin-bottom: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
     .card h2 { font-size: 19px; margin-bottom: 12px; font-weight: 600; }
     .card-subtitle { font-size: 14px; color: #666; margin-bottom: 10px; }
-    .btn { background: #e6703b; color: #fff; border: none; border-radius: 14px; padding: 12px 16px; cursor: pointer; font-size: 15px; }
+    .btn { background: #e6703b; color: #fff; border: none; border-radius: 14px; padding: 12px 16px; cursor: pointer; font-size: 15px; transition: all 0.2s; }
+    .btn:active { opacity: 0.8; }
     .btn.secondary { background: #f1ede4; color: #333; }
     .btn.small { padding: 9px 14px; font-size: 14px; border-radius: 12px; }
     .btn.ai-btn { background: #4A90E2; color: white; }
@@ -140,6 +141,11 @@
     /* 快捷食材按钮 */
     .quick-btn { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 4px 8px; font-size: 13px; color: #555; cursor: pointer; }
     .quick-btn:active { background: #f0f0f0; }
+
+    /* 底部操作面板 */
+    .action-sheet-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: flex-end; }
+    .action-sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); animation: slideUp 0.3s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   </style>
 </head>
 <body>
@@ -158,7 +164,6 @@
           <div v-for="(alert, idx) in globalHealthAlerts" :key="idx">🚨 {{ alert }}</div>
         </div>
 
-        <!-- 今晚备忘提醒 -->
         <div v-if="tonightPrepReminder" class="health-alert" style="background: #fdf3d8; border-color: #fce8b2; color: #b6862c; margin-bottom: 14px;">
           💡 <div><b>今晚备忘：</b>{{ tonightPrepReminder }}</div>
         </div>
@@ -213,19 +218,10 @@
         <div class="switch-btn" :class="{active:viewWeekMode==='next'}" @click="viewWeekMode='next'">🪄 下周食谱</div>
       </div>
 
-      <!-- 💡 优化了这里的按钮排版，加入了外部AI和批量导入按钮 -->
-      <div style="margin-bottom: 14px;">
-        <h2 style="margin-bottom: 10px;">{{ viewWeekMode === 'current' ? '本周菜单' : '下周菜单' }}</h2>
-        <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: space-between;">
-          <div style="display: flex; gap: 8px;">
-             <button class="btn small" @click="generateWeekPlan(viewWeekMode)">🪄 一键生成</button>
-             <button class="btn small secondary" @click="openAddRecipeModal">➕ 手动添加</button>
-          </div>
-          <div style="display: flex; gap: 8px;">
-             <button class="btn small" style="background: #4A90E2;" @click="copyDeepseekPrompt">🤖 复制AI提示词</button>
-             <button class="btn small" style="background: #2b703b;" @click="batchImportModal.show = true">📥 批量导入</button>
-          </div>
-        </div>
+      <!-- 💡 优化：按钮收纳到右上角 -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h2>{{ viewWeekMode === 'current' ? '本周菜单' : '下周菜单' }}</h2>
+        <button class="btn small secondary" @click="showMoreActions = true">⚙️ 菜单操作</button>
       </div>
       
       <div class="date-scroll">
@@ -633,7 +629,6 @@
           
           <div v-for="(msg, idx) in chatHistory" :key="idx" class="chat-bubble" :class="msg.role === 'user' ? 'chat-user' : 'chat-ai'">
             {{ msg.content }}
-            <!-- AI回复下的导入按钮 -->
             <div v-if="msg.role === 'assistant' && !msg.content.includes('出错') && !msg.content.includes('正在思考')" style="margin-top: 12px; border-top: 1px dashed #eee; padding-top: 10px;">
               <span class="import-btn" @click="importAiToRecipe(msg.content)">📥 导入到我的菜谱库</span>
             </div>
@@ -643,11 +638,91 @@
           </div>
         </div>
 
-        <!-- 底部输入区域 -->
         <div class="chat-input-area">
           <input v-model="chatInput" @keyup.enter="sendMessage" placeholder="输入你想吃的菜或需求..." />
           <button class="chat-send-btn" @click="sendMessage">发送</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 💡 操作面板 (底部弹出) -->
+  <div class="action-sheet-mask" v-if="showMoreActions" @click.self="showMoreActions = false">
+    <div class="action-sheet">
+      <h3 style="margin-bottom: 16px; text-align: center;">⚙️ 菜单操作</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <button class="btn secondary" style="padding: 16px 0;" @click="generateWeekPlan(viewWeekMode); showMoreActions = false;">🪄 本地一键生成</button>
+        <button class="btn secondary" style="padding: 16px 0;" @click="openAddRecipeModal(); showMoreActions = false;">➕ 手动添加菜谱</button>
+        <button class="btn ai-btn" style="padding: 16px 0;" @click="openAiPromptModal">🤖 生成AI提示词</button>
+        <button class="btn" style="padding: 16px 0; background: #2b703b;" @click="batchImportModal.show = true; showMoreActions = false;">📥 批量导入菜单</button>
+      </div>
+      <button class="btn secondary" style="width: 100%; margin-top: 16px; background: #f1ede4;" @click="showMoreActions = false">取消</button>
+    </div>
+  </div>
+
+  <!-- 💡 全新 AI 提示词定制器 -->
+  <div class="modal-mask" v-if="aiPromptModal.show" @click.self="aiPromptModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">🤖 定制 AI 提示词</h3>
+      
+      <div class="input-wrap">
+        <label>生成范围</label>
+        <select v-model="aiPromptModal.scope">
+          <option value="week">生成本周（周一至周日）</option>
+          <option value="day">生成单天</option>
+        </select>
+      </div>
+      
+      <div class="input-wrap" v-if="aiPromptModal.scope === 'day'">
+        <label>选择哪一天</label>
+        <select v-model="aiPromptModal.dayIdx">
+          <option :value="0">周一</option>
+          <option :value="1">周二</option>
+          <option :value="2">周三</option>
+          <option :value="3">周四</option>
+          <option :value="4">周五</option>
+          <option :value="5">周六</option>
+          <option :value="6">周日</option>
+        </select>
+      </div>
+
+      <label style="margin-top: 12px;">家庭成员特殊状态</label>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
+        <div class="input-wrap" style="margin: 0;">
+          <select v-model="aiPromptModal.momStatus" style="border-color: #fce8e8;">
+            <option value="normal">妈妈：正常</option>
+            <option value="period">妈妈：经期(温补)</option>
+            <option value="sick">妈妈：生病(病号饭)</option>
+          </select>
+        </div>
+        <div class="input-wrap" style="margin: 0;">
+          <select v-model="aiPromptModal.dadStatus">
+            <option value="normal">爸爸：正常</option>
+            <option value="sick">爸爸：生病(清淡)</option>
+          </select>
+        </div>
+        <div class="input-wrap" style="margin: 0;">
+          <select v-model="aiPromptModal.sisterStatus">
+            <option value="normal">姐姐：正常</option>
+            <option value="sick">姐姐：生病(清淡)</option>
+          </select>
+        </div>
+        <div class="input-wrap" style="margin: 0;">
+          <select v-model="aiPromptModal.brotherStatus">
+            <option value="normal">弟弟：正常</option>
+            <option value="sick">弟弟：生病(清淡)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-wrap" style="margin-top: 12px;">
+        <label>其他要求（选填）</label>
+        <input v-model="aiPromptModal.extraNote" placeholder="如：想吃鱼、不要鸡蛋、多用空气炸锅..." />
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="aiPromptModal.show=false">取消</button>
+        <button class="btn" style="flex:1; background: #4A90E2;" @click="generateAndCopyPrompt">📋 生成并复制</button>
       </div>
     </div>
   </div>
@@ -669,7 +744,7 @@
       
       <div style="background: #eaf6ec; padding: 12px; border-radius: 12px; margin-bottom: 16px;">
         <label style="color: #2b703b; font-weight: 600;">✨ 智能解析粘贴板</label>
-        <p style="font-size: 12px; color: #666; margin-bottom: 8px;">把提取的菜谱文字（或 AI 的回复）粘贴到这里，系统帮你自动拆分！</p>
+        <p style="font-size: 12px; color: #666; margin-bottom: 8px;">把提取的菜谱文字粘贴到这里，系统帮你自动拆分！</p>
         <textarea v-model="addRecipeModal.rawText" rows="4" placeholder="把小红书提取的文字全部粘贴到这里..."></textarea>
         <button class="btn small" style="width: 100%; margin-top: 8px; background: #2b703b;" @click="parseRawText">🪄 一键智能拆分</button>
       </div>
@@ -721,7 +796,7 @@
     </div>
   </div>
 
-  <!-- 💡 新增：批量导入弹窗 -->
+  <!-- 批量导入弹窗 (DeepSeek) -->
   <div class="modal-mask" v-if="batchImportModal.show" @click.self="batchImportModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:10px">📥 批量导入外部菜单</h3>
@@ -912,7 +987,7 @@
     <div class="modal-box">
       <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
       <div style="width:100%;height:280px;margin-top:10px;position: relative;">
-        <canvas ref="chartCanvasRef" id="trendChartCanvas"></canvas>
+        <canvas id="trendChartCanvas"></canvas>
       </div>
       <button class="btn secondary" style="width:100%;margin-top:16px" @click="closeChartModal">关闭</button>
     </div>
@@ -939,8 +1014,19 @@ createApp({
       isTyping: false,
       showSettingsModal: false,
 
-      // 💡 新增：DeepSeek 提示词与批量导入状态
-      deepseekPrompt: "你现在是家庭高级营养师。请为我制定下周（周一至周日）的家庭食谱。\n家庭情况：妈妈减脂，需要高蛋白低脂；姐姐8岁长身体需补钙；弟弟5岁不爱吃青菜（需切碎隐藏）；爸爸有肾结石（需焯水高草酸蔬菜）。\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，千万不要包含任何解释文字，不要使用代码块标记。你必须严格按照以下结构输出（包含7个对象，dayIdx 0代表周一，6代表周日）：\n[\n  {\n    \"dayIdx\": 0,\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"soup\": []\n  }\n]\n注意：每一餐可以包含多道菜，用数组表示。weight 必须是纯数字（单位默认克）。请务必保证格式完全正确，方便我直接复制！",
+      showMoreActions: false,
+      aiPromptModal: {
+        show: false,
+        scope: 'week',
+        dayIdx: 0,
+        momStatus: 'normal',
+        dadStatus: 'normal',
+        sisterStatus: 'normal',
+        brotherStatus: 'normal',
+        extraNote: ''
+      },
+
+      deepseekPrompt: "", // 将被动态生成覆盖
       batchImportModal: { show: false, text: '' },
 
       scheduleConfig: {
@@ -1099,11 +1185,9 @@ createApp({
       return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [], soup: [] };
     },
 
-    // 今晚备忘提示逻辑
     tonightPrepReminder() {
       if (!this.currentDayDishes) return '';
       let reminders = [];
-      // 检查冷冻肉类
       const allDishes = [...this.currentDayDishes.breakfast, ...this.currentDayDishes.lunch, ...this.currentDayDishes.dinner];
       allDishes.forEach(dish => {
         dish.ingredients.forEach(ing => {
@@ -1193,7 +1277,6 @@ createApp({
       }
     },
 
-    // 快捷加减库存
     quickAdjustStock(item, gram) {
       const newWeight = item.weight + gram;
       if (newWeight >= 0) {
@@ -1203,14 +1286,14 @@ createApp({
       }
     },
 
-    // 将 AI 的内容导入菜谱
     importAiToRecipe(content) {
       this.addRecipeModal.rawText = content;
       this.addRecipeModal.show = true;
-      this.addRecipeModal.name = ''; // 留给系统解析
+      this.addRecipeModal.name = ''; 
       this.addRecipeModal.ingredientsText = '';
       this.addRecipeModal.stepsText = '';
-      this.view = 'weekMenu'; // 为了让你能看到弹窗，把背景切到周菜谱
+      this.view = 'weekMenu'; 
+      setTimeout(() => { this.parseRawText(); }, 100);
     },
 
     async sendMessage() {
@@ -1222,42 +1305,51 @@ createApp({
       this.isTyping = true;
       this.scrollToBottom();
 
-      const systemPrompt = `你现在是一个非常专业的家庭营养师。请遵循以下家庭特殊情况和规则来回答用户的问题。
-【家庭成员情况】
-1. 爸爸：轻微脂肪肝，肾结石。必须低脂，高草酸蔬菜必须提醒焯水。不吃内脏。
-2. 妈妈：气血不足，需要补铁和优质蛋白，减脂。经期不能吃寒凉食物。
-3. 姐姐：8岁，避激素食物，需要补钙长高。
-4. 弟弟：5岁，不爱吃青菜，需将蔬菜切碎做成肉丸或蛋饼。坚果必须打粉。
-【常用厨具】电饭煲、陶瓷锅、微波炉、空气炸锅。
-【语音纠错要求】用户的输入可能是语音识别的，如果出现同音错别字（如把“牛腩”识别成“牛难”），请结合营养菜谱的语境自行纠错，直接给出正确菜谱，**千万不要反问用户是不是打错字了**。
-【回答要求】格式清晰，包含食材和克数、做法步骤、分餐建议。字数300字以内，不要啰嗦。`;
+      const familyInfo = "1. 爸爸：" + this.memberData.dad.health + "。忌口：" + this.memberData.dad.taboo + "。\n2. 妈妈：" + this.memberData.mom.health + "。忌口：" + this.memberData.mom.taboo + "。" + (this.memberTempStatus.mom === 'period' ? '【当前处于经期，忌寒凉】' : '') + (this.memberTempStatus.mom === 'sick' ? '【当前生病，需清淡】' : '') + "\n3. 姐姐：" + this.memberData.sister.health + "。忌口：" + this.memberData.sister.taboo + "。\n4. 弟弟：" + this.memberData.brother.health + "。忌口：" + this.memberData.brother.taboo + "。";
+
+      const systemPrompt = "你现在是一位拥有10年经验的国家高级注册营养师，专门为中国家庭提供健康、减脂、儿童成长和特殊人群（如经期）的营养规划。\n【家庭情况】\n" + familyInfo + "\n【常用厨具】电饭煲、陶瓷锅、微波炉、空气炸锅。\n\n【核心规则】\n1. **意图判断**：判断用户是要“安排计划”还是“查菜谱”。\n2. **安排计划模式**：绝不能只给单一菜品。必须给出组合搭配（如：碳水+蛋白质+维生素），分析营养元素，并给出针对妈妈减脂和孩子长身体的分餐建议。\n3. **查菜谱模式**：必须严格按照以下格式输出，方便前端解析入库：\n【菜名】XXX\n【食材】A 50g，B 100g\n【做法】1. 第一步；2. 第二步...\n【特殊建议】针对孕妇/减脂/孩子的调整说明。\n4. 如果用户的输入包含语音识别错别字（如“牛难”），请自行纠错，不要反问。\n5. 字数控制在 400 字以内。";
+
+      this.abortController = new AbortController();
+      const timeoutId = setTimeout(() => this.abortController.abort(), 45000);
 
       try {
         const response = await fetch("https://api.siliconflow.cn/v1/chat/completions", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${this.apiKey}`
+            "Authorization": "Bearer " + this.apiKey
           },
+          signal: this.abortController.signal,
           body: JSON.stringify({
-            model: "Qwen/Qwen2.5-7B-Instruct",
+            model: "Qwen/Qwen2.5-7B-Instruct", 
             messages: [
               { role: "system", content: systemPrompt },
+              ...this.chatHistory.slice(-5).map(h => ({ role: h.role, content: h.content })),
               { role: "user", content: userText }
             ],
-            temperature: 0.7
+            temperature: 0.7,
+            max_tokens: 1000
           })
         });
 
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
-           throw new Error(`请求失败，状态码: ${response.status}。请检查 API Key 是否正确。`);
+           if(response.status === 401) throw new Error("API Key 无效或已过期");
+           if(response.status === 429) throw new Error("请求太频繁，请稍后再试");
+           throw new Error("请求失败，状态码: " + response.status);
         }
 
         const data = await response.json();
         const aiReply = data.choices[0].message.content;
+        
         this.chatHistory.push({ role: 'assistant', content: aiReply });
       } catch (error) {
-        this.chatHistory.push({ role: 'assistant', content: `出错了：${error.message}。` });
+        if (error.name === 'AbortError') {
+          this.chatHistory.push({ role: 'assistant', content: "出错了：AI 思考时间过长（超过45秒）。可能是网络卡顿，请重试。" });
+        } else {
+          this.chatHistory.push({ role: 'assistant', content: "出错了：" + error.message });
+        }
       } finally {
         this.isTyping = false;
         this.scrollToBottom();
@@ -1275,14 +1367,14 @@ createApp({
       let warnings = [];
       if (this.memberTempStatus.sister === 'sick') {
         if (dish.tag.includes('少油') || dish.tag.includes('油炸') || dish.tag.includes('补铁')) {
-          warnings.push(`姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的。`);
+          warnings.push("姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的。");
         } else if (dish.name.includes('凉拌') || dish.name.includes('雪梨')) {
-          warnings.push(`姐姐生病中，注意避开生冷食物。`);
+          warnings.push("姐姐生病中，注意避开生冷食物。");
         }
       }
       if (this.memberTempStatus.dad === 'sick') {
         if (dish.name.includes('炸锅') || dish.tag.includes('油腻')) {
-          warnings.push(`爸爸生病中，建议避开高脂食物。`);
+          warnings.push("爸爸生病中，建议避开高脂食物。");
         }
       }
       return warnings;
@@ -1292,38 +1384,47 @@ createApp({
       let text = this.addRecipeModal.rawText;
       if (!text) { alert("请先粘贴提取的文字"); return; }
 
-      let nameMatch = text.split('\n')[0].substring(0, 20);
-      this.addRecipeModal.name = nameMatch || '新菜谱';
-
-      let toolMatch = text.match(/空气炸锅|微波炉|电饭煲|陶瓷锅|蒸锅|炒锅|平底锅/);
-      this.addRecipeModal.tool = toolMatch ? toolMatch[0] : '炒锅';
-      
-      let timeMatch = text.match(/\d+分钟|\d+小时/);
-      this.addRecipeModal.time = timeMatch ? timeMatch[0] : '约20分钟';
-
-      let lines = text.split('\n');
+      let name = '';
       let ingredientsArr = [];
       let stepsArr = [];
-      let isStepSection = false;
+      
+      const nameMatch = text.match(/【菜名】(.*)/);
+      if (nameMatch) name = nameMatch[1].trim();
+      
+      const ingMatch = text.match(/【食材】(.*)/);
+      if (ingMatch) {
+        ingredientsArr = ingMatch[1].split(/[,，、]/).map(s => s.trim()).filter(s => s);
+      }
 
-      lines.forEach(line => {
-        line = line.trim();
-        if (!line) return;
-        if (/做法|步骤|烹饪|操作/.test(line)) { isStepSection = true; return; }
-        if (!isStepSection) {
-          if (/克|g|ml|个|颗|勺|瓣|片|适量|少许|半/.test(line) && line.length < 20) {
-            let ingName = line.replace(/[0-9]/g, '').replace(/克|g|ml|个|颗|勺|瓣|片|适量|少许|半|、|,|，/g, '').trim();
-            if (ingName && !ingredientsArr.includes(ingName)) ingredientsArr.push(ingName);
-          }
-        } else {
-          if (line.length > 5 && !/第|步/.test(line.substring(0,2))) stepsArr.push(line);
-        }
-      });
+      const stepMatch = text.match(/【做法】([\s\S]*?)(?=?【|$)/);
+      if (stepMatch) {
+        stepsArr = stepMatch[1].split(/\n|\d+\./).map(s => s.trim()).filter(s => s.length > 2);
+      }
 
-      if (ingredientsArr.length === 0) ingredientsArr = ['根据实际情况准备食材'];
-      this.addRecipeModal.ingredientsText = ingredientsArr.join('，');
-      this.addRecipeModal.stepsText = stepsArr.length > 0 ? stepsArr.join('\n') : text.substring(text.length / 2).trim();
-      alert("✨ 智能拆分完成！请核对下方的内容。");
+      if (!name) name = text.split('\n')[0].substring(0, 20) || '新菜谱';
+      if (ingredientsArr.length === 0) {
+        let lines = text.split('\n');
+        lines.forEach(line => {
+           if (/克|g|ml|个|颗|勺|瓣|片|适量|少许|半/.test(line) && line.length < 20) {
+             let ingName = line.replace(/[0-9]/g, '').replace(/克|g|ml|个|颗|勺|瓣|片|适量|少许|半|、|,|，/g, '').trim();
+             if (ingName && !ingredientsArr.includes(ingName)) ingredientsArr.push(ingName);
+           }
+        });
+      }
+      if (stepsArr.length === 0) stepsArr = text.substring(text.length / 2).split('\n').filter(s=>s.trim().length>0);
+
+      this.addRecipeModal.name = name;
+      this.addRecipeModal.tool = text.match(/空气炸锅|微波炉|电饭煲|陶瓷锅|蒸锅|炒锅|平底锅/)?.[0] || '炒锅';
+      this.addRecipeModal.time = text.match(/\d+分钟|\d+小时/)?.[0] || '约20分钟';
+      this.addRecipeModal.ingredientsText = ingredientsArr.length ? ingredientsArr.join('，') : '根据实际情况准备食材';
+      this.addRecipeModal.stepsText = stepsArr.length ? stepsArr.join('\n') : text;
+      
+      this.addRecipeModal.isHealthy = !/油炸|红烧|糖醋|五花肉|大量糖|高油/.test(text);
+
+      if (text.includes('早餐')) this.addRecipeModal.type = 'breakfast';
+      else if (text.includes('午餐')) this.addRecipeModal.type = 'lunch';
+      else if (text.includes('汤') || text.includes('羹')) this.addRecipeModal.type = 'soup';
+      else this.addRecipeModal.type = 'dinner';
     },
 
     shuffleArray(array) {
@@ -1493,7 +1594,7 @@ createApp({
       localStorage.setItem('customRecipes', JSON.stringify(customRecipes));
 
       this.addRecipeModal.show = false;
-      alert(`✅ 【${name}】已加入菜谱库！`);
+      alert("✅ 【" + name + "】已加入菜谱库！");
     },
 
     getMealName(type) {
@@ -1514,7 +1615,7 @@ createApp({
       
       this.replaceModal.show = false;
       if (this.viewWeekMode === 'next') this.recalculateShoppingList(); 
-      alert(`已替换为【${newRecipe.name}】`);
+      alert("已替换为【" + newRecipe.name + "】");
     },
     
     setDishFeedback(dish, type) { dish.feedback = type; },
@@ -1547,7 +1648,6 @@ createApp({
       let missingList = [];
       
       dish.ingredients.forEach(ing => {
-        // 在所有4个库中查找
         let target = this.rawIngList.find(i => i.name === ing.name);
         if (!target) target = this.fruitList.find(i => i.name === ing.name);
         if (!target) target = this.snackList.find(i => i.name === ing.name);
@@ -1556,9 +1656,9 @@ createApp({
         if (target) {
           if (target.weight >= ing.weight) {
             target.weight -= ing.weight;
-            deductedList.push(`${ing.name} ${ing.weight}g`);
+            deductedList.push(ing.name + " " + ing.weight + "g");
           } else {
-            deductedList.push(`${ing.name} 扣减了现有全部 ${target.weight}g（需${ing.weight}g）`);
+            deductedList.push(ing.name + " 扣减了现有全部 " + target.weight + "g（需" + ing.weight + "g）");
             target.weight = 0;
           }
         } else {
@@ -1568,9 +1668,9 @@ createApp({
       
       dish.completed = true;
       
-      let msg = `【${dish.name}】已完成制作！\n`;
-      if (deductedList.length > 0) msg += `\n已自动扣减库存：\n${deductedList.join('\n')}`;
-      if (missingList.length > 0) msg += `\n\n注意：以下食材未在库中找到，未扣减：\n${missingList.join('、')}`;
+      let msg = "【" + dish.name + "】已完成制作！\n";
+      if (deductedList.length > 0) msg += "\n已自动扣减库存：\n" + deductedList.join('\n');
+      if (missingList.length > 0) msg += "\n\n注意：以下食材未在库中找到，未扣减：\n" + missingList.join('、');
       
       alert(msg);
     },
@@ -1602,7 +1702,7 @@ createApp({
       else this.preIngList.push(newItem);
       
       this.addIngModal.show = false;
-      alert(`【${name}】已成功入库！`);
+      alert("【" + name + "】已成功入库！");
     },
     addMomRestDay() {
       const form = this.newMomRestForm;
@@ -1624,15 +1724,20 @@ createApp({
     },
     getMemberName(key){ const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' }; return map[key] || ''; },
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
-    saveMemberEdit(){ alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`); this.memberEditModal.show = false; },
+    saveMemberEdit(){ alert(this.getMemberName(this.memberEditModal.key) + "的信息已保存！"); this.memberEditModal.show = false; },
     
+    // 💡 修复：改用 id 获取 canvas，并在 nextTick 后调用
     openChartModal(personKey){
       this.chartModal.target = personKey;
-      const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'}
+      const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'};
       this.chartModal.title = nameMap[personKey];
       this.chartModal.show = true;
       
-      setTimeout(() => { this.renderSingleChart(personKey); }, 200);
+      this.$nextTick(() => {
+        setTimeout(() => {
+          this.renderSingleChart(personKey);
+        }, 100);
+      });
     },
     
     closeChartModal(){
@@ -1641,7 +1746,7 @@ createApp({
     },
     
     renderSingleChart(person){
-      const canvas = this.$refs.chartCanvasRef;
+      const canvas = document.getElementById('trendChartCanvas');
       if (!canvas) return;
       const ctx = canvas.getContext('2d');
       
@@ -1698,16 +1803,78 @@ createApp({
       }
     },
     toggleBought(item){ item.bought = !item.bought; },
+    toggleTaboo(person, word) {
+      const arr = this.memberTaboo[person];
+      if (arr.includes(word)) {
+        arr.splice(arr.indexOf(word), 1);
+      } else {
+        arr.push(word);
+      }
+    },
 
-    // 💡 新增：复制提示词与批量导入方法
-    copyDeepseekPrompt() {
+    // 💡 新增：AI 提示词定制器方法
+    openAiPromptModal() {
+      this.aiPromptModal = {
+        show: true,
+        scope: 'week',
+        dayIdx: new Date().getDay() === 0 ? 6 : new Date().getDay() - 1, // 默认今天
+        momStatus: this.memberTempStatus.mom,
+        dadStatus: this.memberTempStatus.dad,
+        sisterStatus: this.memberTempStatus.sister,
+        brotherStatus: this.memberTempStatus.brother,
+        extraNote: ''
+      };
+      this.showMoreActions = false;
+    },
+
+    generateAndCopyPrompt() {
+      const m = this.aiPromptModal;
+      let prompt = "你现在是家庭高级营养师。请为我的家庭制定食谱。\n";
+      
+      // 1. 基础情况
+      prompt += "家庭情况：妈妈减脂（气血不足），需要高蛋白低脂；姐姐8岁长身体需补钙；弟弟5岁不爱吃青菜（需切碎隐藏）；爸爸有轻微脂肪肝和肾结石（需焯水高草酸蔬菜，不吃内脏）。\n";
+      
+      // 2. 范围
+      if (m.scope === 'week') {
+        prompt += "请制定【下周（周一至周日）】的食谱。\n";
+      } else {
+        const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        prompt += `请制定【下周${days[m.dayIdx]}】的单天食谱。\n`;
+      }
+      
+      // 3. 特殊状态
+      let specialStatus = [];
+      if (m.momStatus === 'period') specialStatus.push("妈妈目前处于经期，需要温补，绝对不能吃寒凉生冷食物。");
+      if (m.momStatus === 'sick') specialStatus.push("妈妈目前生病，需要极其清淡易消化，做病号饭。");
+      if (m.dadStatus === 'sick') specialStatus.push("爸爸目前生病，需要清淡少油。");
+      if (m.sisterStatus === 'sick') specialStatus.push("姐姐目前生病，需要清淡，避开油炸和生冷。");
+      if (m.brotherStatus === 'sick') specialStatus.push("弟弟目前生病，需要易消化软烂食物。");
+      
+      if (specialStatus.length > 0) {
+        prompt += "\n【特殊健康状况】：\n" + specialStatus.join("\n") + "\n请注意单独给出适合病人吃的变体做法或病号餐！\n";
+      }
+      
+      // 4. 其他要求
+      if (m.extraNote.trim()) {
+        prompt += `\n【其他额外要求】：${m.extraNote.trim()}\n`;
+      }
+
+      // 5. JSON 格式约束
+      if (m.scope === 'week') {
+        prompt += `\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，千万不要包含任何解释文字，不要使用代码块标记。你必须严格按照以下结构输出（包含7个对象，dayIdx 0代表周一，6代表周日）：\n[\n  {\n    "dayIdx": 0,\n    "breakfast": [{"name": "菜名", "tag": "高蛋白", "tool": "蒸锅", "time": "15分钟", "ingredients": [{"name": "鸡蛋", "weight": 100}], "steps": ["步骤1"]}],\n    "lunch": [],\n    "dinner": [],\n    "soup": []\n  }\n]\n注意：每一餐可以包含多道菜，用数组表示。weight 必须是纯数字（单位默认克）。请务必保证格式完全正确，方便我直接复制！`;
+      } else {
+        prompt += `\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，仅包含1个对象（因为只要一天）。千万不要包含任何解释文字。结构如下：\n[\n  {\n    "dayIdx": ${m.dayIdx},\n    "breakfast": [{"name": "菜名", "tag": "高蛋白", "tool": "蒸锅", "time": "15分钟", "ingredients": [{"name": "鸡蛋", "weight": 100}], "steps": ["步骤1"]}],\n    "lunch": [],\n    "dinner": [],\n    "soup": []\n  }\n]\n注意：weight 必须是纯数字。请务必保证格式完全正确！`;
+      }
+
+      // 复制到剪贴板
       const textArea = document.createElement("textarea");
-      textArea.value = this.deepseekPrompt;
+      textArea.value = prompt;
       document.body.appendChild(textArea);
       textArea.select();
       try {
         document.execCommand('copy');
-        alert("✅ 营养师专属提示词已复制！\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
+        alert("✅ 定制提示词已复制！\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
+        this.aiPromptModal.show = false;
       } catch (err) {
         alert("复制失败，请长按手动复制");
       }
@@ -1734,29 +1901,33 @@ createApp({
         const targetWeekData = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
         
         for (let day = 0; day < 7; day++) {
-          const dayData = parsedData.find(d => d.dayIdx === day) || { breakfast: [], lunch: [], dinner: [], soup: [] };
+          // 因为单天生成可能只返回一个对象，所以需要兼容处理
+          const dayData = parsedData.find(d => d.dayIdx === day);
           
-          ['breakfast', 'lunch', 'dinner', 'soup'].forEach(meal => {
-            if (dayData[meal] && dayData[meal].length > 0) {
-              targetWeekData[day][meal] = dayData[meal].map(dish => ({
-                id: idCounter++,
-                name: dish.name || '外部导入菜品',
-                tag: dish.tag || 'AI推荐',
-                tool: dish.tool || '炒锅',
-                time: dish.time || '20分钟',
-                ingredients: (dish.ingredients || []).map(i => ({
-                  name: i.name,
-                  weight: parseFloat(String(i.weight).replace(/[^\d.]/g, '')) || 100
-                })),
-                steps: dish.steps || ['按照常规做法烹饪'],
-                portions: {},
-                completed: false,
-                feedback: ''
-              }));
-            } else {
-              targetWeekData[day][meal] = [];
-            }
-          });
+          if (dayData) {
+             ['breakfast', 'lunch', 'dinner', 'soup'].forEach(meal => {
+              if (dayData[meal] && dayData[meal].length > 0) {
+                targetWeekData[day][meal] = dayData[meal].map(dish => ({
+                  id: idCounter++,
+                  name: dish.name || '外部导入菜品',
+                  tag: dish.tag || 'AI推荐',
+                  tool: dish.tool || '炒锅',
+                  time: dish.time || '20分钟',
+                  ingredients: (dish.ingredients || []).map(i => ({
+                    name: i.name,
+                    weight: parseFloat(String(i.weight).replace(/[^\d.]/g, '')) || 100
+                  })),
+                  steps: dish.steps || ['按照常规做法烹饪'],
+                  portions: {},
+                  completed: false,
+                  feedback: ''
+                }));
+              } else {
+                // 如果单天生成没给这顿饭，不清空原来的（保险起见）
+                // targetWeekData[day][meal] = [];
+              }
+            });
+          }
         }
         
         this.batchImportModal.show = false;
@@ -1766,7 +1937,7 @@ createApp({
           this.recalculateShoppingList();
         }
         
-        alert("✅ 导入成功！已完美覆盖" + (this.viewWeekMode === 'current' ? '本周' : '下周') + "菜单，并完成了数据对齐。");
+        alert("✅ 导入成功！");
 
       } catch (e) {
         alert("❌ 解析失败！\n\n可能原因：\n1. 复制不完整（请确保以 [ 开头，以 ] 结尾）\n2. 格式不是严格 JSON。\n\n系统报错：" + e.message);
