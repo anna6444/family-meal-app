@@ -727,7 +727,7 @@
       <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
         请把 DeepSeek 生成的 <b>JSON 代码</b> 粘贴到这里。系统会自动清洗并覆盖到【{{ viewWeekMode === 'current' ? '本周' : '下周' }}】的排期表中。
       </p>
-      <textarea v-model="batchImportModal.text" rows="10" placeholder='直接粘贴 [{"dayIdx":0, "breakfast":[...]}] 格式的数据' style="width: 100%; font-family: monospace; font-size: 13px;"></textarea>
+      <textarea v-model="batchImportModal.text" rows="10" placeholder="直接粘贴 AI 生成的 JSON 格式数据..." style="width: 100%; font-family: monospace; font-size: 13px;"></textarea>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn secondary" style="flex:1" @click="batchImportModal.show=false">取消</button>
         <button class="btn" style="flex:1; background: #2b703b;" @click="doBatchImport">✅ 解析并导入</button>
@@ -939,21 +939,7 @@ createApp({
       showSettingsModal: false,
       abortController: null,
 
-      // DeepSeek 提示词与批量导入状态
-      deepseekPrompt: `你现在是家庭高级营养师。请为我制定下周（周一至周日）的家庭食谱。
-家庭情况：妈妈减脂，需要高蛋白低脂；姐姐8岁长身体需补钙；弟弟5岁不爱吃青菜（需切碎隐藏）；爸爸有肾结石（需焯水高草酸蔬菜）。
-【严格的输出格式要求】
-请直接输出一个 JSON 数组，千万不要包含任何解释文字，不要使用 ```json 代码块。你必须严格按照以下结构输出（包含7个对象，dayIdx 0代表周一，6代表周日）：
-[
-  {
-    "dayIdx": 0,
-    "breakfast": [{"name": "菜名", "tag": "高蛋白", "tool": "蒸锅", "time": "15分钟", "ingredients": [{"name": "鸡蛋", "weight": 100}, {"name": "牛奶", "weight": 200}], "steps": ["步骤1", "步骤2"]}],
-    "lunch": [{"name": "菜名", "tag": "补钙", "tool": "炒锅", "time": "20分钟", "ingredients": [{"name": "牛肉", "weight": 200}], "steps": ["步骤1", "步骤2"]}],
-    "dinner": [],
-    "soup": []
-  }
-]
-注意：每一餐可以包含多道菜，用数组表示。weight 必须是纯数字（单位默认克）。请务必保证格式完全正确，方便我直接复制！`,
+      deepseekPrompt: "你现在是家庭高级营养师。请为我制定下周（周一至周日）的家庭食谱。\n家庭情况：妈妈减脂，需要高蛋白低脂；姐姐8岁长身体需补钙；弟弟5岁不爱吃青菜（需切碎隐藏）；爸爸有肾结石（需焯水高草酸蔬菜）。\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，千万不要包含任何解释文字，不要使用代码块标记。你必须严格按照以下结构输出（包含7个对象，dayIdx 0代表周一，6代表周日）：\n[\n  {\n    \"dayIdx\": 0,\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"soup\": []\n  }\n]\n注意：每一餐可以包含多道菜，用数组表示。weight 必须是纯数字（单位默认克）。请务必保证格式完全正确，方便我直接复制！",
       batchImportModal: { show: false, text: '' },
 
       scheduleConfig: {
@@ -1220,7 +1206,6 @@ createApp({
       this.addRecipeModal.ingredientsText = '';
       this.addRecipeModal.stepsText = '';
       this.view = 'weekMenu'; 
-      // 自动触发一次解析
       setTimeout(() => { this.parseRawText(); }, 100);
     },
 
@@ -1233,32 +1218,10 @@ createApp({
       this.isTyping = true;
       this.scrollToBottom();
 
-      // 动态生成家庭信息
-      const familyInfo = `
-      1. 爸爸：${this.memberData.dad.health}。忌口：${this.memberData.dad.taboo}。
-      2. 妈妈：${this.memberData.mom.health}。忌口：${this.memberData.mom.taboo}。${this.memberTempStatus.mom === 'period' ? '【当前处于经期，忌寒凉】' : ''}${this.memberTempStatus.mom === 'sick' ? '【当前生病，需清淡】' : ''}
-      3. 姐姐：${this.memberData.sister.health}。忌口：${this.memberData.sister.taboo}。
-      4. 弟弟：${this.memberData.brother.health}。忌口：${this.memberData.brother.taboo}。
-      `;
+      const familyInfo = "1. 爸爸：" + this.memberData.dad.health + "。忌口：" + this.memberData.dad.taboo + "。\n2. 妈妈：" + this.memberData.mom.health + "。忌口：" + this.memberData.mom.taboo + "。" + (this.memberTempStatus.mom === 'period' ? '【当前处于经期，忌寒凉】' : '') + (this.memberTempStatus.mom === 'sick' ? '【当前生病，需清淡】' : '') + "\n3. 姐姐：" + this.memberData.sister.health + "。忌口：" + this.memberData.sister.taboo + "。\n4. 弟弟：" + this.memberData.brother.health + "。忌口：" + this.memberData.brother.taboo + "。";
 
-      // 高级营养师提示词
-      const systemPrompt = `你现在是一位拥有10年经验的国家高级注册营养师，专门为中国家庭提供健康、减脂、儿童成长和特殊人群（如经期）的营养规划。
-【家庭情况】
-${familyInfo}
-【常用厨具】电饭煲、陶瓷锅、微波炉、空气炸锅。
+      const systemPrompt = "你现在是一位拥有10年经验的国家高级注册营养师，专门为中国家庭提供健康、减脂、儿童成长和特殊人群（如经期）的营养规划。\n【家庭情况】\n" + familyInfo + "\n【常用厨具】电饭煲、陶瓷锅、微波炉、空气炸锅。\n\n【核心规则】\n1. **意图判断**：判断用户是要“安排计划”还是“查菜谱”。\n2. **安排计划模式**：绝不能只给单一菜品。必须给出组合搭配（如：碳水+蛋白质+维生素），分析营养元素，并给出针对妈妈减脂和孩子长身体的分餐建议。\n3. **查菜谱模式**：必须严格按照以下格式输出，方便前端解析入库：\n【菜名】XXX\n【食材】A 50g，B 100g\n【做法】1. 第一步；2. 第二步...\n【特殊建议】针对孕妇/减脂/孩子的调整说明。\n4. 如果用户的输入包含语音识别错别字（如“牛难”），请自行纠错，不要反问。\n5. 字数控制在 400 字以内。";
 
-【核心规则】
-1. **意图判断**：判断用户是要“安排计划”（如：安排明天早餐、推荐几个菜）还是“查菜谱”（如：番茄炒蛋怎么做）。
-2. **安排计划模式**：绝不能只给单一菜品。必须给出组合搭配（如：碳水+蛋白质+维生素），分析营养元素，并给出针对妈妈减脂和孩子长身体的分餐建议。
-3. **查菜谱模式**：必须严格按照以下格式输出，方便前端解析入库：
-【菜名】XXX
-【食材】A 50g，B 100g
-【做法】1. 第一步；2. 第二步...
-【特殊建议】针对孕妇/减脂/孩子的调整说明。
-4. 如果用户的输入包含语音识别错别字（如“牛难”），请自行纠错，不要反问。
-5. 字数控制在 400 字以内。`;
-
-      // 增加超时控制（45秒超时）
       this.abortController = new AbortController();
       const timeoutId = setTimeout(() => this.abortController.abort(), 45000);
 
@@ -1267,15 +1230,14 @@ ${familyInfo}
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${this.apiKey}`
+            "Authorization": "Bearer " + this.apiKey
           },
           signal: this.abortController.signal,
           body: JSON.stringify({
-            // 升级为 72B 模型，逻辑规划能力更强。如果觉得慢，可以换成 "deepseek-ai/DeepSeek-V2.5"
-            model: "Qwen/Qwen2.5-72B-Instruct", 
+            // 💡 这里已经改回了永久免费的小模型
+            model: "Qwen/Qwen2.5-7B-Instruct", 
             messages: [
               { role: "system", content: systemPrompt },
-              // 携带最近5轮对话记录，保持上下文
               ...this.chatHistory.slice(-5).map(h => ({ role: h.role, content: h.content })),
               { role: "user", content: userText }
             ],
@@ -1289,7 +1251,7 @@ ${familyInfo}
         if (!response.ok) {
            if(response.status === 401) throw new Error("API Key 无效或已过期");
            if(response.status === 429) throw new Error("请求太频繁，请稍后再试");
-           throw new Error(`请求失败，状态码: ${response.status}`);
+           throw new Error("请求失败，状态码: " + response.status);
         }
 
         const data = await response.json();
@@ -1298,9 +1260,9 @@ ${familyInfo}
         this.chatHistory.push({ role: 'assistant', content: aiReply });
       } catch (error) {
         if (error.name === 'AbortError') {
-          this.chatHistory.push({ role: 'assistant', content: `出错了：AI 思考时间过长（超过45秒）。可能是网络卡顿，请重试。` });
+          this.chatHistory.push({ role: 'assistant', content: "出错了：AI 思考时间过长（超过45秒）。可能是网络卡顿，请重试。" });
         } else {
-          this.chatHistory.push({ role: 'assistant', content: `出错了：${error.message}` });
+          this.chatHistory.push({ role: 'assistant', content: "出错了：" + error.message });
         }
       } finally {
         this.isTyping = false;
@@ -1319,14 +1281,14 @@ ${familyInfo}
       let warnings = [];
       if (this.memberTempStatus.sister === 'sick') {
         if (dish.tag.includes('少油') || dish.tag.includes('油炸') || dish.tag.includes('补铁')) {
-          warnings.push(`姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的。`);
+          warnings.push("姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的。");
         } else if (dish.name.includes('凉拌') || dish.name.includes('雪梨')) {
-          warnings.push(`姐姐生病中，注意避开生冷食物。`);
+          warnings.push("姐姐生病中，注意避开生冷食物。");
         }
       }
       if (this.memberTempStatus.dad === 'sick') {
         if (dish.name.includes('炸锅') || dish.tag.includes('油腻')) {
-          warnings.push(`爸爸生病中，建议避开高脂食物。`);
+          warnings.push("爸爸生病中，建议避开高脂食物。");
         }
       }
       return warnings;
@@ -1336,7 +1298,6 @@ ${familyInfo}
       let text = this.addRecipeModal.rawText;
       if (!text) { alert("请先粘贴提取的文字"); return; }
 
-      // 尝试提取结构化字段
       let name = '';
       let ingredientsArr = [];
       let stepsArr = [];
@@ -1354,7 +1315,6 @@ ${familyInfo}
         stepsArr = stepMatch[1].split(/\n|\d+\./).map(s => s.trim()).filter(s => s.length > 2);
       }
 
-      // 如果没匹配到固定格式，走兜底逻辑
       if (!name) name = text.split('\n')[0].substring(0, 20) || '新菜谱';
       if (ingredientsArr.length === 0) {
         let lines = text.split('\n');
@@ -1373,10 +1333,8 @@ ${familyInfo}
       this.addRecipeModal.ingredientsText = ingredientsArr.length ? ingredientsArr.join('，') : '根据实际情况准备食材';
       this.addRecipeModal.stepsText = stepsArr.length ? stepsArr.join('\n') : text;
       
-      // 智能识别是否是高油高糖
       this.addRecipeModal.isHealthy = !/油炸|红烧|糖醋|五花肉|大量糖|高油/.test(text);
 
-      // 智能判断是哪一餐
       if (text.includes('早餐')) this.addRecipeModal.type = 'breakfast';
       else if (text.includes('午餐')) this.addRecipeModal.type = 'lunch';
       else if (text.includes('汤') || text.includes('羹')) this.addRecipeModal.type = 'soup';
@@ -1550,7 +1508,7 @@ ${familyInfo}
       localStorage.setItem('customRecipes', JSON.stringify(customRecipes));
 
       this.addRecipeModal.show = false;
-      alert(`✅ 【${name}】已加入菜谱库！`);
+      alert("✅ 【" + name + "】已加入菜谱库！");
     },
 
     getMealName(type) {
@@ -1571,7 +1529,7 @@ ${familyInfo}
       
       this.replaceModal.show = false;
       if (this.viewWeekMode === 'next') this.recalculateShoppingList(); 
-      alert(`已替换为【${newRecipe.name}】`);
+      alert("已替换为【" + newRecipe.name + "】");
     },
     
     setDishFeedback(dish, type) { dish.feedback = type; },
@@ -1612,9 +1570,9 @@ ${familyInfo}
         if (target) {
           if (target.weight >= ing.weight) {
             target.weight -= ing.weight;
-            deductedList.push(`${ing.name} ${ing.weight}g`);
+            deductedList.push(ing.name + " " + ing.weight + "g");
           } else {
-            deductedList.push(`${ing.name} 扣减了现有全部 ${target.weight}g（需${ing.weight}g）`);
+            deductedList.push(ing.name + " 扣减了现有全部 " + target.weight + "g（需" + ing.weight + "g）");
             target.weight = 0;
           }
         } else {
@@ -1624,9 +1582,9 @@ ${familyInfo}
       
       dish.completed = true;
       
-      let msg = `【${dish.name}】已完成制作！\n`;
-      if (deductedList.length > 0) msg += `\n已自动扣减库存：\n${deductedList.join('\n')}`;
-      if (missingList.length > 0) msg += `\n\n注意：以下食材未在库中找到，未扣减：\n${missingList.join('、')}`;
+      let msg = "【" + dish.name + "】已完成制作！\n";
+      if (deductedList.length > 0) msg += "\n已自动扣减库存：\n" + deductedList.join('\n');
+      if (missingList.length > 0) msg += "\n\n注意：以下食材未在库中找到，未扣减：\n" + missingList.join('、');
       
       alert(msg);
     },
@@ -1658,7 +1616,7 @@ ${familyInfo}
       else this.preIngList.push(newItem);
       
       this.addIngModal.show = false;
-      alert(`【${name}】已成功入库！`);
+      alert("【" + name + "】已成功入库！");
     },
     addMomRestDay() {
       const form = this.newMomRestForm;
@@ -1680,7 +1638,7 @@ ${familyInfo}
     },
     getMemberName(key){ const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' }; return map[key] || ''; },
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
-    saveMemberEdit(){ alert(`${this.getMemberName(this.memberEditModal.key)}的信息已保存！`); this.memberEditModal.show = false; },
+    saveMemberEdit(){ alert(this.getMemberName(this.memberEditModal.key) + "的信息已保存！"); this.memberEditModal.show = false; },
     
     openChartModal(personKey){
       this.chartModal.target = personKey;
@@ -1763,7 +1721,6 @@ ${familyInfo}
       }
     },
 
-    // 1. 一键复制提示词
     copyDeepseekPrompt() {
       const textArea = document.createElement("textarea");
       textArea.value = this.deepseekPrompt;
@@ -1771,22 +1728,19 @@ ${familyInfo}
       textArea.select();
       try {
         document.execCommand('copy');
-        alert("✅ 营养师专属提示词已复制！\n\n👉 请前往 DeepSeek 网页版 (chat.deepseek.com) 粘贴发送。\n👉 生成 JSON 后，点击网站上的「批量导入」粘贴进来。");
+        alert("✅ 营养师专属提示词已复制！\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
       } catch (err) {
-        alert("复制失败，请手动复制");
+        alert("复制失败，请长按手动复制");
       }
       document.body.removeChild(textArea);
     },
 
-    // 2. 核心解析与入库方法
     doBatchImport() {
       let rawText = this.batchImportModal.text.trim();
       if (!rawText) { alert("请先粘贴内容"); return; }
       
-      // 清洗：去除可能包含的 ```json 和 ```
       rawText = rawText.replace(/```json/ig, '').replace(/```/g, '').trim();
       
-      // 截取第一个 [ 到最后一个 ] 之间的内容，防止 AI 在外面多说了废话
       const startIdx = rawText.indexOf('[');
       const endIdx = rawText.lastIndexOf(']');
       if (startIdx !== -1 && endIdx !== -1) {
@@ -1800,20 +1754,17 @@ ${familyInfo}
         let idCounter = Date.now();
         const targetWeekData = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
         
-        // 遍历 7 天数据
         for (let day = 0; day < 7; day++) {
           const dayData = parsedData.find(d => d.dayIdx === day) || { breakfast: [], lunch: [], dinner: [], soup: [] };
           
           ['breakfast', 'lunch', 'dinner', 'soup'].forEach(meal => {
             if (dayData[meal] && dayData[meal].length > 0) {
-              // 将菜品格式化后覆盖当天数据
               targetWeekData[day][meal] = dayData[meal].map(dish => ({
                 id: idCounter++,
                 name: dish.name || '外部导入菜品',
                 tag: dish.tag || 'AI推荐',
                 tool: dish.tool || '炒锅',
                 time: dish.time || '20分钟',
-                // 强制把 weight 转为数字，防止 DeepSeek 输出了 "100g" 导致后续库存计算 NaN
                 ingredients: (dish.ingredients || []).map(i => ({
                   name: i.name,
                   weight: parseFloat(String(i.weight).replace(/[^\d.]/g, '')) || 100
@@ -1824,7 +1775,7 @@ ${familyInfo}
                 feedback: ''
               }));
             } else {
-              targetWeekData[day][meal] = []; // 如果 AI 没给这顿饭，就清空
+              targetWeekData[day][meal] = [];
             }
           });
         }
@@ -1832,12 +1783,11 @@ ${familyInfo}
         this.batchImportModal.show = false;
         this.batchImportModal.text = '';
         
-        // 重新计算采购清单（如果是导入的下周）
         if (this.viewWeekMode === 'next') {
           this.recalculateShoppingList();
         }
         
-        alert(`✅ 导入成功！已完美覆盖${this.viewWeekMode === 'current' ? '本周' : '下周'}菜单，并完成了数据对齐。`);
+        alert("✅ 导入成功！已完美覆盖" + (this.viewWeekMode === 'current' ? '本周' : '下周') + "菜单，并完成了数据对齐。");
 
       } catch (e) {
         alert("❌ 解析失败！\n\n可能原因：\n1. 复制不完整（请确保以 [ 开头，以 ] 结尾）\n2. 格式不是严格 JSON。\n\n系统报错：" + e.message);
