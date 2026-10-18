@@ -218,7 +218,6 @@
         <div class="switch-btn" :class="{active:viewWeekMode==='next'}" @click="viewWeekMode='next'">🪄 下周食谱</div>
       </div>
 
-      <!-- 💡 优化：按钮收纳到右上角 -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
         <h2>{{ viewWeekMode === 'current' ? '本周菜单' : '下周菜单' }}</h2>
         <button class="btn small secondary" @click="showMoreActions = true">⚙️ 菜单操作</button>
@@ -646,7 +645,7 @@
     </div>
   </div>
 
-  <!-- 💡 操作面板 (底部弹出) -->
+  <!-- 底部操作面板 -->
   <div class="action-sheet-mask" v-if="showMoreActions" @click.self="showMoreActions = false">
     <div class="action-sheet">
       <h3 style="margin-bottom: 16px; text-align: center;">⚙️ 菜单操作</h3>
@@ -660,7 +659,7 @@
     </div>
   </div>
 
-  <!-- 💡 全新 AI 提示词定制器 -->
+  <!-- AI 提示词定制器 -->
   <div class="modal-mask" v-if="aiPromptModal.show" @click.self="aiPromptModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">🤖 定制 AI 提示词</h3>
@@ -1013,6 +1012,7 @@ createApp({
       chatHistory: [],
       isTyping: false,
       showSettingsModal: false,
+      abortController: null,
 
       showMoreActions: false,
       aiPromptModal: {
@@ -1026,7 +1026,6 @@ createApp({
         extraNote: ''
       },
 
-      deepseekPrompt: "", // 将被动态生成覆盖
       batchImportModal: { show: false, text: '' },
 
       scheduleConfig: {
@@ -1396,7 +1395,7 @@ createApp({
         ingredientsArr = ingMatch[1].split(/[,，、]/).map(s => s.trim()).filter(s => s);
       }
 
-      const stepMatch = text.match(/【做法】([\s\S]*?)(?=?【|$)/);
+      const stepMatch = text.match(/【做法】([\s\S]*?)(?=【|$)/);
       if (stepMatch) {
         stepsArr = stepMatch[1].split(/\n|\d+\./).map(s => s.trim()).filter(s => s.length > 2);
       }
@@ -1726,7 +1725,6 @@ createApp({
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
     saveMemberEdit(){ alert(this.getMemberName(this.memberEditModal.key) + "的信息已保存！"); this.memberEditModal.show = false; },
     
-    // 💡 修复：改用 id 获取 canvas，并在 nextTick 后调用
     openChartModal(personKey){
       this.chartModal.target = personKey;
       const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'};
@@ -1812,12 +1810,12 @@ createApp({
       }
     },
 
-    // 💡 新增：AI 提示词定制器方法
+    // 💡 严格安全的提示词生成器
     openAiPromptModal() {
       this.aiPromptModal = {
         show: true,
         scope: 'week',
-        dayIdx: new Date().getDay() === 0 ? 6 : new Date().getDay() - 1, // 默认今天
+        dayIdx: new Date().getDay() === 0 ? 6 : new Date().getDay() - 1,
         momStatus: this.memberTempStatus.mom,
         dadStatus: this.memberTempStatus.dad,
         sisterStatus: this.memberTempStatus.sister,
@@ -1831,18 +1829,15 @@ createApp({
       const m = this.aiPromptModal;
       let prompt = "你现在是家庭高级营养师。请为我的家庭制定食谱。\n";
       
-      // 1. 基础情况
       prompt += "家庭情况：妈妈减脂（气血不足），需要高蛋白低脂；姐姐8岁长身体需补钙；弟弟5岁不爱吃青菜（需切碎隐藏）；爸爸有轻微脂肪肝和肾结石（需焯水高草酸蔬菜，不吃内脏）。\n";
       
-      // 2. 范围
       if (m.scope === 'week') {
         prompt += "请制定【下周（周一至周日）】的食谱。\n";
       } else {
         const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-        prompt += `请制定【下周${days[m.dayIdx]}】的单天食谱。\n`;
+        prompt += "请制定【下周" + days[m.dayIdx] + "】的单天食谱。\n";
       }
       
-      // 3. 特殊状态
       let specialStatus = [];
       if (m.momStatus === 'period') specialStatus.push("妈妈目前处于经期，需要温补，绝对不能吃寒凉生冷食物。");
       if (m.momStatus === 'sick') specialStatus.push("妈妈目前生病，需要极其清淡易消化，做病号饭。");
@@ -1854,19 +1849,21 @@ createApp({
         prompt += "\n【特殊健康状况】：\n" + specialStatus.join("\n") + "\n请注意单独给出适合病人吃的变体做法或病号餐！\n";
       }
       
-      // 4. 其他要求
       if (m.extraNote.trim()) {
-        prompt += `\n【其他额外要求】：${m.extraNote.trim()}\n`;
+        prompt += "\n【其他额外要求】：" + m.extraNote.trim() + "\n";
       }
 
-      // 5. JSON 格式约束
+      // 安全拼接 JSON，不包含反引号
       if (m.scope === 'week') {
-        prompt += `\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，千万不要包含任何解释文字，不要使用代码块标记。你必须严格按照以下结构输出（包含7个对象，dayIdx 0代表周一，6代表周日）：\n[\n  {\n    "dayIdx": 0,\n    "breakfast": [{"name": "菜名", "tag": "高蛋白", "tool": "蒸锅", "time": "15分钟", "ingredients": [{"name": "鸡蛋", "weight": 100}], "steps": ["步骤1"]}],\n    "lunch": [],\n    "dinner": [],\n    "soup": []\n  }\n]\n注意：每一餐可以包含多道菜，用数组表示。weight 必须是纯数字（单位默认克）。请务必保证格式完全正确，方便我直接复制！`;
+        prompt += "\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，千万不要包含任何解释文字，不要使用代码块标记。你必须严格按照以下结构输出（包含7个对象，dayIdx 0代表周一，6代表周日）：\n";
+        prompt += "[\n  {\n    \"dayIdx\": 0,\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"soup\": []\n  }\n]\n";
+        prompt += "注意：每一餐可以包含多道菜，用数组表示。weight 必须是纯数字（单位默认克）。请务必保证格式完全正确，方便我直接复制！";
       } else {
-        prompt += `\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，仅包含1个对象（因为只要一天）。千万不要包含任何解释文字。结构如下：\n[\n  {\n    "dayIdx": ${m.dayIdx},\n    "breakfast": [{"name": "菜名", "tag": "高蛋白", "tool": "蒸锅", "time": "15分钟", "ingredients": [{"name": "鸡蛋", "weight": 100}], "steps": ["步骤1"]}],\n    "lunch": [],\n    "dinner": [],\n    "soup": []\n  }\n]\n注意：weight 必须是纯数字。请务必保证格式完全正确！`;
+        prompt += "\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，仅包含1个对象（因为只要一天）。千万不要包含任何解释文字。结构如下：\n";
+        prompt += "[\n  {\n    \"dayIdx\": " + m.dayIdx + ",\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"soup\": []\n  }\n]\n";
+        prompt += "注意：weight 必须是纯数字。请务必保证格式完全正确！";
       }
 
-      // 复制到剪贴板
       const textArea = document.createElement("textarea");
       textArea.value = prompt;
       document.body.appendChild(textArea);
@@ -1901,7 +1898,6 @@ createApp({
         const targetWeekData = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
         
         for (let day = 0; day < 7; day++) {
-          // 因为单天生成可能只返回一个对象，所以需要兼容处理
           const dayData = parsedData.find(d => d.dayIdx === day);
           
           if (dayData) {
@@ -1922,9 +1918,6 @@ createApp({
                   completed: false,
                   feedback: ''
                 }));
-              } else {
-                // 如果单天生成没给这顿饭，不清空原来的（保险起见）
-                // targetWeekData[day][meal] = [];
               }
             });
           }
