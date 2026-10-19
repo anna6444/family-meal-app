@@ -105,17 +105,6 @@
     .tool-tag { background: #e6f0fa; color: #2b579b; }
     .time-tag { background: #fdf3d8; color: #b6862c; }
 
-    /* AI 悬浮球 */
-    .ai-float-btn { 
-      position: fixed; bottom: 95px; right: 20px; width: 64px; height: 64px; 
-      background: linear-gradient(135deg, #ff9a5a, #e6703b); 
-      border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; 
-      color: white; box-shadow: 0 6px 16px rgba(230, 112, 59, 0.4); 
-      border: 2px solid #fff; z-index: 100; cursor: pointer; transition: transform 0.2s; 
-    }
-    .ai-float-btn:active { transform: scale(0.9); }
-    .ai-float-icon { font-size: 30px; line-height: 1; margin-bottom: 2px; }
-
     /* AI 聊天界面 */
     .chat-wrapper { position: fixed; inset: 0; background: #f4f1ea; z-index: 150; display: flex; flex-direction: column; }
     .chat-header { background: #fff; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; flex-shrink: 0; }
@@ -148,7 +137,7 @@
     .action-sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); animation: slideUp 0.3s ease-out; }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
 
-    /* 💡 修复：隐藏的A4打印区域，去掉固定高度，让它自适应撑开 */
+    /* 隐藏的A4打印区域 */
     #a4-print-area { 
       position: absolute; 
       top: -9999px; 
@@ -233,14 +222,19 @@
 
     <!-- 周菜谱 -->
     <div v-if="view === 'weekMenu'">
-      <div class="tab-switch" style="margin-bottom: 14px;">
-        <div class="switch-btn" :class="{active:viewWeekMode==='current'}" @click="viewWeekMode='current'">📅 本周食谱</div>
-        <div class="switch-btn" :class="{active:viewWeekMode==='next'}" @click="viewWeekMode='next'">🪄 下周食谱</div>
+      <!-- 💡 第一排：切换 + 菜单操作 -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px;">
+        <div class="tab-switch" style="margin-bottom: 0; flex: 1; grid-template-columns: 1fr 1fr; max-width: 65%;">
+          <div class="switch-btn" :class="{active:viewWeekMode==='current'}" @click="viewWeekMode='current'">📅 本周食谱</div>
+          <div class="switch-btn" :class="{active:viewWeekMode==='next'}" @click="viewWeekMode='next'">🪄 下周食谱</div>
+        </div>
+        <button class="btn small secondary" @click="showMoreActions = true" style="padding: 9px 12px;">⚙️ 菜单操作</button>
       </div>
 
+      <!-- 💡 第二排：标题 + 单天换菜 -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
         <h2>{{ viewWeekMode === 'current' ? '本周菜单' : '下周菜单' }}</h2>
-        <button class="btn small secondary" @click="showMoreActions = true">⚙️ 菜单操作</button>
+        <button class="btn small ai-btn" @click="openSingleDayPrompt">🩺 单天/生病换菜</button>
       </div>
       
       <div class="date-scroll">
@@ -250,10 +244,9 @@
         </div>
       </div>
 
-      <!-- 💡 新增：单天调换按钮 -->
+      <!-- 💡 第三排：选中的那一天菜单 -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h3 style="font-size:16px; color:#c46838;">📅 {{displayWeekDates[selDateIdx].week}}菜单</h3>
-        <button class="btn small ai-btn" @click="openSingleDayPrompt">🤖 单天/生病换菜</button>
       </div>
       
       <div v-if="currentDayDishes">
@@ -507,6 +500,17 @@
     <!-- 食材库 -->
     <div v-if="view === 'ingredientLib'">
       <h2 style="margin-bottom:14px">🥬 食材库</h2>
+      
+      <!-- 💡 新增：快过期前置提醒 -->
+      <div v-if="expiringItems.length > 0" class="health-alert" style="background: #fff0f0; border: 1px solid #fce8e8; color: #d14a4a; margin-bottom: 14px; flex-direction: column; align-items: stretch;">
+        <div style="font-weight: 600; margin-bottom: 8px; font-size: 15px;">🚨 重点提醒：以下食材快过期，请优先食用！</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <span v-for="item in expiringItems" :key="item.name" class="tag red" style="font-size: 14px; padding: 6px 12px;">
+            {{ item.name }} (剩 {{ item.expireDay }} 天)
+          </span>
+        </div>
+      </div>
+
       <div class="tab-switch">
         <div class="switch-btn" :class="{active:ingTab==='raw'}" @click="ingTab='raw'">原材料</div>
         <div class="switch-btn" :class="{active:ingTab==='fruit'}" @click="ingTab='fruit'">水果</div>
@@ -630,11 +634,7 @@
 
   </div>
 
-  <!-- 悬浮 AI 按钮 -->
-  <div class="ai-float-btn" v-if="view !== 'ai'" @click="view='ai'">
-    <span class="ai-float-icon">👩‍🍳</span>
-    <span style="font-size: 10px; font-weight: 600; margin-top: -2px;">AI 营养师</span>
-  </div>
+  <!-- 💡 移除了悬浮 AI 按钮，让页面更整洁 -->
 
   <!-- 底部导航 -->
   <div class="tab-bar" v-if="view !== 'ai'">
@@ -663,7 +663,7 @@
     </div>
   </div>
 
-  <!-- AI 聊天全屏页面 -->
+  <!-- AI 聊天全屏页面 (保留以防未来再用) -->
   <div class="chat-wrapper" v-if="view === 'ai'">
     <div class="api-mask" v-if="!apiKey">
       <h3 style="color:#e6703b; margin-bottom: 10px;">请配置 AI 接口</h3>
@@ -1146,7 +1146,6 @@ createApp({
       addRecipeModal: { show: false, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '', rawText: '', isHealthy: true },
       replaceModal: { show: false, mealType: '', dishIdx: -1, currentName: '' },
 
-      // 💡 新增：用于图片预览的数据
       exportedImageUrl: '',
       showImagePreview: false,
 
@@ -1242,10 +1241,32 @@ createApp({
     this.generateWeekPlan('next', true);
   },
   computed: {
-    filteredRawList(){ const kw = this.searchIng.trim().toLowerCase(); if(!kw) return this.rawIngList; return this.rawIngList.filter(i => i.name.toLowerCase().includes(kw)); },
-    filteredFruitList(){ const kw = this.searchIng.trim().toLowerCase(); if(!kw) return this.fruitList; return this.fruitList.filter(i => i.name.toLowerCase().includes(kw)); },
-    filteredSnackList(){ const kw = this.searchIng.trim().toLowerCase(); if(!kw) return this.snackList; return this.snackList.filter(i => i.name.toLowerCase().includes(kw)); },
-    filteredPreList(){ const kw = this.searchIng.trim().toLowerCase(); if(!kw) return this.preIngList; return this.preIngList.filter(i => i.name.toLowerCase().includes(kw)); },
+    // 💡 增加快过期提取和排序逻辑
+    expiringItems() {
+      const all = [...this.rawIngList, ...this.fruitList, ...this.snackList, ...this.preIngList];
+      return all.filter(item => item.expireDay <= 3 && item.weight > 0);
+    },
+    filteredRawList(){ 
+      const kw = this.searchIng.trim().toLowerCase(); 
+      let list = this.rawIngList.filter(i => i.name.toLowerCase().includes(kw)); 
+      return list.sort((a, b) => a.expireDay - b.expireDay);
+    },
+    filteredFruitList(){ 
+      const kw = this.searchIng.trim().toLowerCase(); 
+      let list = this.fruitList.filter(i => i.name.toLowerCase().includes(kw)); 
+      return list.sort((a, b) => a.expireDay - b.expireDay);
+    },
+    filteredSnackList(){ 
+      const kw = this.searchIng.trim().toLowerCase(); 
+      let list = this.snackList.filter(i => i.name.toLowerCase().includes(kw)); 
+      return list.sort((a, b) => a.expireDay - b.expireDay);
+    },
+    filteredPreList(){ 
+      const kw = this.searchIng.trim().toLowerCase(); 
+      let list = this.preIngList.filter(i => i.name.toLowerCase().includes(kw)); 
+      return list.sort((a, b) => a.expireDay - b.expireDay);
+    },
+
     weekendShoppingList() { return this.shoppingList.filter(i => i.category === 'weekend'); },
     dailyShoppingList() { return this.shoppingList.filter(i => i.category === 'daily'); },
     weekendPrepTasks() { return this.prepTasks.filter(t => t.type === 'weekend'); },
@@ -2166,7 +2187,6 @@ createApp({
           windowHeight: printArea.scrollHeight
         });
         
-        // 💡 核心修改：不再直接触发下载，而是把图片地址存起来，在弹窗中展示
         this.exportedImageUrl = canvas.toDataURL('image/png');
         this.showImagePreview = true;
         
