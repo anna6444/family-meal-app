@@ -42,10 +42,10 @@
     .tag.orange { background: #fff1e6; color: #c46838; }
     .tag.red { background: #fce8e8; color: #d14a4a; }
 
-    /* 顶部日期标签 */
-    .date-picker-wrapper { display: flex; align-items: center; justify-content: space-between; background: #fff5ef; border-radius: 14px; padding: 10px 16px; border: 1px solid #fce8df; margin-bottom:14px; gap: 10px;}
-    .date-picker-wrapper label { font-size: 15px; color: #c46838; font-weight: 600; margin: 0; white-space: nowrap; flex-shrink: 0; }
-    .date-picker-wrapper input[type="date"] { border: none; background: transparent; color: #333; font-size: 14px; font-weight: 500; outline: none; text-align: right; width: 100%; }
+    /* 💡 优化：顶部日期标签，字体变大，对齐更完美 */
+    .date-picker-wrapper { display: flex; align-items: center; justify-content: space-between; background: #fff5ef; border-radius: 14px; padding: 12px 16px; border: 1px solid #fce8df; margin-bottom:14px; gap: 10px;}
+    .date-picker-wrapper label { font-size: 16px; color: #c46838; font-weight: 600; margin: 0; white-space: nowrap; flex-shrink: 0; }
+    .date-picker-wrapper input[type="date"] { border: none; background: transparent; color: #333; font-size: 18px; font-weight: 700; outline: none; text-align: right; width: 100%; padding: 0; min-height: auto; }
 
     .menu-preview-section { border-bottom: 1px dashed #eee; padding-bottom: 12px; margin-bottom: 12px; }
     .menu-preview-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
@@ -71,7 +71,7 @@
     .switch-btn { padding: 10px 2px; border-radius: 10px; text-align: center; border: 1px solid #e8e2d6; cursor: pointer; font-size: 13px; }
     .switch-btn.active { background: #e6703b; color: white; border-color: #e6703b; }
     
-    .list-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1ede4; font-size: 15px; gap: 10px; }
+    .list-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1ede4; font-size: 15px; gap: 10px; transition: all 0.2s; }
     .empty-text { text-align: center; padding: 30px; color: #999; font-size: 14px; }
     .meal-title { font-size: 17px; font-weight: 600; margin: 22px 0 12px; color: #c46838; }
 
@@ -98,7 +98,12 @@
     
     .rest-day-tag { display: inline-flex; align-items: center; background: #fff1e6; color: #c46838; border-radius: 8px; padding: 6px 10px; font-size: 13px; margin: 4px; border: 1px solid #f7dcc8; }
     .rest-day-tag span { margin-left: 6px; cursor: pointer; color: #999; font-weight: bold; }
-    .expire-warning { color: #d14a4a; font-size: 12px; margin-left: 6px; font-weight: 600; }
+    
+    /* 💡 优化：快过期食材整行高亮 */
+    .row-danger { background-color: #fff8f8; border-left: 4px solid #d14a4a; padding-left: 12px; border-radius: 4px; }
+    .row-danger > div:first-child { color: #d14a4a; font-weight: 600; }
+    .expire-warning { background-color: #fce8e8; color: #d14a4a; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 6px; font-weight: bold; }
+
     .replace-btn { background: #f0f0f0; color: #666; border: none; border-radius: 8px; padding: 4px 8px; font-size: 12px; cursor: pointer; margin-left: 8px; }
     .tool-time-row { display: flex; gap: 10px; margin-top: 8px; }
     .tool-tag, .time-tag { font-size: 12px; padding: 4px 8px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; }
@@ -501,16 +506,6 @@
     <div v-if="view === 'ingredientLib'">
       <h2 style="margin-bottom:14px">🥬 食材库</h2>
       
-      <!-- 💡 新增：快过期前置提醒 -->
-      <div v-if="expiringItems.length > 0" class="health-alert" style="background: #fff0f0; border: 1px solid #fce8e8; color: #d14a4a; margin-bottom: 14px; flex-direction: column; align-items: stretch;">
-        <div style="font-weight: 600; margin-bottom: 8px; font-size: 15px;">🚨 重点提醒：以下食材快过期，请优先食用！</div>
-        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-          <span v-for="item in expiringItems" :key="item.name" class="tag red" style="font-size: 14px; padding: 6px 12px;">
-            {{ item.name }} (剩 {{ item.expireDay }} 天)
-          </span>
-        </div>
-      </div>
-
       <div class="tab-switch">
         <div class="switch-btn" :class="{active:ingTab==='raw'}" @click="ingTab='raw'">原材料</div>
         <div class="switch-btn" :class="{active:ingTab==='fruit'}" @click="ingTab='fruit'">水果</div>
@@ -523,7 +518,8 @@
       
       <!-- 快捷增减 -->
       <div v-if="ingTab==='raw'">
-        <div v-for="item in filteredRawList" class="list-row">
+        <!-- 💡 优化：过期食材整行变色 -->
+        <div v-for="item in filteredRawList" class="list-row" :class="{'row-danger': item.expireDay <= 3}">
           <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
@@ -536,7 +532,7 @@
       </div>
 
       <div v-if="ingTab==='fruit'">
-        <div v-for="item in filteredFruitList" class="list-row">
+        <div v-for="item in filteredFruitList" class="list-row" :class="{'row-danger': item.expireDay <= 3}">
           <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
@@ -549,7 +545,7 @@
       </div>
 
       <div v-if="ingTab==='snack'">
-        <div v-for="item in filteredSnackList" class="list-row">
+        <div v-for="item in filteredSnackList" class="list-row" :class="{'row-danger': item.expireDay <= 3}">
           <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
@@ -562,7 +558,7 @@
       </div>
 
       <div v-if="ingTab==='pre'">
-        <div v-for="item in filteredPreList" class="list-row">
+        <div v-for="item in filteredPreList" class="list-row" :class="{'row-danger': item.expireDay <= 3}">
           <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
@@ -634,8 +630,6 @@
 
   </div>
 
-  <!-- 💡 移除了悬浮 AI 按钮，让页面更整洁 -->
-
   <!-- 底部导航 -->
   <div class="tab-bar" v-if="view !== 'ai'">
     <div class="tab-item" :class="{active:view==='home'}" @click="view='home'">
@@ -663,7 +657,7 @@
     </div>
   </div>
 
-  <!-- AI 聊天全屏页面 (保留以防未来再用) -->
+  <!-- AI 聊天全屏页面 -->
   <div class="chat-wrapper" v-if="view === 'ai'">
     <div class="api-mask" v-if="!apiKey">
       <h3 style="color:#e6703b; margin-bottom: 10px;">请配置 AI 接口</h3>
@@ -1067,7 +1061,7 @@
     </div>
   </div>
 
-  <!-- 💡 新增：A4 图片预览弹窗 -->
+  <!-- A4 图片预览弹窗 -->
   <div class="modal-mask" v-if="showImagePreview" @click.self="showImagePreview=false" style="z-index: 9999; background: rgba(0,0,0,0.85);">
     <div class="modal-box" style="padding: 10px; max-height: 90vh; background: #333; display: flex; flex-direction: column;">
       <p style="color: white; text-align: center; margin-bottom: 10px; font-size: 14px; font-weight: 600;">👇 长按下方图片，选择“保存图片”或“发给家人”</p>
@@ -1078,7 +1072,7 @@
     </div>
   </div>
 
-  <!-- 💡 隐藏的 A4 打印渲染区域 -->
+  <!-- 隐藏的 A4 打印渲染区域 -->
   <div id="a4-print-area" style="display: none;"></div>
 
 </div>
@@ -1089,7 +1083,7 @@ createApp({
   data(){
     return{
       view: 'home',
-      homeDate: new Date().toISOString().split('T')[0],
+      homeDate: this.getTodayString(), // 💡 使用本地时间生成今日日期
       selDateIdx: 0,
       viewWeekMode: 'current',
       todoTab: 'daily',
@@ -1241,29 +1235,49 @@ createApp({
     this.generateWeekPlan('next', true);
   },
   computed: {
-    // 💡 增加快过期提取和排序逻辑
-    expiringItems() {
-      const all = [...this.rawIngList, ...this.fruitList, ...this.snackList, ...this.preIngList];
-      return all.filter(item => item.expireDay <= 3 && item.weight > 0);
+    // 💡 优化：日期正确计算逻辑，防止 UTC 导致的偏移
+    homeCurrentDayDishes() {
+      if (!this.homeDate) return null;
+      const parts = this.homeDate.split('-');
+      const targetDate = new Date(parts[0], parts[1]-1, parts[2]); // 使用本地时间解析
+      const tDateStr = this.homeDate;
+      
+      const isNextWeek = this.nextWeekDates.some(d => d.dateStr === tDateStr);
+      const weekMenu = isNextWeek ? this.weekMenuData.next : this.weekMenuData.current;
+      const dayOfWeek = targetDate.getDay(); // 0是周日，1是周一
+      const idx = (dayOfWeek + 6) % 7; // 转为周一为0，周日为6
+      return weekMenu[idx];
     },
+    
+    currentDayDishes() {
+      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [], soup: [] };
+    },
+
+    // 💡 优化：使用本地时间生成字符串，防止时区偏移
+    getTodayString() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    },
+
     filteredRawList(){ 
       const kw = this.searchIng.trim().toLowerCase(); 
-      let list = this.rawIngList.filter(i => i.name.toLowerCase().includes(kw)); 
+      let list = kw ? this.rawIngList.filter(i => i.name.toLowerCase().includes(kw)) : this.rawIngList; 
       return list.sort((a, b) => a.expireDay - b.expireDay);
     },
     filteredFruitList(){ 
       const kw = this.searchIng.trim().toLowerCase(); 
-      let list = this.fruitList.filter(i => i.name.toLowerCase().includes(kw)); 
+      let list = kw ? this.fruitList.filter(i => i.name.toLowerCase().includes(kw)) : this.fruitList; 
       return list.sort((a, b) => a.expireDay - b.expireDay);
     },
     filteredSnackList(){ 
       const kw = this.searchIng.trim().toLowerCase(); 
-      let list = this.snackList.filter(i => i.name.toLowerCase().includes(kw)); 
+      let list = kw ? this.snackList.filter(i => i.name.toLowerCase().includes(kw)) : this.snackList; 
       return list.sort((a, b) => a.expireDay - b.expireDay);
     },
     filteredPreList(){ 
       const kw = this.searchIng.trim().toLowerCase(); 
-      let list = this.preIngList.filter(i => i.name.toLowerCase().includes(kw)); 
+      let list = kw ? this.preIngList.filter(i => i.name.toLowerCase().includes(kw)) : this.preIngList; 
       return list.sort((a, b) => a.expireDay - b.expireDay);
     },
 
@@ -1300,22 +1314,6 @@ createApp({
       else if (this.replaceModal.mealType === 'dinner') pool = [...this.recipeLibrary.dinnerMeat, ...this.recipeLibrary.dinnerVeg];
       else pool = this.recipeLibrary[this.replaceModal.mealType] || [];
       return pool.filter(r => r.name !== this.replaceModal.currentName);
-    },
-    
-    homeCurrentDayDishes() {
-      if (!this.homeDate) return null;
-      const targetDate = new Date(this.homeDate);
-      const tDateStr = this.homeDate;
-      const isNextWeek = this.nextWeekDates.some(d => d.dateStr === tDateStr);
-      const weekMenu = isNextWeek ? this.weekMenuData.next : this.weekMenuData.current;
-      const dayOfWeek = targetDate.getDay(); 
-      const idx = (dayOfWeek + 6) % 7; 
-      return weekMenu[idx];
-    },
-    
-    currentDayDishes() {
-      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
-      return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [], soup: [] };
     },
 
     tonightPrepReminder() {
@@ -1360,8 +1358,9 @@ createApp({
     },
 
     todayMembers(){
-      const targetDateStr = this.homeDate || new Date().toISOString().split('T')[0];
-      const targetDate = new Date(targetDateStr);
+      const targetDateStr = this.homeDate;
+      const parts = targetDateStr.split('-');
+      const targetDate = new Date(parts[0], parts[1]-1, parts[2]);
       const dayOfWeek = targetDate.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
@@ -1699,18 +1698,23 @@ createApp({
       let now = new Date();
       let day = now.getDay() || 7;
       let monday = new Date(now.getTime() - (day - 1) * 86400000);
-      
+      monday.setHours(0,0,0,0);
+
+      const formatDate = (date) => {
+        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+      };
+
       let thisWeek = [];
       for (let i = 0; i < 7; i++) {
         let d = new Date(monday.getTime() + i * 86400000);
-        thisWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: d.toISOString().split('T')[0] });
+        thisWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: formatDate(d) });
       }
       this.thisWeekDates = thisWeek;
 
       let nextWeek = [];
       for (let i = 0; i < 7; i++) {
         let d = new Date(monday.getTime() + (i + 7) * 86400000);
-        nextWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: d.toISOString().split('T')[0] });
+        nextWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: formatDate(d) });
       }
       this.nextWeekDates = nextWeek;
     },
