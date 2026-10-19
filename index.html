@@ -154,10 +154,10 @@
       top: -9999px; 
       left: -9999px; 
       width: 794px; 
-      min-height: 1123px; /* 最小高度保证是一张A4的样子 */
-      height: auto;       /* 内容多自动往下长 */
+      min-height: 1123px;
+      height: auto;
       background: #fff; 
-      padding-bottom: 40px; /* 底部留白 */
+      padding-bottom: 40px;
     }
   </style>
 </head>
@@ -1056,7 +1056,7 @@
     </div>
   </div>
 
-  <!-- 💡 彻底修复：将 v-show 改为 v-if，彻底重建 DOM，解决图表不渲染 -->
+  <!-- 趋势图弹窗 -->
   <div class="modal-mask" v-if="chartModal.show" @click.self="closeChartModal">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
@@ -1064,6 +1064,17 @@
         <canvas ref="chartCanvasRef" :key="chartModal.target"></canvas>
       </div>
       <button class="btn secondary" style="width:100%;margin-top:16px" @click="closeChartModal">关闭</button>
+    </div>
+  </div>
+
+  <!-- 💡 新增：A4 图片预览弹窗 -->
+  <div class="modal-mask" v-if="showImagePreview" @click.self="showImagePreview=false" style="z-index: 9999; background: rgba(0,0,0,0.85);">
+    <div class="modal-box" style="padding: 10px; max-height: 90vh; background: #333; display: flex; flex-direction: column;">
+      <p style="color: white; text-align: center; margin-bottom: 10px; font-size: 14px; font-weight: 600;">👇 长按下方图片，选择“保存图片”或“发给家人”</p>
+      <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+        <img :src="exportedImageUrl" style="width: 100%; border-radius: 8px; display: block;" />
+      </div>
+      <button class="btn secondary" style="width: 100%; margin-top: 10px; flex-shrink: 0;" @click="showImagePreview=false">关闭</button>
     </div>
   </div>
 
@@ -1134,6 +1145,10 @@ createApp({
       
       addRecipeModal: { show: false, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '', rawText: '', isHealthy: true },
       replaceModal: { show: false, mealType: '', dishIdx: -1, currentName: '' },
+
+      // 💡 新增：用于图片预览的数据
+      exportedImageUrl: '',
+      showImagePreview: false,
 
       historyData: {
         dad: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [92, 91.5, 91, 90.5, 90, 90] },
@@ -1299,7 +1314,6 @@ createApp({
       return '';
     },
     
-    // 💡 修改：生病给出详细饮食与做法建议
     globalHealthAlerts() {
       let alerts = [];
       const m = this.memberTempStatus;
@@ -1845,7 +1859,6 @@ createApp({
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
     saveMemberEdit(){ alert(this.getMemberName(this.memberEditModal.key) + "的信息已保存！"); this.memberEditModal.show = false; },
     
-    // 💡 修复：彻底解决图表时好时坏的问题
     openChartModal(personKey){
       this.chartModal.target = personKey;
       const nameMap = {
@@ -1875,7 +1888,6 @@ createApp({
       const canvas = this.$refs.chartCanvasRef;
       if (!canvas) return;
       
-      // 强制清理旧画布尺寸，解决手机端无法渲染的问题
       canvas.width = canvas.width; 
       const ctx = canvas.getContext('2d');
       
@@ -1908,7 +1920,7 @@ createApp({
 
       let chartOptions = {
         responsive: true, maintainAspectRatio: false,
-        animation: false, // 彻底关闭动画，防止手机卡住白屏
+        animation: false,
         scales: {
           x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
           y: { beginAtZero: false, title: { display: true, text: dataLabel } }
@@ -1945,7 +1957,6 @@ createApp({
       this.showMoreActions = false;
     },
 
-    // 💡 新增：单天快捷调换
     openSingleDayPrompt() {
       this.aiPromptModal = {
         show: true,
@@ -2151,14 +2162,14 @@ createApp({
           scale: 2, 
           backgroundColor: '#ffffff',
           useCORS: true,
-          height: printArea.scrollHeight, // 💡 强制获取真实内容高度，防止截断
+          height: printArea.scrollHeight,
           windowHeight: printArea.scrollHeight
         });
         
-        const link = document.createElement('a');
-        link.download = `周末购物清单_${new Date().toLocaleDateString()}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
+        // 💡 核心修改：不再直接触发下载，而是把图片地址存起来，在弹窗中展示
+        this.exportedImageUrl = canvas.toDataURL('image/png');
+        this.showImagePreview = true;
+        
       } catch (err) {
         alert("生成图片失败，请重试。\n" + err.message);
       } finally {
