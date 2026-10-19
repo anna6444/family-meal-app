@@ -6,6 +6,7 @@
   <title>家庭膳食工作台</title>
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
     body { background-color: #f9f6ef; color: #333; padding-bottom: 100px; font-size: 15px; }
@@ -146,6 +147,18 @@
     .action-sheet-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: flex-end; }
     .action-sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); animation: slideUp 0.3s ease-out; }
     @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    /* 💡 修复：隐藏的A4打印区域，去掉固定高度，让它自适应撑开 */
+    #a4-print-area { 
+      position: absolute; 
+      top: -9999px; 
+      left: -9999px; 
+      width: 794px; 
+      min-height: 1123px; /* 最小高度保证是一张A4的样子 */
+      height: auto;       /* 内容多自动往下长 */
+      background: #fff; 
+      padding-bottom: 40px; /* 底部留白 */
+    }
   </style>
 </head>
 <body>
@@ -154,6 +167,13 @@
 
     <!-- 首页 -->
     <div v-if="view === 'home'">
+
+      <!-- 💡 智能提醒横幅 -->
+      <div v-if="smartShoppingReminder" class="health-alert" style="background: #eaf6ec; border-color: #cce5d2; color: #2b703b; font-size: 15px; border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
+        <div><b>{{ smartShoppingReminder }}</b></div>
+        <button class="btn small" style="background: #2b703b; white-space: nowrap;" @click="view = 'todo'; todoTab = 'weekend'">去导出清单</button>
+      </div>
+
       <div class="card">
         <div class="date-picker-wrapper">
           <label>📅 今日状态</label>
@@ -161,7 +181,7 @@
         </div>
         
         <div v-if="globalHealthAlerts.length > 0" class="health-alert" style="margin-bottom: 14px; flex-direction: column;">
-          <div v-for="(alert, idx) in globalHealthAlerts" :key="idx">🚨 {{ alert }}</div>
+          <div v-for="(alert, idx) in globalHealthAlerts" :key="idx" style="margin-bottom: 6px;">🚨 {{ alert }}</div>
         </div>
 
         <div v-if="tonightPrepReminder" class="health-alert" style="background: #fdf3d8; border-color: #fce8b2; color: #b6862c; margin-bottom: 14px;">
@@ -228,6 +248,12 @@
           <div style="font-size:13px">{{d.week}}</div>
           <div style="font-size:19px">{{d.day}}</div>
         </div>
+      </div>
+
+      <!-- 💡 新增：单天调换按钮 -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h3 style="font-size:16px; color:#c46838;">📅 {{displayWeekDates[selDateIdx].week}}菜单</h3>
+        <button class="btn small ai-btn" @click="openSingleDayPrompt">🤖 单天/生病换菜</button>
       </div>
       
       <div v-if="currentDayDishes">
@@ -406,39 +432,76 @@
 
     <!-- 待操作 -->
     <div v-if="view === 'todo'">
-      <div class="card">
-        <h2>🛒 周末大采购（耐储存）</h2>
-        <p class="card-subtitle">根据下周食谱自动汇总，建议周末一次性买齐。</p>
-        <div v-if="weekendShoppingList.length === 0" class="empty-text">暂无周末采购需求。</div>
-        <div v-for="item in weekendShoppingList" :key="item.id" class="list-row">
-          <div>{{item.name}} {{item.weight}}g</div>
-          <button class="btn small" :class="item.bought ? 'secondary' : ''" @click="toggleBought(item)">
-            {{item.bought ? '已采购' : '未采购'}}
-          </button>
+      
+      <div class="tab-switch" style="margin-bottom: 14px; grid-template-columns: 1fr 1fr;">
+        <div class="switch-btn" :class="{active:todoTab==='daily'}" @click="todoTab='daily'">📅 日常跟进（单日/近期）</div>
+        <div class="switch-btn" :class="{active:todoTab==='weekend'}" @click="todoTab='weekend'">🛒 周末大采购</div>
+      </div>
+
+      <!-- 💡 日常跟进 -->
+      <div v-if="todoTab === 'daily'">
+        <div class="card">
+          <h2>🛒 提前1-2天买（新鲜食材）</h2>
+          <p class="card-subtitle">易腐烂的叶菜、鲜鱼、鲜肉等，建议提前1-2天购买。</p>
+          <div v-if="dailyShoppingList.length === 0" class="empty-text">暂无临时采购需求。</div>
+          <div v-for="item in dailyShoppingList" :key="item.id" class="list-row">
+            <div>{{item.name}} {{item.weight}}g</div>
+            <button class="btn small" :class="item.bought ? 'secondary' : ''" @click="toggleBought(item)">
+              {{item.bought ? '已采购' : '未采购'}}
+            </button>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h2>⏱️ 日常预处理（前夜准备）</h2>
+          <div class="section-title">📅 每天做饭前的小准备</div>
+          <div v-if="dailyPrepTasks.length === 0" class="empty-text">暂无预处理任务。</div>
+          <div v-for="(task, idx) in dailyPrepTasks" :key="idx" style="padding:10px 0;line-height:1.8;font-size:15px; border-bottom: 1px dashed #eee;">
+            <span style="font-weight: 600; color: #e6703b;">📌 {{task.title}}</span><br/>
+            <span style="font-size: 13px; color: #666;">{{task.desc}}</span>
+          </div>
         </div>
       </div>
 
-      <div class="card">
-        <h2>🛒 提前1-2天买（新鲜食材）</h2>
-        <p class="card-subtitle">易腐烂的叶菜、鲜鱼、鲜肉等，建议提前1-2天购买。</p>
-        <div v-if="dailyShoppingList.length === 0" class="empty-text">暂无临时采购需求。</div>
-        <div v-for="item in dailyShoppingList" :key="item.id" class="list-row">
-          <div>{{item.name}} {{item.weight}}g</div>
-          <button class="btn small" :class="item.bought ? 'secondary' : ''" @click="toggleBought(item)">
-            {{item.bought ? '已采购' : '未采购'}}
-          </button>
+      <!-- 💡 周末大采购 -->
+      <div v-if="todoTab === 'weekend'">
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h2>🛒 周末大采购</h2>
+            <button class="btn small" style="background: #2b703b;" @click="exportShoppingList">🖨️ 导出A4清单</button>
+          </div>
+          <p class="card-subtitle">根据下周食谱自动汇总减去现有库存。已合并近期生鲜，一张A4纸搞定所有采购。</p>
+          
+          <div class="meal-title" style="margin-top: 10px;">📦 耐储存囤货</div>
+          <div v-if="weekendShoppingList.length === 0" class="empty-text">暂无周末采购需求。</div>
+          <div v-for="item in weekendShoppingList" :key="item.id" class="list-row">
+            <div>{{item.name}} <span style="font-weight: 600; color: #e6703b;">{{item.weight}}g</span></div>
+            <button class="btn small" :class="item.bought ? 'secondary' : ''" @click="toggleBought(item)">
+              {{item.bought ? '已采购' : '未采购'}}
+            </button>
+          </div>
+
+          <div class="meal-title">🥬 顺手买（生鲜）</div>
+          <div v-if="dailyShoppingList.length === 0" class="empty-text">暂无生鲜采购需求。</div>
+          <div v-for="item in dailyShoppingList" :key="item.id" class="list-row">
+            <div>{{item.name}} <span style="font-weight: 600; color: #e6703b;">{{item.weight}}g</span></div>
+            <button class="btn small" :class="item.bought ? 'secondary' : ''" @click="toggleBought(item)">
+              {{item.bought ? '已采购' : '未采购'}}
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>⏱️ 周末预处理（批量备菜）</h2>
+          <div class="section-title">📅 周末一次性搞定，节省工作日时间</div>
+          <div v-if="weekendPrepTasks.length === 0" class="empty-text">暂无预处理任务。</div>
+          <div v-for="(task, idx) in weekendPrepTasks" :key="idx" style="padding:10px 0;line-height:1.8;font-size:15px; border-bottom: 1px dashed #eee;">
+            <span style="font-weight: 600; color: #e6703b;">📌 {{task.title}}</span><br/>
+            <span style="font-size: 13px; color: #666;">{{task.desc}}</span>
+          </div>
         </div>
       </div>
-      
-      <div class="card">
-        <h2>⏱️ 预处理清单（周日准备）</h2>
-        <div class="section-title">📅 周末批量处理（节省工作日时间）</div>
-        <div v-if="prepTasks.length === 0" class="empty-text">暂无预处理任务。</div>
-        <div v-for="(task, idx) in prepTasks" :key="idx" style="padding:10px 0;line-height:1.8;font-size:15px; border-bottom: 1px dashed #eee;">
-          <span style="font-weight: 600; color: #e6703b;">📌 {{task.title}}</span><br/>
-          <span style="font-size: 13px; color: #666;">{{task.desc}}</span>
-        </div>
-      </div>
+
     </div>
 
     <!-- 食材库 -->
@@ -557,8 +620,10 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
           <button class="btn small" @click="openChartModal('dad')">👨爸爸体重</button>
           <button class="btn small" @click="openChartModal('mom')">👩妈妈体重</button>
-          <button class="btn small" @click="openChartModal('sister')">👧姐姐身高体重</button>
-          <button class="btn small" @click="openChartModal('brother')">👦弟弟身高体重</button>
+          <button class="btn small" @click="openChartModal('sister_height')">👧姐姐身高</button>
+          <button class="btn small" @click="openChartModal('sister_weight')">👧姐姐体重</button>
+          <button class="btn small" @click="openChartModal('brother_height')">👦弟弟身高</button>
+          <button class="btn small" @click="openChartModal('brother_weight')">👦弟弟体重</button>
         </div>
       </div>
     </div>
@@ -691,25 +756,33 @@
           <select v-model="aiPromptModal.momStatus" style="border-color: #fce8e8;">
             <option value="normal">妈妈：正常</option>
             <option value="period">妈妈：经期(温补)</option>
-            <option value="sick">妈妈：生病(病号饭)</option>
+            <option value="cold">妈妈：感冒(清淡)</option>
+            <option value="fever">妈妈：发烧(流食)</option>
+            <option value="gastro">妈妈：肠胃炎</option>
           </select>
         </div>
         <div class="input-wrap" style="margin: 0;">
           <select v-model="aiPromptModal.dadStatus">
             <option value="normal">爸爸：正常</option>
-            <option value="sick">爸爸：生病(清淡)</option>
+            <option value="cold">爸爸：感冒(清淡)</option>
+            <option value="fever">爸爸：发烧(流食)</option>
+            <option value="gastro">爸爸：肠胃炎</option>
           </select>
         </div>
         <div class="input-wrap" style="margin: 0;">
           <select v-model="aiPromptModal.sisterStatus">
             <option value="normal">姐姐：正常</option>
-            <option value="sick">姐姐：生病(清淡)</option>
+            <option value="cold">姐姐：感冒(清淡)</option>
+            <option value="fever">姐姐：发烧(流食)</option>
+            <option value="gastro">姐姐：肠胃炎</option>
           </select>
         </div>
         <div class="input-wrap" style="margin: 0;">
           <select v-model="aiPromptModal.brotherStatus">
             <option value="normal">弟弟：正常</option>
-            <option value="sick">弟弟：生病(清淡)</option>
+            <option value="cold">弟弟：感冒(清淡)</option>
+            <option value="fever">弟弟：发烧(流食)</option>
+            <option value="gastro">弟弟：肠胃炎</option>
           </select>
         </div>
       </div>
@@ -839,7 +912,9 @@
           <label>当前状态</label>
           <select v-model="memberTempStatus[tempStatusModal.key]">
             <option value="normal">正常</option>
-            <option value="sick">生病</option>
+            <option value="cold">感冒</option>
+            <option value="fever">发烧</option>
+            <option value="gastro">肠胃炎</option>
             <option v-if="tempStatusModal.key === 'mom'" value="period">姨妈期</option>
           </select>
         </div>
@@ -981,16 +1056,19 @@
     </div>
   </div>
 
-  <!-- 趋势图弹窗 -->
+  <!-- 💡 彻底修复：将 v-show 改为 v-if，彻底重建 DOM，解决图表不渲染 -->
   <div class="modal-mask" v-if="chartModal.show" @click.self="closeChartModal">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
       <div style="width:100%;height:280px;margin-top:10px;position: relative;">
-        <canvas id="trendChartCanvas"></canvas>
+        <canvas ref="chartCanvasRef" :key="chartModal.target"></canvas>
       </div>
       <button class="btn secondary" style="width:100%;margin-top:16px" @click="closeChartModal">关闭</button>
     </div>
   </div>
+
+  <!-- 💡 隐藏的 A4 打印渲染区域 -->
+  <div id="a4-print-area" style="display: none;"></div>
 
 </div>
 
@@ -1003,6 +1081,7 @@ createApp({
       homeDate: new Date().toISOString().split('T')[0],
       selDateIdx: 0,
       viewWeekMode: 'current',
+      todoTab: 'daily',
       ingTab: 'raw',
       searchIng: '',
       
@@ -1154,8 +1233,27 @@ createApp({
     filteredPreList(){ const kw = this.searchIng.trim().toLowerCase(); if(!kw) return this.preIngList; return this.preIngList.filter(i => i.name.toLowerCase().includes(kw)); },
     weekendShoppingList() { return this.shoppingList.filter(i => i.category === 'weekend'); },
     dailyShoppingList() { return this.shoppingList.filter(i => i.category === 'daily'); },
+    weekendPrepTasks() { return this.prepTasks.filter(t => t.type === 'weekend'); },
+    dailyPrepTasks() { return this.prepTasks.filter(t => t.type === 'daily'); },
     hasUnfinishedTask(){ return this.shoppingList.some(i => !i.bought); },
     
+    smartShoppingReminder() {
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const isWeekend = dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
+      
+      const hasNextWeekMenu = this.weekMenuData.next.some(day => 
+        day.breakfast.length > 0 || day.lunch.length > 0 || day.dinner.length > 0
+      );
+
+      const hasUnboughtItems = this.shoppingList.some(item => item.category === 'weekend' && !item.bought);
+
+      if (isWeekend && hasNextWeekMenu && hasUnboughtItems) {
+        return "📅 周末大采购时间到啦！下周菜单已生成，带着孩子一起去超市采购吧！";
+      }
+      return "";
+    },
+
     displayWeekDates() { return this.viewWeekMode === 'current' ? this.thisWeekDates : this.nextWeekDates; },
     momIsMorningShift() { const today = this.todayMembers.find(m => m.key === 'mom'); return today && today.status.includes('早班'); },
     
@@ -1201,13 +1299,28 @@ createApp({
       return '';
     },
     
+    // 💡 修改：生病给出详细饮食与做法建议
     globalHealthAlerts() {
       let alerts = [];
-      if (this.memberTempStatus.sister === 'sick') alerts.push('姐姐生病中，本周食谱请尽量清淡，避开生冷、油炸，可以给她单独煮点软烂的面条或白粥。');
-      if (this.memberTempStatus.brother === 'sick') alerts.push('弟弟生病中，注意饮食清淡易消化，坚果类务必打成粉或暂停食用。');
-      if (this.memberTempStatus.dad === 'sick') alerts.push('爸爸生病中，避免油腻，高草酸蔬菜务必焯水。');
-      if (this.memberTempStatus.mom === 'sick') alerts.push('妈妈生病中，注意营养补充，多喝温水。');
-      if (this.memberTempStatus.mom === 'period') alerts.push('妈妈处于姨妈期，汤羹已自动避开寒凉食材，注意保暖。');
+      const m = this.memberTempStatus;
+      
+      if (m.sister === 'cold') alerts.push('姐姐感冒了：推荐【葱白姜糖水】(葱白3段、生姜3片、红糖10g，煮水10分钟)，饮食清淡，多喝温水。');
+      if (m.sister === 'fever') alerts.push('姐姐发烧了：推荐【小米绿豆粥】(小米50g、绿豆30g，熬至软烂)，补充水分和电解质，吃易消化的流食。');
+      if (m.sister === 'gastro') alerts.push('姐姐肠胃炎：推荐【清汤面】(面条50g煮软，加少许盐和生抽，不加一滴油)，减轻肠胃负担。');
+      
+      if (m.brother === 'cold') alerts.push('弟弟感冒了：推荐【白萝卜蜂蜜水】(白萝卜切丁煮水，放温后加少许蜂蜜)，饮食需极度清淡。');
+      if (m.brother === 'fever') alerts.push('弟弟发烧了：推荐【南瓜泥】(南瓜100g蒸熟压成泥)，易吞咽且补充维生素。');
+      if (m.brother === 'gastro') alerts.push('弟弟肠胃炎：推荐【焦米汤】(大米50g干炒至焦黄，加水熬煮取汤汁)，止泻效果极好。');
+      
+      if (m.dad === 'cold') alerts.push('爸爸感冒了：推荐【姜丝瘦肉粥】(瘦肉50g切丝，加姜丝与大米50g同煮)，发汗驱寒。');
+      if (m.dad === 'fever') alerts.push('爸爸发烧了：推荐【冬瓜虾皮汤】(冬瓜200g、虾皮少许煮汤)，利尿退烧。');
+      if (m.dad === 'gastro') alerts.push('爸爸肠胃炎：推荐【山药小米粥】(山药100g切碎与小米50g熬粥)，养胃护胃。');
+      
+      if (m.mom === 'cold') alerts.push('妈妈感冒了：推荐【番茄热汤面】(番茄1个炒出汁加水，下面条50g)，补充维C。');
+      if (m.mom === 'fever') alerts.push('妈妈发烧了：推荐【绿豆百合汤】(绿豆30g、百合10g煮汤)，注意多休息。');
+      if (m.mom === 'gastro') alerts.push('妈妈肠胃炎：推荐【蒸苹果】(苹果切块蒸熟)，熟苹果有收敛止泻的作用。');
+      
+      if (m.mom === 'period') alerts.push('妈妈处于姨妈期，汤羹已自动避开寒凉食材，注意保暖。');
       return alerts;
     },
 
@@ -1364,16 +1477,16 @@ createApp({
 
     getDishWarning(dish) {
       let warnings = [];
-      if (this.memberTempStatus.sister === 'sick') {
+      if (this.memberTempStatus.sister === 'sick' || this.memberTempStatus.sister === 'cold' || this.memberTempStatus.sister === 'fever' || this.memberTempStatus.sister === 'gastro') {
         if (dish.tag.includes('少油') || dish.tag.includes('油炸') || dish.tag.includes('补铁')) {
-          warnings.push("姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的。");
+          warnings.push(`姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的。`);
         } else if (dish.name.includes('凉拌') || dish.name.includes('雪梨')) {
-          warnings.push("姐姐生病中，注意避开生冷食物。");
+          warnings.push(`姐姐生病中，注意避开生冷食物。`);
         }
       }
-      if (this.memberTempStatus.dad === 'sick') {
+      if (this.memberTempStatus.dad === 'sick' || this.memberTempStatus.dad === 'cold' || this.memberTempStatus.dad === 'fever' || this.memberTempStatus.dad === 'gastro') {
         if (dish.name.includes('炸锅') || dish.tag.includes('油腻')) {
-          warnings.push("爸爸生病中，建议避开高脂食物。");
+          warnings.push(`爸爸生病中，建议避开高脂食物。`);
         }
       }
       return warnings;
@@ -1486,8 +1599,10 @@ createApp({
 
     generatePrepTasks() {
       this.prepTasks = [
-        { title: "制作一批蔬菜肉丸/肉饼", desc: "根据食谱，将瘦肉馅、菠菜碎、胡萝卜碎混合，蒸熟或煎熟后冷冻。" },
-        { title: "清洗焯水绿叶菜", desc: "将下周用到的西兰花、菠菜等洗净焯水，沥干冷藏。" }
+        { title: "批量制作肉丸/肉饼 (周末)", desc: "取猪肉馅500g，加入切碎的菠菜50g、胡萝卜50g，打入1个鸡蛋，加少许盐和生抽。顺着一个方向搅拌上劲。搓成小丸子，水开上锅蒸15分钟，冷却后分装冷冻。", type: 'weekend' },
+        { title: "清洗焯水绿叶菜 (周末)", desc: "将买回来的西兰花300g、菠菜200g洗净，切块或切段。水开后滴两滴油和少许盐，下锅焯水30秒捞出，过凉水沥干，装入保鲜袋冷藏，工作日直接炒。", type: 'weekend' },
+        { title: "日常肉类解冻/腌制 (前夜)", desc: "今晚睡觉前，把明天要用的鸡翅500g从冷冻室拿到冷藏室解冻。明早取出，用刀划两刀，加生抽15g、蒜末10g腌制入味，晚上直接烤。", type: 'daily' },
+        { title: "粗粮提前浸泡 (前夜)", desc: "今晚把明天早餐要用的红豆50g、黑米30g淘洗干净，加水没过食材浸泡一夜，明早直接按煮粥键，口感更软烂，节省早晨时间。", type: 'daily' }
       ];
     },
 
@@ -1622,13 +1737,18 @@ createApp({
     getStatusText(status, person){
       if (person === 'mom') {
         if (status === 'period') return '姨妈期';
-        if (status === 'sick') return '生病';
+        if (status === 'cold') return '感冒';
+        if (status === 'fever') return '发烧';
+        if (status === 'gastro') return '肠胃炎';
         return '正常';
       }
+      if (status === 'cold') return '感冒';
+      if (status === 'fever') return '发烧';
+      if (status === 'gastro') return '肠胃炎';
       return status === 'sick' ? '生病' : '正常';
     },
     getStatusClass(status){
-      if (status === 'sick' || status === 'period') return 'status-sick';
+      if (status === 'sick' || status === 'period' || status === 'cold' || status === 'fever' || status === 'gastro') return 'status-sick';
       return 'status-rest';
     },
     getTabooOptions(person){
@@ -1725,16 +1845,24 @@ createApp({
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
     saveMemberEdit(){ alert(this.getMemberName(this.memberEditModal.key) + "的信息已保存！"); this.memberEditModal.show = false; },
     
+    // 💡 修复：彻底解决图表时好时坏的问题
     openChartModal(personKey){
       this.chartModal.target = personKey;
-      const nameMap = {dad:'👨爸爸体重趋势',mom:'👩妈妈体重趋势',sister:'👧姐姐身高体重趋势',brother:'👦弟弟身高体重趋势'};
+      const nameMap = {
+        dad: '👨爸爸体重趋势',
+        mom: '👩妈妈体重趋势',
+        sister_height: '👧姐姐身高趋势',
+        sister_weight: '👧姐姐体重趋势',
+        brother_height: '👦弟弟身高趋势',
+        brother_weight: '👦弟弟体重趋势'
+      };
       this.chartModal.title = nameMap[personKey];
       this.chartModal.show = true;
       
       this.$nextTick(() => {
         setTimeout(() => {
           this.renderSingleChart(personKey);
-        }, 100);
+        }, 150);
       });
     },
     
@@ -1743,56 +1871,49 @@ createApp({
       if(this.currentChart) { this.currentChart.destroy(); this.currentChart = null; }
     },
     
-    renderSingleChart(person){
-      const canvas = document.getElementById('trendChartCanvas');
+    renderSingleChart(personKey){
+      const canvas = this.$refs.chartCanvasRef;
       if (!canvas) return;
+      
+      // 强制清理旧画布尺寸，解决手机端无法渲染的问题
+      canvas.width = canvas.width; 
       const ctx = canvas.getContext('2d');
       
       if(this.currentChart) { this.currentChart.destroy(); this.currentChart = null; }
       
-      const data = this.historyData[person];
-      if(!data || !data.labels) return;
+      let dataObj = null;
+      let dataLabel = '';
+      let dataArr = [];
+      let color = '#e6703b';
 
-      let chartData, chartOptions;
+      if (personKey === 'dad') { dataObj = this.historyData.dad; dataLabel = '体重(kg)'; dataArr = dataObj.weight; color = '#e6703b'; }
+      else if (personKey === 'mom') { dataObj = this.historyData.mom; dataLabel = '体重(kg)'; dataArr = dataObj.weight; color = '#e6703b'; }
+      else if (personKey === 'sister_height') { dataObj = this.historyData.sister; dataLabel = '身高(cm)'; dataArr = dataObj.height; color = '#2b9954'; }
+      else if (personKey === 'sister_weight') { dataObj = this.historyData.sister; dataLabel = '体重(kg)'; dataArr = dataObj.weight; color = '#c46838'; }
+      else if (personKey === 'brother_height') { dataObj = this.historyData.brother; dataLabel = '身高(cm)'; dataArr = dataObj.height; color = '#2b9954'; }
+      else if (personKey === 'brother_weight') { dataObj = this.historyData.brother; dataLabel = '体重(kg)'; dataArr = dataObj.weight; color = '#c46838'; }
 
-      if (person === 'dad' || person === 'mom') {
-        chartData = {
-          labels: data.labels,
-          datasets: [{
-            label: person === 'dad' ? '爸爸体重(kg)' : '妈妈体重(kg)',
-            data: data.weight,
-            borderColor: '#e6703b',
-            backgroundColor: 'rgba(230, 112, 59, 0.1)',
-            fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: '#e6703b', borderWidth: 2
-          }]
-        };
-        chartOptions = {
-          responsive: true, maintainAspectRatio: false,
-          scales: {
-            x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
-            y: { beginAtZero: false, title: { display: true, text: '体重 (kg)' } }
-          }
-        };
-      } else {
-        const weightData = data.weight.map(Number);
-        const heightData = data.height.map(Number);
-        
-        chartData = {
-          labels: data.labels,
-          datasets: [
-            { label: '身高(cm)', data: heightData, borderColor: '#2b9954', backgroundColor: 'rgba(43, 153, 84, 0.1)', fill: false, tension: 0.3, yAxisID: 'y', pointRadius: 4, pointBackgroundColor: '#2b9954', borderWidth: 2 },
-            { label: '体重(kg)', data: weightData, borderColor: '#c46838', backgroundColor: 'rgba(196, 104, 56, 0.1)', fill: false, tension: 0.3, yAxisID: 'y1', pointRadius: 4, pointBackgroundColor: '#c46838', borderWidth: 2 }
-          ]
-        };
-        chartOptions = {
-          responsive: true, maintainAspectRatio: false,
-          scales: {
-            x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
-            y: { type: 'linear', display: true, position: 'left', title: { display: true, text: '身高 (cm)' } },
-            y1: { type: 'linear', display: true, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '体重 (kg)' }, min: Math.floor(Math.min(...weightData) - 2), max: Math.ceil(Math.max(...weightData) + 2) }
-          }
-        };
-      }
+      if(!dataObj || !dataArr) return;
+
+      let chartData = {
+        labels: dataObj.labels,
+        datasets: [{
+          label: dataLabel,
+          data: dataArr,
+          borderColor: color,
+          backgroundColor: color + '1A',
+          fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: color, borderWidth: 2
+        }]
+      };
+
+      let chartOptions = {
+        responsive: true, maintainAspectRatio: false,
+        animation: false, // 彻底关闭动画，防止手机卡住白屏
+        scales: {
+          x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+          y: { beginAtZero: false, title: { display: true, text: dataLabel } }
+        }
+      };
       
       try {
         this.currentChart = new Chart(ctx, { type: 'line', data: chartData, options: chartOptions });
@@ -1810,8 +1931,7 @@ createApp({
       }
     },
 
-    // 💡 严格安全的提示词生成器
-        openAiPromptModal() {
+    openAiPromptModal() {
       this.aiPromptModal = {
         show: true,
         scope: 'week',
@@ -1825,7 +1945,21 @@ createApp({
       this.showMoreActions = false;
     },
 
-       generateAndCopyPrompt() {
+    // 💡 新增：单天快捷调换
+    openSingleDayPrompt() {
+      this.aiPromptModal = {
+        show: true,
+        scope: 'day',
+        dayIdx: this.selDateIdx,
+        momStatus: this.memberTempStatus.mom,
+        dadStatus: this.memberTempStatus.dad,
+        sisterStatus: this.memberTempStatus.sister,
+        brotherStatus: this.memberTempStatus.brother,
+        extraNote: ''
+      };
+    },
+
+    generateAndCopyPrompt() {
       const m = this.aiPromptModal;
       const targetWeekText = this.viewWeekMode === 'current' ? '本周' : '下周';
       
@@ -1842,10 +1976,21 @@ createApp({
       
       let specialStatus = [];
       if (m.momStatus === 'period') specialStatus.push("妈妈目前处于经期，需要温补，绝对不能吃寒凉生冷食物。");
-      if (m.momStatus === 'sick') specialStatus.push("妈妈目前生病，需要极其清淡易消化，做病号饭。");
-      if (m.dadStatus === 'sick') specialStatus.push("爸爸目前生病，需要清淡少油。");
-      if (m.sisterStatus === 'sick') specialStatus.push("姐姐目前生病，需要清淡，避开油炸和生冷。");
-      if (m.brotherStatus === 'sick') specialStatus.push("弟弟目前生病，需要易消化软烂食物。");
+      if (m.momStatus === 'cold') specialStatus.push("妈妈目前感冒，需要清淡流食。");
+      if (m.momStatus === 'fever') specialStatus.push("妈妈目前发烧，需要补充电解质，吃流食。");
+      if (m.momStatus === 'gastro') specialStatus.push("妈妈目前肠胃炎，需要吃焦米汤、清汤面等养胃食物。");
+      
+      if (m.dadStatus === 'cold') specialStatus.push("爸爸目前感冒，需要清淡。");
+      if (m.dadStatus === 'fever') specialStatus.push("爸爸目前发烧，需要流食。");
+      if (m.dadStatus === 'gastro') specialStatus.push("爸爸目前肠胃炎，需要吃软烂养胃食物。");
+      
+      if (m.sisterStatus === 'cold') specialStatus.push("姐姐目前感冒，需要清淡。");
+      if (m.sisterStatus === 'fever') specialStatus.push("姐姐目前发烧，需要流食。");
+      if (m.sisterStatus === 'gastro') specialStatus.push("姐姐目前肠胃炎，需要养胃食物。");
+      
+      if (m.brotherStatus === 'cold') specialStatus.push("弟弟目前感冒，需要清淡。");
+      if (m.brotherStatus === 'fever') specialStatus.push("弟弟目前发烧，需要流食。");
+      if (m.brotherStatus === 'gastro') specialStatus.push("弟弟目前肠胃炎，需要养胃食物。");
       
       if (specialStatus.length > 0) {
         prompt += "\n【特殊健康状况】：\n" + specialStatus.join("\n") + "\n请注意单独给出适合病人吃的变体做法或病号餐！\n";
@@ -1879,8 +2024,7 @@ createApp({
       document.body.removeChild(textArea);
     },
 
-    
-        doBatchImport() {
+    doBatchImport() {
       let rawText = this.batchImportModal.text.trim();
       if (!rawText) { alert("请先粘贴内容"); return; }
       
@@ -1939,6 +2083,88 @@ createApp({
         alert("❌ 解析失败！\n\n可能原因：\n1. 复制不完整（请确保以 [ 开头，以 ] 结尾）\n2. 格式不是严格 JSON。\n\n系统报错：" + e.message);
       }
     },
+
+    async exportShoppingList() {
+      if (this.weekendShoppingList.length === 0 && this.dailyShoppingList.length === 0) {
+        alert("当前没有任何采购需求哦，请先排好下周菜单！");
+        return;
+      }
+
+      const printArea = document.getElementById('a4-print-area');
+      
+      let html = `
+        <div style="padding: 40px; box-sizing: border-box; height: 100%; display: flex; flex-direction: column; background: #fff;">
+          <div style="text-align: center; border-bottom: 3px solid #e6703b; padding-bottom: 20px; margin-bottom: 20px;">
+            <h1 style="font-size: 32px; color: #333; margin-bottom: 10px;">🛒 家庭大采购清单</h1>
+            <div style="font-size: 16px; color: #666;">生成日期：${new Date().toLocaleDateString()} | 已自动核算库存，周末去一趟买齐</div>
+          </div>
+      `;
+
+      if (this.weekendShoppingList.length > 0) {
+        html += `
+          <div style="margin-bottom: 30px;">
+            <h2 style="font-size: 22px; color: #c46838; margin-bottom: 15px; border-left: 5px solid #e6703b; padding-left: 10px;">📦 耐储存大件（周末囤）</h2>
+            <div style="column-count: 2; column-gap: 40px;">
+        `;
+        this.weekendShoppingList.forEach(item => {
+          html += `
+            <div style="display: flex; align-items: center; border-bottom: 1px dashed #ccc; padding: 10px 0; font-size: 18px; break-inside: avoid;">
+              <div style="width: 22px; height: 22px; border: 2px solid #333; border-radius: 4px; margin-right: 15px; flex-shrink: 0;"></div>
+              <div style="flex: 1; color: #333;">${item.name}</div>
+              <div style="font-weight: bold; color: #e6703b; width: 80px; text-align: right;">${item.weight}g</div>
+            </div>
+          `;
+        });
+        html += `</div></div>`;
+      }
+
+      if (this.dailyShoppingList.length > 0) {
+        html += `
+          <div>
+            <h2 style="font-size: 22px; color: #2b703b; margin-bottom: 15px; border-left: 5px solid #2b703b; padding-left: 10px;">🥬 近期生鲜（顺手买）</h2>
+            <div style="column-count: 2; column-gap: 40px;">
+        `;
+        this.dailyShoppingList.forEach(item => {
+          html += `
+            <div style="display: flex; align-items: center; border-bottom: 1px dashed #ccc; padding: 10px 0; font-size: 18px; break-inside: avoid;">
+              <div style="width: 22px; height: 22px; border: 2px solid #333; border-radius: 4px; margin-right: 15px; flex-shrink: 0;"></div>
+              <div style="flex: 1; color: #333;">${item.name}</div>
+              <div style="font-weight: bold; color: #2b703b; width: 80px; text-align: right;">${item.weight}g</div>
+            </div>
+          `;
+        });
+        html += `</div></div>`;
+      }
+
+      html += `
+          <div style="text-align: center; color: #999; font-size: 14px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+            --- 家庭膳食工作台 自动生成 ---
+          </div>
+        </div>
+      `;
+
+      printArea.innerHTML = html;
+      printArea.style.display = 'block'; 
+
+      try {
+        const canvas = await html2canvas(printArea, { 
+          scale: 2, 
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          height: printArea.scrollHeight, // 💡 强制获取真实内容高度，防止截断
+          windowHeight: printArea.scrollHeight
+        });
+        
+        const link = document.createElement('a');
+        link.download = `周末购物清单_${new Date().toLocaleDateString()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } catch (err) {
+        alert("生成图片失败，请重试。\n" + err.message);
+      } finally {
+        printArea.style.display = 'none'; 
+      }
+    }
   }
 }).mount('#app')
 </script>
