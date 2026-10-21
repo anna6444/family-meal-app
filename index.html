@@ -7,7 +7,7 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <!-- 💡 新增：引入 Supabase SDK -->
+  <!-- 引入 Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
@@ -569,30 +569,6 @@
     <!-- 我的页面 -->
     <div v-if="view === 'setting'">
       
-      <!-- 💡 新增：云同步设置卡片 -->
-      <div class="card" style="border: 2px solid #4A90E2; background: #f4f8fd;">
-        <h2>☁️ 云端同步设置</h2>
-        <p class="card-subtitle">配置后，所有数据将自动同步到云端，多设备共享。</p>
-        
-        <div class="input-wrap">
-          <label>Supabase URL</label>
-          <input v-model="supabaseConfig.url" placeholder="https://xxxxxx.supabase.co" />
-        </div>
-        <div class="input-wrap">
-          <label>Supabase Anon Key</label>
-          <input v-model="supabaseConfig.key" placeholder="eyJh..." type="password" />
-        </div>
-        
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-          <button class="btn" style="flex:1; background: #4A90E2;" @click="connectSupabase">连接并测试</button>
-          <button class="btn secondary" style="flex:1;" @click="disconnectSupabase">断开连接</button>
-        </div>
-        
-        <div v-if="supabaseConnected" style="margin-top: 12px; font-size: 14px; color: #2b703b; font-weight: bold; text-align: center;">
-          ✅ 云端已连接 (最后同步: {{ lastSyncTime || '刚刚' }})
-        </div>
-      </div>
-
       <div class="card">
         <h2>👨‍👩‍👧‍👦 人员管理</h2>
         <div class="member-list-item" @click="openMemberEdit('dad')">
@@ -644,6 +620,15 @@
           <button class="btn small" @click="openChartModal('brother_weight')">👦弟弟体重</button>
         </div>
       </div>
+
+      <!-- 💡 新增：底部设置按钮 -->
+      <button class="btn secondary" style="width:100%; margin-top: 10px; border: 1px solid #ddd;" @click="showSyncSettingsModal = true">
+        ⚙️ 云端同步配置
+      </button>
+      
+      <div v-if="supabaseConnected" style="text-align: center; margin-top: 12px; font-size: 13px; color: #2b703b; font-weight: 500;">
+        ✅ 已连接云端 (最后同步: {{ lastSyncTime || '刚刚' }})
+      </div>
     </div>
 
   </div>
@@ -689,7 +674,30 @@
     </div>
   </div>
 
-  <!-- 各种弹窗（为了节省篇幅省略了具体HTML结构，保持和之前一致即可） -->
+  <!-- 💡 新增：云端同步设置弹窗 -->
+  <div class="modal-mask" v-if="showSyncSettingsModal" @click.self="showSyncSettingsModal=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">☁️ 云端同步配置</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 16px;">配置后，所有数据将自动同步到云端，多设备共享。</p>
+      
+      <div class="input-wrap">
+        <label>Supabase URL</label>
+        <input v-model="supabaseConfig.url" placeholder="https://xxxxxx.supabase.co" />
+      </div>
+      <div class="input-wrap">
+        <label>Supabase Anon Key</label>
+        <input v-model="supabaseConfig.key" placeholder="eyJh..." type="password" />
+      </div>
+      
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn secondary" style="flex:1" @click="showSyncSettingsModal = false">关闭</button>
+        <button class="btn" style="flex:1; background: #4A90E2;" @click="connectSupabase">连接并测试</button>
+      </div>
+      
+      <button v-if="supabaseConnected" class="btn secondary" style="width:100%; margin-top: 12px; background: #fee; color: #d14a4a; border: 1px solid #fcc;" @click="disconnectSupabase">断开连接并清除配置</button>
+    </div>
+  </div>
+
   <!-- AI 提示词定制器 -->
   <div class="modal-mask" v-if="aiPromptModal.show" @click.self="aiPromptModal.show=false">
     <div class="modal-box">
@@ -1077,7 +1085,6 @@ createApp({
 
       batchImportModal: { show: false, text: '' },
 
-      // 💡 新增：Supabase 配置
       supabaseConfig: {
         url: localStorage.getItem('sb_url') || '',
         key: localStorage.getItem('sb_key') || ''
@@ -1085,7 +1092,8 @@ createApp({
       supabaseClient: null,
       supabaseConnected: false,
       lastSyncTime: '',
-      isSyncing: false, // 防抖标记
+      isSyncing: false,
+      showSyncSettingsModal: false, // 💡 控制弹窗显隐
 
       scheduleConfig: {
         dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 },
@@ -1209,7 +1217,6 @@ createApp({
     this.generateWeekPlan('current', true);
     this.generateWeekPlan('next', true);
 
-    // 💡 初始化时，如果配置了 Supabase，就去拉取云端数据
     if (this.supabaseConfig.url && this.supabaseConfig.key) {
       this.initSupabase(true);
     }
@@ -1222,8 +1229,8 @@ createApp({
       
       const isNextWeek = this.nextWeekDates.some(d => d.dateStr === this.homeDate);
       const weekMenu = isNextWeek ? this.weekMenuData.next : this.weekMenuData.current;
-      const dayOfWeek = targetDate.getDay(); // 0是周日
-      const idx = (dayOfWeek + 6) % 7; // 转为周一为0，周日为6
+      const dayOfWeek = targetDate.getDay(); 
+      const idx = (dayOfWeek + 6) % 7; 
       return weekMenu[idx] || { breakfast: [], lunch: [], dinner: [], soup: [] };
     },
     
@@ -1379,17 +1386,15 @@ createApp({
     }
   },
   methods:{
-    // 💡 初始化 Supabase 客户端
     initSupabase(isAutoLoad = false) {
       try {
         if (!this.supabaseConfig.url || !this.supabaseConfig.key) return;
-        // 使用 CDN 引入的 supabase 对象初始化
         this.supabaseClient = supabase.createClient(this.supabaseConfig.url, this.supabaseConfig.key);
         this.supabaseConnected = true;
         if (isAutoLoad) {
-          this.pullFromCloud(true); // 静默拉取，不弹窗
+          this.pullFromCloud(true); 
         } else {
-          this.pullFromCloud(); // 手动连接时拉取，有提示
+          this.pullFromCloud(); 
         }
       } catch (e) {
         console.error("初始化失败", e);
@@ -1415,16 +1420,15 @@ createApp({
         this.supabaseConfig = { url: '', key: '' };
         this.supabaseConnected = false;
         this.supabaseClient = null;
+        this.showSyncSettingsModal = false; // 断开后关闭弹窗
       }
     },
 
-    // 💡 推送到云端
     async pushToCloud() {
       if (!this.supabaseClient || this.isSyncing) return;
       
       this.isSyncing = true;
       try {
-        // 把所有核心数据打包
         const payload = {
           rawIngList: this.rawIngList,
           fruitList: this.fruitList,
@@ -1455,7 +1459,6 @@ createApp({
       }
     },
 
-    // 💡 从云端拉取
     async pullFromCloud(isSilent = false) {
       if (!this.supabaseClient) return;
       
@@ -1469,7 +1472,6 @@ createApp({
         if (error) throw error;
 
         if (data && data.payload && Object.keys(data.payload).length > 0) {
-          // 覆盖本地数据
           const p = data.payload;
           if (p.rawIngList) this.rawIngList = p.rawIngList;
           if (p.fruitList) this.fruitList = p.fruitList;
@@ -1484,8 +1486,10 @@ createApp({
           if (p.brotherHolidays) this.brotherHolidays = p.brotherHolidays;
 
           if (!isSilent) alert("✅ 数据已从云端更新到本地！");
+          this.showSyncSettingsModal = false; // 同步成功后关闭弹窗
         } else {
           if (!isSilent) alert("云端暂无数据，当前本地数据将在修改时自动上传。");
+          this.showSyncSettingsModal = false;
         }
       } catch (e) {
         console.error("拉取失败", e);
@@ -1513,7 +1517,7 @@ createApp({
       const newWeight = item.weight + gram;
       if (newWeight >= 0) {
         item.weight = newWeight;
-        this.pushToCloud(); // 💡 自动同步
+        this.pushToCloud(); 
       } else {
         item.weight = 0;
         this.pushToCloud();
@@ -1711,13 +1715,13 @@ createApp({
       if (mode === 'current') {
         this.weekMenuData.current = newWeekMenu;
         if (!isInit) alert("✅ 本周食谱已重新生成！");
-        this.pushToCloud(); // 💡 自动同步
+        this.pushToCloud(); 
       } else {
         this.weekMenuData.next = newWeekMenu;
         this.recalculateShoppingList();
         this.generatePrepTasks();
         if (!isInit) alert("✅ 下周食谱已生成！");
-        this.pushToCloud(); // 💡 自动同步
+        this.pushToCloud(); 
       }
     },
 
@@ -1838,7 +1842,7 @@ createApp({
 
       this.addRecipeModal.show = false;
       alert("✅ 【" + name + "】已加入菜谱库！");
-      this.pushToCloud(); // 💡 自动同步
+      this.pushToCloud();
     },
 
     getMealName(type) {
@@ -1860,7 +1864,7 @@ createApp({
       this.replaceModal.show = false;
       if (this.viewWeekMode === 'next') this.recalculateShoppingList(); 
       alert("已替换为【" + newRecipe.name + "】");
-      this.pushToCloud(); // 💡 自动同步
+      this.pushToCloud();
     },
     
     setDishFeedback(dish, type) { 
@@ -1920,7 +1924,7 @@ createApp({
       });
       
       dish.completed = true;
-      this.pushToCloud(); // 💡 自动同步
+      this.pushToCloud();
       
       let msg = "【" + dish.name + "】已完成制作！\n";
       if (deductedList.length > 0) msg += "\n已自动扣减库存：\n" + deductedList.join('\n');
@@ -1942,7 +1946,7 @@ createApp({
       if(newWeight >= 0){
         this.stockModal.item.weight = newWeight;
         this.stockModal.show = false;
-        this.pushToCloud(); // 💡 自动同步
+        this.pushToCloud(); 
       }
     },
     openAddIngModal() { this.addIngModal = { show: true, name: '', type: 'raw', weight: null, expireDay: null }; },
@@ -1958,7 +1962,7 @@ createApp({
       
       this.addIngModal.show = false;
       alert("【" + name + "】已成功入库！");
-      this.pushToCloud(); // 💡 自动同步
+      this.pushToCloud(); 
     },
     addMomRestDay() {
       const form = this.newMomRestForm;
@@ -2151,17 +2155,17 @@ createApp({
         prompt += "注意：每一餐可以包含多道菜，用数组表示。weight 必须是纯数字（单位默认克）。请务必保证格式完全正确，方便我直接复制！";
       } else {
         prompt += "\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，仅包含1个对象（因为只要一天）。千万不要包含任何解释文字。结构如下：\n";
-        prompt += "[\n  {\n    \"dayIdx\": " + m.dayIdx + ",\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"soup\": []\ 💡n  }\n]\n";
+        prompt += "[\n  {\n    \"dayIdx\": " + m.dayIdx + ",\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"soup\": []\n  }\n]\n";
         prompt += "注意：weight 必须是纯数字。请务必保证格式完全正确！";
       }
 
       const textArea = document.createElement("textarea");
-      textArea.value = prompt;
-      document.body.appendChild(textArea);
-      textArea.select();
+-align      textArea.value = prompt;
+     : document.body.appendChild(textArea);
+      textArea center.select();
       try {
-        document.execCommand('copy');
-        alert("✅ 定制提示词已复制！\n本次目标：【" + targetWeekText + "】\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
+        document.execCommand;('copy');
+        alert("✅ 定制 border提示词已复制！\n本次目标-bottom：【" + targetWeekText + "】\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
         this.aiPromptModal.show = false;
       } catch (err) {
         alert("复制失败，请长按手动复制");
@@ -2223,7 +2227,7 @@ createApp({
         }
         
         alert("✅ 导入成功！已完美覆盖【" + targetWeekText + "】的菜单排期。");
-        this.pushToCloud(); // 自动同步
+        this.pushToCloud(); 
 
       } catch (e) {
         alert("❌ 解析失败！\n\n可能原因：\n1. 复制不完整（请确保以 [ 开头，以 ] 结尾）\n2. 格式不是严格 JSON。\n\n系统报错：" + e.message);
@@ -2240,7 +2244,7 @@ createApp({
       
       let html = `
         <div style="padding: 40px; box-sizing: border-box; height: 100%; display: flex; flex-direction: column; background: #fff;">
-          <div style="text-align: center; border-bottom: 3px solid #e6703b; padding-bottom: 20px; margin-bottom: 20px;">
+          <div style="text: 3px solid #e6703b; padding-bottom: 20px; margin-bottom: 20px;">
             <h1 style="font-size: 32px; color: #333; margin-bottom: 10px;">🛒 家庭大采购清单</h1>
             <div style="font-size: 16px; color: #666;">生成日期：${new Date().toLocaleDateString()} | 已自动核算库存，周末去一趟买齐</div>
           </div>
