@@ -7,7 +7,6 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <!-- 引入 Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
@@ -500,12 +499,18 @@
     <!-- 食材库 -->
     <div v-if="view === 'ingredientLib'">
       
-      <!-- 💡 批量操作按钮 -->
+      <!-- 💡 按钮区动态切换 -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
         <h2 style="margin: 0;">🥬 食材库</h2>
         <div style="display: flex; gap: 8px;">
-          <button class="btn small secondary" style="color: #2b703b; border: 1px solid #cce5d2;" @click="showBatchAddModal = true">📦 批量入库</button>
-          <button class="btn small secondary" style="color: #d14a4a; border: 1px solid #fce8e8;" @click="showBatchDeleteModal = true">🗑️ 批量删除</button>
+          <template v-if="!isBatchDeleteMode">
+            <button class="btn small secondary" style="color: #2b703b; border: 1px solid #cce5d2;" @click="showBatchAddModal = true">📦 批量入库</button>
+            <button class="btn small secondary" style="color: #d14a4a; border: 1px solid #fce8e8;" @click="toggleBatchDeleteMode">🗑️ 批量删除</button>
+          </template>
+          <template v-else>
+            <button class="btn small" style="background: #d14a4a; color: white;" @click="confirmBatchDelete">✅ 确认删除 ({{ selectedToDelete.length }})</button>
+            <button class="btn small secondary" @click="cancelBatchDelete">取消</button>
+          </template>
         </div>
       </div>
 
@@ -521,12 +526,16 @@
       
       <div v-if="ingTab==='raw'">
         <div v-for="item in filteredRawList" class="list-row" :class="{'row-danger': item.expireDay <= 3}">
-          <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <!-- 💡 批量删除时的复选框 -->
+            <input v-if="isBatchDeleteMode" type="checkbox" :value="item.name" v-model="selectedToDelete" style="width: 20px; height: 20px; margin: 0; accent-color: #d14a4a;">
+            <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
+          </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
-            <button class="quick-btn" @click="quickAdjustStock(item, -50)">-50g</button>
-            <button class="quick-btn" @click="quickAdjustStock(item, 50)">+50g</button>
-            <button class="btn small secondary" @click="openStockModal(item, 'raw')">✏️</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, -50)" :disabled="isBatchDeleteMode">-50g</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, 50)" :disabled="isBatchDeleteMode">+50g</button>
+            <button class="btn small secondary" @click="openStockModal(item, 'raw')" :disabled="isBatchDeleteMode">✏️</button>
           </div>
         </div>
         <div v-if="filteredRawList.length===0" class="empty-text">无匹配食材</div>
@@ -534,12 +543,15 @@
 
       <div v-if="ingTab==='fruit'">
         <div v-for="item in filteredFruitList" class="list-row" :class="{'row-danger': item.expireDay <= 3}">
-          <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input v-if="isBatchDeleteMode" type="checkbox" :value="item.name" v-model="selectedToDelete" style="width: 20px; height: 20px; margin: 0; accent-color: #d14a4a;">
+            <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
+          </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
-            <button class="quick-btn" @click="quickAdjustStock(item, -50)">-50g</button>
-            <button class="quick-btn" @click="quickAdjustStock(item, 50)">+50g</button>
-            <button class="btn small secondary" @click="openStockModal(item, 'fruit')">✏️</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, -50)" :disabled="isBatchDeleteMode">-50g</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, 50)" :disabled="isBatchDeleteMode">+50g</button>
+            <button class="btn small secondary" @click="openStockModal(item, 'fruit')" :disabled="isBatchDeleteMode">✏️</button>
           </div>
         </div>
         <div v-if="filteredFruitList.length===0" class="empty-text">暂无水果库存</div>
@@ -547,12 +559,15 @@
 
       <div v-if="ingTab==='snack'">
         <div v-for="item in filteredSnackList" class="list-row" :class="{'row-danger': item.expireDay <= 3}">
-          <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input v-if="isBatchDeleteMode" type="checkbox" :value="item.name" v-model="selectedToDelete" style="width: 20px; height: 20px; margin: 0; accent-color: #d14a4a;">
+            <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
+          </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
-            <button class="quick-btn" @click="quickAdjustStock(item, -50)">-50g</button>
-            <button class="quick-btn" @click="quickAdjustStock(item, 50)">+50g</button>
-            <button class="btn small secondary" @click="openStockModal(item, 'snack')">✏️</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, -50)" :disabled="isBatchDeleteMode">-50g</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, 50)" :disabled="isBatchDeleteMode">+50g</button>
+            <button class="btn small secondary" @click="openStockModal(item, 'snack')" :disabled="isBatchDeleteMode">✏️</button>
           </div>
         </div>
         <div v-if="filteredSnackList.length===0" class="empty-text">暂无零食库存</div>
@@ -560,18 +575,21 @@
 
       <div v-if="ingTab==='pre'">
         <div v-for="item in filteredPreList" class="list-row" :class="{'row-danger': item.expireDay <= 3}">
-          <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input v-if="isBatchDeleteMode" type="checkbox" :value="item.name" v-model="selectedToDelete" style="width: 20px; height: 20px; margin: 0; accent-color: #d14a4a;">
+            <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
+          </div>
           <div style="display:flex;align-items:center;gap:6px;">
             <span style="font-weight:600; width: 60px; text-align: right;">{{item.weight}}g</span>
-            <button class="quick-btn" @click="quickAdjustStock(item, -50)">-50g</button>
-            <button class="quick-btn" @click="quickAdjustStock(item, 50)">+50g</button>
-            <button class="btn small secondary" @click="openStockModal(item, 'pre')">✏️</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, -50)" :disabled="isBatchDeleteMode">-50g</button>
+            <button class="quick-btn" @click="quickAdjustStock(item, 50)" :disabled="isBatchDeleteMode">+50g</button>
+            <button class="btn small secondary" @click="openStockModal(item, 'pre')" :disabled="isBatchDeleteMode">✏️</button>
           </div>
         </div>
         <div v-if="filteredPreList.length===0" class="empty-text">无匹配食材</div>
       </div>
 
-      <button class="btn" style="margin-top:20px; width:100%;" @click="openAddIngModal">➕ 新增单项食材</button>
+      <button v-if="!isBatchDeleteMode" class="btn" style="margin-top:20px; width:100%;" @click="openAddIngModal">➕ 新增单项食材</button>
     </div>
 
     <!-- 我的页面 -->
@@ -681,7 +699,7 @@
     </div>
   </div>
 
-  <!-- 💡 新增：批量入库弹窗 -->
+  <!-- 💡 批量入库弹窗 -->
   <div class="modal-mask" v-if="showBatchAddModal" @click.self="showBatchAddModal=false">
     <div class="modal-box">
       <h3 style="margin-bottom:10px">📦 批量入库</h3>
@@ -692,21 +710,6 @@
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn secondary" style="flex:1" @click="showBatchAddModal=false">取消</button>
         <button class="btn" style="flex:1; background: #2b703b;" @click="processBatchAdd">✅ 确认入库</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 💡 新增：批量删除弹窗 -->
-  <div class="modal-mask" v-if="showBatchDeleteModal" @click.self="showBatchDeleteModal=false">
-    <div class="modal-box">
-      <h3 style="margin-bottom:10px">🗑️ 批量删除</h3>
-      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
-        输入要删除的食材名称（用逗号或换行隔开），例如：<b>鸡蛋, 苹果</b>。
-      </p>
-      <textarea v-model="batchDeleteText" rows="6" placeholder="鸡蛋, 苹果" style="width: 100%; font-family: monospace; font-size: 14px;"></textarea>
-      <div style="display:flex;gap:10px;margin-top:16px">
-        <button class="btn secondary" style="flex:1" @click="showBatchDeleteModal=false">取消</button>
-        <button class="btn" style="flex:1; background: #d14a4a;" @click="processBatchDelete">✅ 确认删除</button>
       </div>
     </div>
   </div>
@@ -1122,11 +1125,11 @@ createApp({
 
       batchImportModal: { show: false, text: '' },
 
-      // 💡 批量操作相关
+      // 💡 批量入库和批量删除状态控制
       showBatchAddModal: false,
       batchAddText: '',
-      showBatchDeleteModal: false,
-      batchDeleteText: '',
+      isBatchDeleteMode: false,
+      selectedToDelete: [],
 
       supabaseConfig: {
         url: localStorage.getItem('sb_url') || '',
@@ -1431,7 +1434,6 @@ createApp({
   methods:{
     initSupabase(isAutoLoad = false) {
       try {
-        // 💡 增加环境检查，防止因为网络加载问题导致整个应用白屏
         if (typeof supabase === 'undefined') {
           console.error("Supabase SDK 未加载");
           return; 
@@ -1546,6 +1548,34 @@ createApp({
       }
     },
 
+    // 💡 批量删除逻辑
+    toggleBatchDeleteMode() {
+      this.isBatchDeleteMode = true;
+      this.selectedToDelete = [];
+    },
+    cancelBatchDelete() {
+      this.isBatchDeleteMode = false;
+      this.selectedToDelete = [];
+    },
+    confirmBatchDelete() {
+      if (this.selectedToDelete.length === 0) {
+        alert("请先勾选要删除的食材");
+        return;
+      }
+      if (!confirm(`确定要删除选中的 ${this.selectedToDelete.length} 项食材吗？`)) return;
+
+      const filterFn = (list) => list.filter(item => !this.selectedToDelete.includes(item.name));
+      
+      this.rawIngList = filterFn(this.rawIngList);
+      this.fruitList = filterFn(this.fruitList);
+      this.snackList = filterFn(this.snackList);
+      this.preIngList = filterFn(this.preIngList);
+
+      this.pushToCloud();
+      alert(`✅ 成功删除 ${this.selectedToDelete.length} 项食材！`);
+      this.cancelBatchDelete();
+    },
+
     // 💡 批量入库逻辑
     processBatchAdd() {
       const text = this.batchAddText.trim();
@@ -1558,18 +1588,16 @@ createApp({
         line = line.trim();
         if (!line) return;
         
-        // 匹配：名称 + 空格/逗号/冒号 + 数量
         const match = line.match(/^(.+?)[\s,，:：]+(\d+(?:\.\d+)?)/);
         if (match) {
           const name = match[1].trim();
           const weight = parseFloat(match[2]);
           
-          // 统一先加到原材料库，如果已有则增加
           const existing = this.rawIngList.find(i => i.name === name);
           if (existing) {
             existing.weight += weight;
           } else {
-            this.rawIngList.push({ name: name, weight: weight, expireDay: 7 }); // 默认保质期7天
+            this.rawIngList.push({ name: name, weight: weight, expireDay: 7 }); 
           }
           addedCount++;
         }
@@ -1580,42 +1608,9 @@ createApp({
         alert(`✅ 成功批量入库 ${addedCount} 项食材！`);
         this.showBatchAddModal = false;
         this.batchAddText = '';
-        this.ingTab = 'raw'; // 自动切到原材料查看
+        this.ingTab = 'raw'; 
       } else {
         alert("格式识别失败，请确保格式为：食材名称 数量（如：鸡蛋 500）");
-      }
-    },
-
-    // 💡 批量删除逻辑
-    processBatchDelete() {
-      const text = this.batchDeleteText.trim();
-      if (!text) { alert("请输入要删除的食材名称"); return; }
-
-      const namesToDelete = text.split(/[\n,，]/).map(s => s.trim()).filter(s => s);
-      
-      let deletedCount = 0;
-      const filterFn = (list) => {
-        return list.filter(item => {
-          if (namesToDelete.includes(item.name)) {
-            deletedCount++;
-            return false;
-          }
-          return true;
-        });
-      };
-
-      this.rawIngList = filterFn(this.rawIngList);
-      this.fruitList = filterFn(this.fruitList);
-      this.snackList = filterFn(this.snackList);
-      this.preIngList = filterFn(this.preIngList);
-
-      if (deletedCount > 0) {
-        this.pushToCloud();
-        alert(`✅ 成功删除 ${deletedCount} 项食材！`);
-        this.showBatchDeleteModal = false;
-        this.batchDeleteText = '';
-      } else {
-        alert("未找到输入的食材名称，请检查输入。");
       }
     },
 
