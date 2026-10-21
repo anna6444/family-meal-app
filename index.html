@@ -7,6 +7,8 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <!-- 💡 新增：引入 Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
     body { background-color: #f9f6ef; color: #333; padding-bottom: 100px; font-size: 15px; }
@@ -42,7 +44,7 @@
     .tag.orange { background: #fff1e6; color: #c46838; }
     .tag.red { background: #fce8e8; color: #d14a4a; }
 
-    /* 💡 优化：顶部日期标签，字体放大，对齐 */
+    /* 顶部日期标签 */
     .date-picker-wrapper { display: flex; align-items: center; justify-content: space-between; background: #fff5ef; border-radius: 14px; padding: 14px 18px; border: 1px solid #fce8df; margin-bottom:14px; gap: 10px;}
     .date-picker-wrapper label { font-size: 16px; color: #c46838; font-weight: 600; margin: 0; white-space: nowrap; flex-shrink: 0; }
     .date-picker-wrapper input[type="date"] { border: none; background: transparent; color: #333; font-size: 18px; font-weight: 700; outline: none; text-align: right; width: 100%; padding: 0; min-height: auto; }
@@ -99,7 +101,6 @@
     .rest-day-tag { display: inline-flex; align-items: center; background: #fff1e6; color: #c46838; border-radius: 8px; padding: 6px 10px; font-size: 13px; margin: 4px; border: 1px solid #f7dcc8; }
     .rest-day-tag span { margin-left: 6px; cursor: pointer; color: #999; font-weight: bold; }
     
-    /* 💡 优化：快过期食材整行变色高亮 */
     .row-danger { background-color: #fff8f8; border-left: 4px solid #d14a4a; padding-left: 12px; border-radius: 4px; margin: 4px 0; }
     .row-danger > div:first-child { color: #d14a4a; font-weight: 600; }
     .expire-warning { background-color: #fce8e8; color: #d14a4a; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 6px; font-weight: bold; }
@@ -162,7 +163,6 @@
     <!-- 首页 -->
     <div v-if="view === 'home'">
 
-      <!-- 💡 智能提醒横幅 -->
       <div v-if="smartShoppingReminder" class="health-alert" style="background: #eaf6ec; border-color: #cce5d2; color: #2b703b; font-size: 15px; border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
         <div><b>{{ smartShoppingReminder }}</b></div>
         <button class="btn small" style="background: #2b703b; white-space: nowrap;" @click="view = 'todo'; todoTab = 'weekend'">去导出清单</button>
@@ -227,7 +227,6 @@
 
     <!-- 周菜谱 -->
     <div v-if="view === 'weekMenu'">
-      <!-- 💡 第一排：切换 + 菜单操作 -->
       <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px;">
         <div class="tab-switch" style="margin-bottom: 0; flex: 1; grid-template-columns: 1fr 1fr; max-width: 65%;">
           <div class="switch-btn" :class="{active:viewWeekMode==='current'}" @click="viewWeekMode='current'">📅 本周食谱</div>
@@ -236,7 +235,6 @@
         <button class="btn small secondary" @click="showMoreActions = true" style="padding: 9px 12px;">⚙️ 菜单操作</button>
       </div>
 
-      <!-- 💡 第二排：标题 + 单天换菜 -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
         <h2>{{ viewWeekMode === 'current' ? '本周菜单' : '下周菜单' }}</h2>
         <button class="btn small ai-btn" @click="openSingleDayPrompt">🩺 单天/生病换菜</button>
@@ -249,7 +247,6 @@
         </div>
       </div>
 
-      <!-- 💡 第三排：选中的那一天菜单 -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
         <h3 style="font-size:16px; color:#c46838;">📅 {{displayWeekDates[selDateIdx].week}}菜单</h3>
       </div>
@@ -436,7 +433,6 @@
         <div class="switch-btn" :class="{active:todoTab==='weekend'}" @click="todoTab='weekend'">🛒 周末大采购</div>
       </div>
 
-      <!-- 💡 日常跟进 -->
       <div v-if="todoTab === 'daily'">
         <div class="card">
           <h2>🛒 提前1-2天买（新鲜食材）</h2>
@@ -461,7 +457,6 @@
         </div>
       </div>
 
-      <!-- 💡 周末大采购 -->
       <div v-if="todoTab === 'weekend'">
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
@@ -516,7 +511,6 @@
         <input v-model="searchIng" placeholder="🔍 搜索食材，输入关键字筛选"/>
       </div>
       
-      <!-- 快捷增减 -->
       <div v-if="ingTab==='raw'">
         <div v-for="item in filteredRawList" class="list-row" :class="{'row-danger': item.expireDay <= 3}">
           <div>{{item.name}} <span v-if="item.expireDay <= 3" class="expire-warning">快过期</span></div>
@@ -574,6 +568,31 @@
 
     <!-- 我的页面 -->
     <div v-if="view === 'setting'">
+      
+      <!-- 💡 新增：云同步设置卡片 -->
+      <div class="card" style="border: 2px solid #4A90E2; background: #f4f8fd;">
+        <h2>☁️ 云端同步设置</h2>
+        <p class="card-subtitle">配置后，所有数据将自动同步到云端，多设备共享。</p>
+        
+        <div class="input-wrap">
+          <label>Supabase URL</label>
+          <input v-model="supabaseConfig.url" placeholder="https://xxxxxx.supabase.co" />
+        </div>
+        <div class="input-wrap">
+          <label>Supabase Anon Key</label>
+          <input v-model="supabaseConfig.key" placeholder="eyJh..." type="password" />
+        </div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+          <button class="btn" style="flex:1; background: #4A90E2;" @click="connectSupabase">连接并测试</button>
+          <button class="btn secondary" style="flex:1;" @click="disconnectSupabase">断开连接</button>
+        </div>
+        
+        <div v-if="supabaseConnected" style="margin-top: 12px; font-size: 14px; color: #2b703b; font-weight: bold; text-align: center;">
+          ✅ 云端已连接 (最后同步: {{ lastSyncTime || '刚刚' }})
+        </div>
+      </div>
+
       <div class="card">
         <h2>👨‍👩‍👧‍👦 人员管理</h2>
         <div class="member-list-item" @click="openMemberEdit('dad')">
@@ -656,53 +675,6 @@
     </div>
   </div>
 
-  <!-- AI 聊天全屏页面 (保留以防未来再用) -->
-  <div class="chat-wrapper" v-if="view === 'ai'">
-    <div class="api-mask" v-if="!apiKey">
-      <h3 style="color:#e6703b; margin-bottom: 10px;">请配置 AI 接口</h3>
-      <p style="font-size: 13px; color: #666; margin-bottom: 15px;">填入硅基流动的 API Key（sk-开头）</p>
-      <input v-model="tempKey" placeholder="在此粘贴你的 API Key" style="width:100%; padding:12px; border:1px solid #ddd; border-radius:8px; margin-bottom:10px; font-size:15px;" />
-      <button class="btn" @click="saveApiKey" style="width:100%; padding: 12px;">保存并开始对话</button>
-      <button class="btn secondary" @click="view='home'" style="width:100%; margin-top:10px; background:none;">返回首页</button>
-    </div>
-
-    <div v-else style="display:flex; flex-direction:column; height:100%;">
-      <div class="chat-header">
-        <h3 style="color: #e6703b; display: flex; align-items: center; gap: 8px;">👩‍🍳 专属营养师</h3>
-        <div style="display:flex; gap: 8px;">
-          <button class="btn secondary small" @click="showSettingsModal = true" style="padding: 6px 12px;">⚙️ 设置</button>
-          <button class="btn secondary small" @click="view='home'">关闭</button>
-        </div>
-      </div>
-      
-      <div class="chat-container">
-        <div class="chat-messages" id="chatMsgBox">
-          <div class="chat-bubble chat-ai">
-            你好！我是你的专属家庭营养师 🤖。我已经掌握了你们全家的身体情况。
-            <br><br>你可以直接问我：
-            <br>👉 “我想吃番茄炖牛腩，怎么做？”
-            <br>👉 “今晚有什么快手菜推荐？最好能用空气炸锅。”
-          </div>
-          
-          <div v-for="(msg, idx) in chatHistory" :key="idx" class="chat-bubble" :class="msg.role === 'user' ? 'chat-user' : 'chat-ai'">
-            {{ msg.content }}
-            <div v-if="msg.role === 'assistant' && !msg.content.includes('出错') && !msg.content.includes('正在思考')" style="margin-top: 12px; border-top: 1px dashed #eee; padding-top: 10px;">
-              <span class="import-btn" @click="importAiToRecipe(msg.content)">📥 导入到我的菜谱库</span>
-            </div>
-          </div>
-          <div v-if="isTyping" class="chat-bubble chat-ai" style="color: #999;">
-            AI 正在思考中，请稍候...
-          </div>
-        </div>
-
-        <div class="chat-input-area">
-          <input v-model="chatInput" @keyup.enter="sendMessage" placeholder="输入你想吃的菜或需求..." />
-          <button class="chat-send-btn" @click="sendMessage">发送</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- 底部操作面板 -->
   <div class="action-sheet-mask" v-if="showMoreActions" @click.self="showMoreActions = false">
     <div class="action-sheet">
@@ -717,6 +689,7 @@
     </div>
   </div>
 
+  <!-- 各种弹窗（为了节省篇幅省略了具体HTML结构，保持和之前一致即可） -->
   <!-- AI 提示词定制器 -->
   <div class="modal-mask" v-if="aiPromptModal.show" @click.self="aiPromptModal.show=false">
     <div class="modal-box">
@@ -792,13 +765,18 @@
     </div>
   </div>
 
-  <!-- 设置弹窗 -->
-  <div class="modal-mask" v-if="showSettingsModal" @click.self="showSettingsModal=false">
-    <div class="modal-box" style="text-align: center;">
-      <h3 style="margin-bottom: 20px;">⚙️ 营养师设置</h3>
-      <p style="font-size: 13px; color: #888; margin-bottom: 20px;">如果 API Key 过期或想换一个新账号的 Key，可以点击下方重置。</p>
-      <button class="btn" style="width: 100%; margin-bottom: 12px; background: #d14a4a;" @click="confirmClearKey">重置 API Key</button>
-      <button class="btn secondary" style="width: 100%;" @click="showSettingsModal=false">取消</button>
+  <!-- 批量导入弹窗 -->
+  <div class="modal-mask" v-if="batchImportModal.show" @click.self="batchImportModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:10px">📥 批量导入外部菜单</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+        请把 DeepSeek 生成的 <b>JSON 代码</b> 粘贴到这里。系统会自动清洗并覆盖到【{{ viewWeekMode === 'current' ? '本周' : '下周' }}】的排期表中。
+      </p>
+      <textarea v-model="batchImportModal.text" rows="10" placeholder="直接粘贴 AI 生成的 JSON 格式数据..." style="width: 100%; font-family: monospace; font-size: 13px;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="batchImportModal.show=false">取消</button>
+        <button class="btn" style="flex:1; background: #2b703b;" @click="doBatchImport">✅ 解析并导入</button>
+      </div>
     </div>
   </div>
 
@@ -857,21 +835,6 @@
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn secondary" style="flex:1" @click="addRecipeModal.show=false">取消</button>
         <button class="btn" style="flex:1" @click="saveCustomRecipe">保存菜谱</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 批量导入弹窗 (DeepSeek) -->
-  <div class="modal-mask" v-if="batchImportModal.show" @click.self="batchImportModal.show=false">
-    <div class="modal-box">
-      <h3 style="margin-bottom:10px">📥 批量导入外部菜单</h3>
-      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
-        请把 DeepSeek 生成的 <b>JSON 代码</b> 粘贴到这里。系统会自动清洗并覆盖到【{{ viewWeekMode === 'current' ? '本周' : '下周' }}】的排期表中。
-      </p>
-      <textarea v-model="batchImportModal.text" rows="10" placeholder="直接粘贴 AI 生成的 JSON 格式数据..." style="width: 100%; font-family: monospace; font-size: 13px;"></textarea>
-      <div style="display:flex;gap:10px;margin-top:16px">
-        <button class="btn secondary" style="flex:1" @click="batchImportModal.show=false">取消</button>
-        <button class="btn" style="flex:1; background: #2b703b;" @click="doBatchImport">✅ 解析并导入</button>
       </div>
     </div>
   </div>
@@ -1114,6 +1077,16 @@ createApp({
 
       batchImportModal: { show: false, text: '' },
 
+      // 💡 新增：Supabase 配置
+      supabaseConfig: {
+        url: localStorage.getItem('sb_url') || '',
+        key: localStorage.getItem('sb_key') || ''
+      },
+      supabaseClient: null,
+      supabaseConnected: false,
+      lastSyncTime: '',
+      isSyncing: false, // 防抖标记
+
       scheduleConfig: {
         dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 },
         mom: { startDate: '2026-10-16', firstShift: 'morning' }
@@ -1235,9 +1208,13 @@ createApp({
     this.loadCustomRecipes(); 
     this.generateWeekPlan('current', true);
     this.generateWeekPlan('next', true);
+
+    // 💡 初始化时，如果配置了 Supabase，就去拉取云端数据
+    if (this.supabaseConfig.url && this.supabaseConfig.key) {
+      this.initSupabase(true);
+    }
   },
   computed: {
-    // 💡 修复：使用本地时间解析，解决首页菜单与周菜谱不同步的问题
     homeCurrentDayDishes() {
       if (!this.homeDate) return null;
       const parts = this.homeDate.split('-');
@@ -1402,6 +1379,120 @@ createApp({
     }
   },
   methods:{
+    // 💡 初始化 Supabase 客户端
+    initSupabase(isAutoLoad = false) {
+      try {
+        if (!this.supabaseConfig.url || !this.supabaseConfig.key) return;
+        // 使用 CDN 引入的 supabase 对象初始化
+        this.supabaseClient = supabase.createClient(this.supabaseConfig.url, this.supabaseConfig.key);
+        this.supabaseConnected = true;
+        if (isAutoLoad) {
+          this.pullFromCloud(true); // 静默拉取，不弹窗
+        } else {
+          this.pullFromCloud(); // 手动连接时拉取，有提示
+        }
+      } catch (e) {
+        console.error("初始化失败", e);
+        this.supabaseConnected = false;
+        alert("连接失败，请检查 URL 和 Key 格式。");
+      }
+    },
+
+    connectSupabase() {
+      const url = this.supabaseConfig.url.trim();
+      const key = this.supabaseConfig.key.trim();
+      if (!url || !key) { alert("请填写完整的配置信息"); return; }
+      
+      localStorage.setItem('sb_url', url);
+      localStorage.setItem('sb_key', key);
+      this.initSupabase();
+    },
+
+    disconnectSupabase() {
+      if (confirm("断开后将不再自动同步，确定吗？")) {
+        localStorage.removeItem('sb_url');
+        localStorage.removeItem('sb_key');
+        this.supabaseConfig = { url: '', key: '' };
+        this.supabaseConnected = false;
+        this.supabaseClient = null;
+      }
+    },
+
+    // 💡 推送到云端
+    async pushToCloud() {
+      if (!this.supabaseClient || this.isSyncing) return;
+      
+      this.isSyncing = true;
+      try {
+        // 把所有核心数据打包
+        const payload = {
+          rawIngList: this.rawIngList,
+          fruitList: this.fruitList,
+          snackList: this.snackList,
+          preIngList: this.preIngList,
+          weekMenuData: this.weekMenuData,
+          memberData: this.memberData,
+          memberTempStatus: this.memberTempStatus,
+          memberTaboo: this.memberTaboo,
+          momRestDays: this.momRestDays,
+          sisterHolidays: this.sisterHolidays,
+          brotherHolidays: this.brotherHolidays
+        };
+
+        const { error } = await this.supabaseClient
+          .from('family_dashboard')
+          .update({ payload: payload, updated_at: new Date().toISOString() })
+          .eq('id', 'family_data');
+
+        if (error) throw error;
+        
+        const now = new Date();
+        this.lastSyncTime = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+      } catch (e) {
+        console.error("云端保存失败", e);
+      } finally {
+        this.isSyncing = false;
+      }
+    },
+
+    // 💡 从云端拉取
+    async pullFromCloud(isSilent = false) {
+      if (!this.supabaseClient) return;
+      
+      try {
+        const { data, error } = await this.supabaseClient
+          .from('family_dashboard')
+          .select('payload, updated_at')
+          .eq('id', 'family_data')
+          .single();
+
+        if (error) throw error;
+
+        if (data && data.payload && Object.keys(data.payload).length > 0) {
+          // 覆盖本地数据
+          const p = data.payload;
+          if (p.rawIngList) this.rawIngList = p.rawIngList;
+          if (p.fruitList) this.fruitList = p.fruitList;
+          if (p.snackList) this.snackList = p.snackList;
+          if (p.preIngList) this.preIngList = p.preIngList;
+          if (p.weekMenuData) this.weekMenuData = p.weekMenuData;
+          if (p.memberData) this.memberData = p.memberData;
+          if (p.memberTempStatus) this.memberTempStatus = p.memberTempStatus;
+          if (p.memberTaboo) this.memberTaboo = p.memberTaboo;
+          if (p.momRestDays) this.momRestDays = p.momRestDays;
+          if (p.sisterHolidays) this.sisterHolidays = p.sisterHolidays;
+          if (p.brotherHolidays) this.brotherHolidays = p.brotherHolidays;
+
+          if (!isSilent) alert("✅ 数据已从云端更新到本地！");
+        } else {
+          if (!isSilent) alert("云端暂无数据，当前本地数据将在修改时自动上传。");
+        }
+      } catch (e) {
+        console.error("拉取失败", e);
+        if (!isSilent) alert("拉取云端数据失败：" + e.message);
+      }
+    },
+
     saveApiKey() {
       const key = this.tempKey.trim();
       if (!key) { alert("请输入有效的 Key"); return; }
@@ -1422,8 +1513,10 @@ createApp({
       const newWeight = item.weight + gram;
       if (newWeight >= 0) {
         item.weight = newWeight;
+        this.pushToCloud(); // 💡 自动同步
       } else {
         item.weight = 0;
+        this.pushToCloud();
       }
     },
 
@@ -1618,11 +1711,13 @@ createApp({
       if (mode === 'current') {
         this.weekMenuData.current = newWeekMenu;
         if (!isInit) alert("✅ 本周食谱已重新生成！");
+        this.pushToCloud(); // 💡 自动同步
       } else {
         this.weekMenuData.next = newWeekMenu;
         this.recalculateShoppingList();
         this.generatePrepTasks();
         if (!isInit) alert("✅ 下周食谱已生成！");
+        this.pushToCloud(); // 💡 自动同步
       }
     },
 
@@ -1743,6 +1838,7 @@ createApp({
 
       this.addRecipeModal.show = false;
       alert("✅ 【" + name + "】已加入菜谱库！");
+      this.pushToCloud(); // 💡 自动同步
     },
 
     getMealName(type) {
@@ -1764,9 +1860,13 @@ createApp({
       this.replaceModal.show = false;
       if (this.viewWeekMode === 'next') this.recalculateShoppingList(); 
       alert("已替换为【" + newRecipe.name + "】");
+      this.pushToCloud(); // 💡 自动同步
     },
     
-    setDishFeedback(dish, type) { dish.feedback = type; },
+    setDishFeedback(dish, type) { 
+      dish.feedback = type; 
+      this.pushToCloud();
+    },
     openTempStatusModal(key){ this.tempStatusModal.key = key; this.tempStatusModal.show = true; },
     getStatusText(status, person){
       if (person === 'mom') {
@@ -1820,6 +1920,7 @@ createApp({
       });
       
       dish.completed = true;
+      this.pushToCloud(); // 💡 自动同步
       
       let msg = "【" + dish.name + "】已完成制作！\n";
       if (deductedList.length > 0) msg += "\n已自动扣减库存：\n" + deductedList.join('\n');
@@ -1841,6 +1942,7 @@ createApp({
       if(newWeight >= 0){
         this.stockModal.item.weight = newWeight;
         this.stockModal.show = false;
+        this.pushToCloud(); // 💡 自动同步
       }
     },
     openAddIngModal() { this.addIngModal = { show: true, name: '', type: 'raw', weight: null, expireDay: null }; },
@@ -1856,28 +1958,36 @@ createApp({
       
       this.addIngModal.show = false;
       alert("【" + name + "】已成功入库！");
+      this.pushToCloud(); // 💡 自动同步
     },
     addMomRestDay() {
       const form = this.newMomRestForm;
       if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
       this.momRestDays.push({ name: '休息日', start: form.start, end: form.end });
       this.newMomRestForm = { start: '', end: '' };
+      this.pushToCloud();
     },
-    removeMomRestDay(index) { this.momRestDays.splice(index, 1); },
+    removeMomRestDay(index) { this.momRestDays.splice(index, 1); this.pushToCloud(); },
     addHoliday(person) {
       const form = this.newHolidayForm[person];
       if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
       const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
       targetArray.push({ name: form.name || '假期/请假', start: form.start, end: form.end });
       this.newHolidayForm[person] = { name: '', start: '', end: '' };
+      this.pushToCloud();
     },
     removeHoliday(person, index) {
       const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
       targetArray.splice(index, 1);
+      this.pushToCloud();
     },
     getMemberName(key){ const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' }; return map[key] || ''; },
     openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
-    saveMemberEdit(){ alert(this.getMemberName(this.memberEditModal.key) + "的信息已保存！"); this.memberEditModal.show = false; },
+    saveMemberEdit(){ 
+      alert(this.getMemberName(this.memberEditModal.key) + "的信息已保存！"); 
+      this.memberEditModal.show = false; 
+      this.pushToCloud();
+    },
     
     openChartModal(personKey){
       this.chartModal.target = personKey;
@@ -1953,7 +2063,10 @@ createApp({
         console.error("图表渲染失败", e);
       }
     },
-    toggleBought(item){ item.bought = !item.bought; },
+    toggleBought(item){ 
+      item.bought = !item.bought; 
+      this.pushToCloud();
+    },
     toggleTaboo(person, word) {
       const arr = this.memberTaboo[person];
       if (arr.includes(word)) {
@@ -1961,6 +2074,7 @@ createApp({
       } else {
         arr.push(word);
       }
+      this.pushToCloud();
     },
 
     openAiPromptModal() {
@@ -2037,7 +2151,7 @@ createApp({
         prompt += "注意：每一餐可以包含多道菜，用数组表示。weight 必须是纯数字（单位默认克）。请务必保证格式完全正确，方便我直接复制！";
       } else {
         prompt += "\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，仅包含1个对象（因为只要一天）。千万不要包含任何解释文字。结构如下：\n";
-        prompt += "[\n  {\n    \"dayIdx\": " + m.dayIdx + ",\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"soup\": []\n  }\n]\n";
+        prompt += "[\n  {\n    \"dayIdx\": " + m.dayIdx + ",\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"soup\": []\ 💡n  }\n]\n";
         prompt += "注意：weight 必须是纯数字。请务必保证格式完全正确！";
       }
 
@@ -2109,6 +2223,7 @@ createApp({
         }
         
         alert("✅ 导入成功！已完美覆盖【" + targetWeekText + "】的菜单排期。");
+        this.pushToCloud(); // 自动同步
 
       } catch (e) {
         alert("❌ 解析失败！\n\n可能原因：\n1. 复制不完整（请确保以 [ 开头，以 ] 结尾）\n2. 格式不是严格 JSON。\n\n系统报错：" + e.message);
