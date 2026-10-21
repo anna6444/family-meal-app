@@ -499,8 +499,16 @@
 
     <!-- 食材库 -->
     <div v-if="view === 'ingredientLib'">
-      <h2 style="margin-bottom:14px">🥬 食材库</h2>
       
+      <!-- 💡 批量操作按钮 -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h2 style="margin: 0;">🥬 食材库</h2>
+        <div style="display: flex; gap: 8px;">
+          <button class="btn small secondary" style="color: #2b703b; border: 1px solid #cce5d2;" @click="showBatchAddModal = true">📦 批量入库</button>
+          <button class="btn small secondary" style="color: #d14a4a; border: 1px solid #fce8e8;" @click="showBatchDeleteModal = true">🗑️ 批量删除</button>
+        </div>
+      </div>
+
       <div class="tab-switch">
         <div class="switch-btn" :class="{active:ingTab==='raw'}" @click="ingTab='raw'">原材料</div>
         <div class="switch-btn" :class="{active:ingTab==='fruit'}" @click="ingTab='fruit'">水果</div>
@@ -563,7 +571,7 @@
         <div v-if="filteredPreList.length===0" class="empty-text">无匹配食材</div>
       </div>
 
-      <button class="btn" style="margin-top:20px; width:100%;" @click="openAddIngModal">➕ 新增食材入库</button>
+      <button class="btn" style="margin-top:20px; width:100%;" @click="openAddIngModal">➕ 新增单项食材</button>
     </div>
 
     <!-- 我的页面 -->
@@ -621,7 +629,6 @@
         </div>
       </div>
 
-      <!-- 💡 新增：底部设置按钮 -->
       <button class="btn secondary" style="width:100%; margin-top: 10px; border: 1px solid #ddd;" @click="showSyncSettingsModal = true">
         ⚙️ 云端同步配置
       </button>
@@ -674,7 +681,37 @@
     </div>
   </div>
 
-  <!-- 💡 新增：云端同步设置弹窗 -->
+  <!-- 💡 新增：批量入库弹窗 -->
+  <div class="modal-mask" v-if="showBatchAddModal" @click.self="showBatchAddModal=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:10px">📦 批量入库</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+        按行输入，格式：<b>食材名称 克数</b>（例如：鸡蛋 500）。支持空格、逗号或冒号分隔。
+      </p>
+      <textarea v-model="batchAddText" rows="8" placeholder="鸡蛋 500&#10;苹果 1000&#10;牛肉, 800" style="width: 100%; font-family: monospace; font-size: 14px;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="showBatchAddModal=false">取消</button>
+        <button class="btn" style="flex:1; background: #2b703b;" @click="processBatchAdd">✅ 确认入库</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 💡 新增：批量删除弹窗 -->
+  <div class="modal-mask" v-if="showBatchDeleteModal" @click.self="showBatchDeleteModal=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:10px">🗑️ 批量删除</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+        输入要删除的食材名称（用逗号或换行隔开），例如：<b>鸡蛋, 苹果</b>。
+      </p>
+      <textarea v-model="batchDeleteText" rows="6" placeholder="鸡蛋, 苹果" style="width: 100%; font-family: monospace; font-size: 14px;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="showBatchDeleteModal=false">取消</button>
+        <button class="btn" style="flex:1; background: #d14a4a;" @click="processBatchDelete">✅ 确认删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 云端同步设置弹窗 -->
   <div class="modal-mask" v-if="showSyncSettingsModal" @click.self="showSyncSettingsModal=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">☁️ 云端同步配置</h3>
@@ -773,7 +810,7 @@
     </div>
   </div>
 
-  <!-- 批量导入弹窗 -->
+  <!-- 批量导入菜单弹窗 -->
   <div class="modal-mask" v-if="batchImportModal.show" @click.self="batchImportModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:10px">📥 批量导入外部菜单</h3>
@@ -988,10 +1025,10 @@
     </div>
   </div>
 
-  <!-- 新增食材弹窗 -->
+  <!-- 新增单项食材弹窗 -->
   <div class="modal-mask" v-if="addIngModal.show" @click.self="addIngModal.show=false">
     <div class="modal-box">
-      <h3 style="margin-bottom:14px">新增食材入库</h3>
+      <h3 style="margin-bottom:14px">新增单项食材</h3>
       <div class="input-wrap">
         <label>食材名称</label>
         <input v-model="addIngModal.name" placeholder="例如：苹果、核桃" />
@@ -1085,6 +1122,12 @@ createApp({
 
       batchImportModal: { show: false, text: '' },
 
+      // 💡 批量操作相关
+      showBatchAddModal: false,
+      batchAddText: '',
+      showBatchDeleteModal: false,
+      batchDeleteText: '',
+
       supabaseConfig: {
         url: localStorage.getItem('sb_url') || '',
         key: localStorage.getItem('sb_key') || ''
@@ -1093,7 +1136,7 @@ createApp({
       supabaseConnected: false,
       lastSyncTime: '',
       isSyncing: false,
-      showSyncSettingsModal: false, // 💡 控制弹窗显隐
+      showSyncSettingsModal: false,
 
       scheduleConfig: {
         dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 },
@@ -1388,7 +1431,13 @@ createApp({
   methods:{
     initSupabase(isAutoLoad = false) {
       try {
+        // 💡 增加环境检查，防止因为网络加载问题导致整个应用白屏
+        if (typeof supabase === 'undefined') {
+          console.error("Supabase SDK 未加载");
+          return; 
+        }
         if (!this.supabaseConfig.url || !this.supabaseConfig.key) return;
+        
         this.supabaseClient = supabase.createClient(this.supabaseConfig.url, this.supabaseConfig.key);
         this.supabaseConnected = true;
         if (isAutoLoad) {
@@ -1420,7 +1469,7 @@ createApp({
         this.supabaseConfig = { url: '', key: '' };
         this.supabaseConnected = false;
         this.supabaseClient = null;
-        this.showSyncSettingsModal = false; // 断开后关闭弹窗
+        this.showSyncSettingsModal = false;
       }
     },
 
@@ -1486,7 +1535,7 @@ createApp({
           if (p.brotherHolidays) this.brotherHolidays = p.brotherHolidays;
 
           if (!isSilent) alert("✅ 数据已从云端更新到本地！");
-          this.showSyncSettingsModal = false; // 同步成功后关闭弹窗
+          this.showSyncSettingsModal = false;
         } else {
           if (!isSilent) alert("云端暂无数据，当前本地数据将在修改时自动上传。");
           this.showSyncSettingsModal = false;
@@ -1494,6 +1543,79 @@ createApp({
       } catch (e) {
         console.error("拉取失败", e);
         if (!isSilent) alert("拉取云端数据失败：" + e.message);
+      }
+    },
+
+    // 💡 批量入库逻辑
+    processBatchAdd() {
+      const text = this.batchAddText.trim();
+      if (!text) { alert("请输入要入库的内容"); return; }
+
+      const lines = text.split('\n');
+      let addedCount = 0;
+
+      lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+        
+        // 匹配：名称 + 空格/逗号/冒号 + 数量
+        const match = line.match(/^(.+?)[\s,，:：]+(\d+(?:\.\d+)?)/);
+        if (match) {
+          const name = match[1].trim();
+          const weight = parseFloat(match[2]);
+          
+          // 统一先加到原材料库，如果已有则增加
+          const existing = this.rawIngList.find(i => i.name === name);
+          if (existing) {
+            existing.weight += weight;
+          } else {
+            this.rawIngList.push({ name: name, weight: weight, expireDay: 7 }); // 默认保质期7天
+          }
+          addedCount++;
+        }
+      });
+
+      if (addedCount > 0) {
+        this.pushToCloud();
+        alert(`✅ 成功批量入库 ${addedCount} 项食材！`);
+        this.showBatchAddModal = false;
+        this.batchAddText = '';
+        this.ingTab = 'raw'; // 自动切到原材料查看
+      } else {
+        alert("格式识别失败，请确保格式为：食材名称 数量（如：鸡蛋 500）");
+      }
+    },
+
+    // 💡 批量删除逻辑
+    processBatchDelete() {
+      const text = this.batchDeleteText.trim();
+      if (!text) { alert("请输入要删除的食材名称"); return; }
+
+      const namesToDelete = text.split(/[\n,，]/).map(s => s.trim()).filter(s => s);
+      
+      let deletedCount = 0;
+      const filterFn = (list) => {
+        return list.filter(item => {
+          if (namesToDelete.includes(item.name)) {
+            deletedCount++;
+            return false;
+          }
+          return true;
+        });
+      };
+
+      this.rawIngList = filterFn(this.rawIngList);
+      this.fruitList = filterFn(this.fruitList);
+      this.snackList = filterFn(this.snackList);
+      this.preIngList = filterFn(this.preIngList);
+
+      if (deletedCount > 0) {
+        this.pushToCloud();
+        alert(`✅ 成功删除 ${deletedCount} 项食材！`);
+        this.showBatchDeleteModal = false;
+        this.batchDeleteText = '';
+      } else {
+        alert("未找到输入的食材名称，请检查输入。");
       }
     },
 
@@ -2160,12 +2282,12 @@ createApp({
       }
 
       const textArea = document.createElement("textarea");
--align      textArea.value = prompt;
-     : document.body.appendChild(textArea);
-      textArea center.select();
+      textArea.value = prompt;
+      document.body.appendChild(textArea);
+      textArea.select();
       try {
-        document.execCommand;('copy');
-        alert("✅ 定制 border提示词已复制！\n本次目标-bottom：【" + targetWeekText + "】\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
+        document.execCommand('copy');
+        alert("✅ 定制提示词已复制！\n本次目标：【" + targetWeekText + "】\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
         this.aiPromptModal.show = false;
       } catch (err) {
         alert("复制失败，请长按手动复制");
@@ -2244,7 +2366,7 @@ createApp({
       
       let html = `
         <div style="padding: 40px; box-sizing: border-box; height: 100%; display: flex; flex-direction: column; background: #fff;">
-          <div style="text: 3px solid #e6703b; padding-bottom: 20px; margin-bottom: 20px;">
+          <div style="text-align: center; border-bottom: 3px solid #e6703b; padding-bottom: 20px; margin-bottom: 20px;">
             <h1 style="font-size: 32px; color: #333; margin-bottom: 10px;">🛒 家庭大采购清单</h1>
             <div style="font-size: 16px; color: #666;">生成日期：${new Date().toLocaleDateString()} | 已自动核算库存，周末去一趟买齐</div>
           </div>
