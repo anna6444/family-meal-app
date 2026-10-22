@@ -119,21 +119,6 @@
     .tool-tag { background: #e6f0fa; color: #2b579b; }
     .time-tag { background: #fdf3d8; color: #b6862c; }
 
-    /* AI 聊天界面 */
-    .chat-wrapper { position: fixed; inset: 0; background: #f4f1ea; z-index: 150; display: flex; flex-direction: column; }
-    .chat-header { background: #fff; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; flex-shrink: 0; padding-top: calc(16px + env(safe-area-inset-top)); }
-    .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 15px; }
-    .chat-messages { flex: 1; overflow-y: auto; padding-bottom: 20px; }
-    .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; margin-bottom: 12px; font-size: 15px; line-height: 1.6; word-wrap: break-word; white-space: pre-wrap; }
-    .chat-user { background: #e6703b; color: #fff; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; }
-    .chat-ai { background: #fff; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; }
-    
-    .import-btn { display: inline-block; margin-top: 10px; padding: 6px 12px; background: #eaf6ec; color: #2b703b; border: 1px solid #cce5d2; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
-    .import-btn:active { background: #d1ead7; }
-    .chat-input-area { display: flex; align-items: center; gap: 8px; background: #fff; padding: 8px 12px; border-radius: 20px; margin-top: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: calc(10px + env(safe-area-inset-bottom)); }
-    .chat-input-area input { flex: 1; border: none; outline: none; font-size: 15px; background: transparent; padding: 8px 4px; margin: 0; line-height: 1.5; }
-    .chat-send-btn { padding: 8px 16px; border-radius: 14px; background: #e6703b; color: #fff; border: none; font-weight: 600; flex-shrink: 0; }
-
     .quick-btn { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 4px 8px; font-size: 13px; color: #555; cursor: pointer; }
     .quick-btn:active { background: #f0f0f0; }
 
@@ -183,6 +168,7 @@
         </div>
 
         <div class="card-subtitle" style="margin-top: 14px;">今日就餐人员</div>
+        <!-- 排班防崩溃处理 -->
         <div v-for="m in todayMembers" :key="m.key" class="list-row">
           <div style="display: flex; align-items: center;">
             <span style="margin-right: 8px;">{{m.icon}} {{m.name}}</span>
@@ -200,21 +186,21 @@
         <div v-if="homeCurrentDayDishes">
           <div class="menu-preview-section">
             <div class="menu-preview-title">🌅 早餐</div>
-            <div class="menu-preview-row"><span style="font-weight:600;">全家共享：</span>{{ homeCurrentDayDishes.breakfast.map(d => d.name).join('、') || '暂无安排' }}</div>
+            <div class="menu-preview-row"><span style="font-weight:600;">全家共享：</span>{{ (homeCurrentDayDishes.breakfast || []).map(d => d.name).join('、') || '暂无安排' }}</div>
             <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span style="font-weight:600;">👩 妈妈（早班外带）：</span>前一晚备好装盒</div>
           </div>
           <div class="menu-preview-section">
             <div class="menu-preview-title">☀️ 午餐</div>
-            <div class="menu-preview-row"><span style="font-weight:600;">👧 姐姐（回家）：</span>{{ homeCurrentDayDishes.lunch.map(d => d.name).join('、') || '暂无安排' }}</div>
+            <div class="menu-preview-row"><span style="font-weight:600;">👧 姐姐（回家）：</span>{{ (homeCurrentDayDishes.lunch || []).map(d => d.name).join('、') || '暂无安排' }}</div>
             <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span style="font-weight:600;">👩 妈妈（早班）：</span>午餐在家或单位吃（按实际排班）</div>
-            <div class="menu-preview-row" style="color:#c46838" v-else><span style="font-weight:600;">👩 妈妈（下午班）：</span>{{ homeCurrentDayDishes.lunch.map(d => d.name).join('、') || '暂无安排' }}</div>
+            <div class="menu-preview-row" style="color:#c46838" v-else><span style="font-weight:600;">👩 妈妈（下午班）：</span>{{ (homeCurrentDayDishes.lunch || []).map(d => d.name).join('、') || '暂无安排' }}</div>
           </div>
           <div class="menu-preview-section">
             <div class="menu-preview-title">🌙 晚餐</div>
-            <div class="menu-preview-row"><span style="font-weight:600;">👨‍👩‍👧‍👦 全家：</span>{{ homeCurrentDayDishes.dinner.map(d => d.name).join('、') || '暂无安排' }}</div>
+            <div class="menu-preview-row"><span style="font-weight:600;">👨‍👩‍👧‍👦 全家：</span>{{ (homeCurrentDayDishes.dinner || []).map(d => d.name).join('、') || '暂无安排' }}</div>
             <div class="menu-preview-row" style="color:#c46838"><span style="font-weight:600;">👦 弟弟专属：</span>肉丸/菜肴中混入菠菜碎+胡萝卜碎（隐形蔬菜）</div>
           </div>
-          <div class="menu-preview-section" v-if="homeCurrentDayDishes.soup && homeCurrentDayDishes.soup.length > 0">
+          <div class="menu-preview-section" v-if="(homeCurrentDayDishes.soup || []).length > 0">
             <div class="menu-preview-title">🍲 炖汤/甜品</div>
             <div class="menu-preview-row" v-for="soup in homeCurrentDayDishes.soup" :key="soup.id">
               👉 {{soup.name}}（{{soup.tool}} {{soup.time}}）
@@ -248,7 +234,8 @@
       </div>
 
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <h3 style="font-size:16px; color:#c46838;">📅 {{displayWeekDates[selDateIdx].week}}菜单</h3>
+        <!-- 防崩溃处理 -->
+        <h3 style="font-size:16px; color:#c46838;">📅 {{ displayWeekDates[selDateIdx] ? displayWeekDates[selDateIdx].week : '' }}菜单</h3>
       </div>
       
       <div v-if="currentDayDishes">
@@ -257,7 +244,7 @@
           🌅 早餐 
           <button class="btn small secondary" style="float: right; font-size: 12px; padding: 4px 8px;" @click="openTakeoutModal">🛒 记录外买</button>
         </div>
-        <div v-if="currentDayDishes.breakfast.length === 0" class="empty-text" style="padding: 10px;">暂无早餐安排</div>
+        <div v-if="(currentDayDishes.breakfast || []).length === 0" class="empty-text" style="padding: 10px;">暂无早餐安排</div>
         <div v-for="(dish, idx) in currentDayDishes.breakfast" :key="dish.id" class="dish-card" :style="dish.skipped ? 'opacity: 0.5; background: #f0f0f0;' : ''">
           <div class="dish-header">
             <div>
@@ -266,13 +253,13 @@
               <span v-if="dish.skipped" class="tag red">已跳过</span>
               <button class="replace-btn" @click="openReplaceModal('breakfast', idx)" v-if="!dish.skipped">🔄 替换</button>
             </div>
-            <span class="tag green">{{dish.tag}}</span>
+            <span class="tag green">{{ dish.tag || '日常' }}</span>
           </div>
           <div class="tool-time-row">
-            <span class="tool-tag">🛠️ {{dish.tool}}</span>
-            <span class="time-tag">⏱️ {{dish.time}}</span>
+            <span class="tool-tag">🛠️ {{ dish.tool || '无' }}</span>
+            <span class="time-tag">⏱️ {{ dish.time || '未知' }}</span>
           </div>
-          <div class="card-subtitle" style="margin-top: 10px;">食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+          <div class="card-subtitle" style="margin-top: 10px;">食材：{{ (dish.ingredients || []).map(i => i.name + ' ' + i.weight + 'g').join('，') || '无' }}</div>
           
           <div class="portion-box" v-if="dish.portions && Object.keys(dish.portions).length > 0">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议</div>
@@ -290,7 +277,7 @@
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;" v-if="!dish.skipped">
             <b>小白做法：</b><br/>
-            <span v-for="(step, sIdx) in dish.steps" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
+            <span v-for="(step, sIdx) in (dish.steps || [])" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
           </div>
           <div style="margin-top:14px; display: flex; gap: 10px;" v-if="!dish.skipped">
             <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
@@ -307,7 +294,7 @@
 
         <!-- 午餐 -->
         <div class="meal-title">☀️ 午餐</div>
-        <div v-if="currentDayDishes.lunch.length === 0" class="empty-text" style="padding: 10px;">暂无午餐安排</div>
+        <div v-if="(currentDayDishes.lunch || []).length === 0" class="empty-text" style="padding: 10px;">暂无午餐安排</div>
         <div v-for="(dish, idx) in currentDayDishes.lunch" :key="dish.id" class="dish-card" :style="dish.skipped ? 'opacity: 0.5; background: #f0f0f0;' : ''">
           <div class="dish-header">
             <div>
@@ -315,13 +302,13 @@
               <span v-if="dish.skipped" class="tag red">已跳过</span>
               <button class="replace-btn" @click="openReplaceModal('lunch', idx)" v-if="!dish.skipped">🔄 替换</button>
             </div>
-            <span class="tag green">{{dish.tag}}</span>
+            <span class="tag green">{{ dish.tag || '日常' }}</span>
           </div>
           <div class="tool-time-row">
-            <span class="tool-tag">🛠️ {{dish.tool}}</span>
-            <span class="time-tag">⏱️ {{dish.time}}</span>
+            <span class="tool-tag">🛠️ {{ dish.tool || '无' }}</span>
+            <span class="time-tag">⏱️ {{ dish.time || '未知' }}</span>
           </div>
-          <div class="card-subtitle" style="margin-top: 10px;">食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+          <div class="card-subtitle" style="margin-top: 10px;">食材：{{ (dish.ingredients || []).map(i => i.name + ' ' + i.weight + 'g').join('，') || '无' }}</div>
           
           <div class="portion-box" v-if="dish.portions && Object.keys(dish.portions).length > 0">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议</div>
@@ -339,7 +326,7 @@
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;" v-if="!dish.skipped">
             <b>小白做法：</b><br/>
-            <span v-for="(step, sIdx) in dish.steps" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
+            <span v-for="(step, sIdx) in (dish.steps || [])" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
           </div>
           <div style="margin-top:14px; display: flex; gap: 10px;" v-if="!dish.skipped">
             <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
@@ -356,7 +343,7 @@
 
         <!-- 晚餐 -->
         <div class="meal-title">🌙 晚餐</div>
-        <div v-if="currentDayDishes.dinner.length === 0" class="empty-text" style="padding: 10px;">暂无晚餐安排</div>
+        <div v-if="(currentDayDishes.dinner || []).length === 0" class="empty-text" style="padding: 10px;">暂无晚餐安排</div>
         <div v-for="(dish, idx) in currentDayDishes.dinner" :key="dish.id" class="dish-card" :style="dish.skipped ? 'opacity: 0.5; background: #f0f0f0;' : ''">
           <div class="dish-header">
             <div>
@@ -364,13 +351,13 @@
               <span v-if="dish.skipped" class="tag red">已跳过</span>
               <button class="replace-btn" @click="openReplaceModal('dinner', idx)" v-if="!dish.skipped">🔄 替换</button>
             </div>
-            <span class="tag green">{{dish.tag}}</span>
+            <span class="tag green">{{ dish.tag || '日常' }}</span>
           </div>
           <div class="tool-time-row">
-            <span class="tool-tag">🛠️ {{dish.tool}}</span>
-            <span class="time-tag">⏱️ {{dish.time}}</span>
+            <span class="tool-tag">🛠️ {{ dish.tool || '无' }}</span>
+            <span class="time-tag">⏱️ {{ dish.time || '未知' }}</span>
           </div>
-          <div class="card-subtitle" style="margin-top: 10px;">食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+          <div class="card-subtitle" style="margin-top: 10px;">食材：{{ (dish.ingredients || []).map(i => i.name + ' ' + i.weight + 'g').join('，') || '无' }}</div>
           
           <div class="portion-box" v-if="dish.portions && Object.keys(dish.portions).length > 0">
             <div class="portion-title">👨‍👩‍👧‍👦 分餐建议</div>
@@ -388,7 +375,7 @@
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;" v-if="!dish.skipped">
             <b>小白做法：</b><br/>
-            <span v-for="(step, sIdx) in dish.steps" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
+            <span v-for="(step, sIdx) in (dish.steps || [])" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
           </div>
           <div style="margin-top:14px; display: flex; gap: 10px;" v-if="!dish.skipped">
             <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
@@ -405,7 +392,7 @@
         
         <!-- 汤羹 -->
         <div class="meal-title">🍲 炖汤/甜品</div>
-        <div v-if="!currentDayDishes.soup || currentDayDishes.soup.length === 0" class="empty-text" style="padding: 10px;">暂无汤羹安排</div>
+        <div v-if="!(currentDayDishes.soup || []).length" class="empty-text" style="padding: 10px;">暂无汤羹安排</div>
         <div v-for="(dish, idx) in currentDayDishes.soup" :key="dish.id" class="dish-card" :style="dish.skipped ? 'opacity: 0.5; background: #f0f0f0;' : ''">
           <div class="dish-header">
             <div>
@@ -413,13 +400,13 @@
               <span v-if="dish.skipped" class="tag red">已跳过</span>
               <button class="replace-btn" @click="openReplaceModal('soup', idx)" v-if="!dish.skipped">🔄 替换</button>
             </div>
-            <span class="tag blue">{{dish.tag}}</span>
+            <span class="tag blue">{{ dish.tag || '汤羹' }}</span>
           </div>
           <div class="tool-time-row">
-            <span class="tool-tag">🛠️ {{dish.tool}}</span>
-            <span class="time-tag">⏱️ {{dish.time}}</span>
+            <span class="tool-tag">🛠️ {{ dish.tool || '无' }}</span>
+            <span class="time-tag">⏱️ {{ dish.time || '未知' }}</span>
           </div>
-          <div class="card-subtitle" style="margin-top: 10px;">食材：{{dish.ingredients.map(i => i.name + ' ' + i.weight + 'g').join('，')}}</div>
+          <div class="card-subtitle" style="margin-top: 10px;">食材：{{ (dish.ingredients || []).map(i => i.name + ' ' + i.weight + 'g').join('，') || '无' }}</div>
           
           <div v-if="getDishWarning(dish).length > 0" class="health-alert">
             <div>
@@ -429,7 +416,7 @@
 
           <div style="font-size:14px;line-height:1.7;margin-top:8px;" v-if="!dish.skipped">
             <b>小白做法：</b><br/>
-            <span v-for="(step, sIdx) in dish.steps" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
+            <span v-for="(step, sIdx) in (dish.steps || [])" :key="sIdx">{{sIdx+1}}.{{step}}<br/></span>
           </div>
           <div style="margin-top:14px; display: flex; gap: 10px;" v-if="!dish.skipped">
             <button class="btn small secondary" @click="completeDish(dish)" :disabled="dish.completed">
@@ -766,7 +753,7 @@
       <div v-else style="display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto;">
         <div v-for="recipe in recommendModal.list" :key="recipe.name" style="border: 1px solid #eee; padding: 12px; border-radius: 12px;">
           <div style="font-weight: 600; color: #c46838; margin-bottom: 4px;">🍲 {{recipe.name}}</div>
-          <div style="font-size: 13px; color: #666;">食材：{{recipe.ingredients.map(i => i.name).join('、')}}</div>
+          <div style="font-size: 13px; color: #666;">食材：{{(recipe.ingredients || []).map(i => i.name).join('、')}}</div>
           <div style="font-size: 12px; color: #999; margin-top: 4px;">工具：{{recipe.tool}} | 耗时：{{recipe.time}}</div>
         </div>
       </div>
@@ -1209,6 +1196,7 @@ createApp({
     },
     currentDayDishes() {
       const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      if (!weekMenu || !Array.isArray(weekMenu)) return { breakfast: [], lunch: [], dinner: [], soup: [] };
       return weekMenu[this.selDateIdx] || { breakfast: [], lunch: [], dinner: [], soup: [] };
     },
     filteredRawList(){ const kw = this.searchIng.trim().toLowerCase(); let list = kw ? this.rawIngList.filter(i => i.name.toLowerCase().includes(kw)) : this.rawIngList; return list.sort((a, b) => this.getRemainingDays(a) - this.getRemainingDays(b)); },
@@ -1254,8 +1242,8 @@ createApp({
     tonightPrepReminder() {
       if (!this.currentDayDishes) return '';
       let reminders = [];
-      const allDishes = [...this.currentDayDishes.breakfast, ...this.currentDayDishes.lunch, ...this.currentDayDishes.dinner];
-      allDishes.forEach(dish => { dish.ingredients.forEach(ing => { if (['牛腩', '鸡翅', '龙利鱼柳', '虾仁', '猪肉丸'].some(m => ing.name.includes(m))) reminders.push(ing.name); }); });
+      const allDishes = [...(this.currentDayDishes.breakfast || []), ...(this.currentDayDishes.lunch || []), ...(this.currentDayDishes.dinner || [])];
+      allDishes.forEach(dish => { (dish.ingredients || []).forEach(ing => { if (['牛腩', '鸡翅', '龙利鱼柳', '虾仁', '猪肉丸'].some(m => ing.name.includes(m))) reminders.push(ing.name); }); });
       if (reminders.length > 0) return `请把明天要用的 ${[...new Set(reminders)].join('、')} 从冷冻室拿到冷藏室解冻。`;
       return '';
     },
@@ -1279,10 +1267,16 @@ createApp({
       const isBrotherHoliday = this.brotherHolidays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
       const result = [];
 
+      // 统一日期格式，解决 iOS 时区差一天问题
+      const parseDateSafe = (str) => {
+        if(!str) return new Date();
+        return new Date(str.replace(/-/g, '/'));
+      };
+
       // 爸爸排班
       const dadConfig = this.scheduleConfig.dad;
-      const dadStart = new Date(dadConfig.startDate);
-      const dadDiffDays = Math.floor((targetDate - dadStart) / (1000 * 60 * 60 * 24));
+      const dadStart = parseDateSafe(dadConfig.startDate);
+      const dadDiffDays = Math.round((targetDate - dadStart) / (1000 * 60 * 60 * 24));
       const dadCycle = dadConfig.homeDays + dadConfig.awayDays;
       const dadDayInCycle = ((dadDiffDays % dadCycle) + dadCycle) % dadCycle;
       let dadMeals = []; let dadStatus = ""; let dadStatusClass = "";
@@ -1292,14 +1286,14 @@ createApp({
       else { dadMeals = []; dadStatus = '全天上班'; dadStatusClass = 'status-work'; }
       result.push({ key: 'dad', name: '爸爸', icon: '👨', status: dadStatus, statusClass: dadStatusClass, meals: dadMeals, dateStr: targetDateStr });
 
-      // 妈妈排班（修复版，读取 firstShift）
+      // 妈妈排班（修复版，读取 firstShift 且解决时区）
       let momMeals = []; let momStatus = ""; let momStatusClass = "";
       if (isMomRest) { 
         momMeals = ['早', '午', '晚']; momStatus = '休息日'; momStatusClass = 'status-rest'; 
       } else {
         const momConfig = this.scheduleConfig.mom;
-        const momStart = new Date(momConfig.startDate);
-        const momDiffDays = Math.floor((targetDate - momStart) / (1000 * 60 * 60 * 24));
+        const momStart = parseDateSafe(momConfig.startDate);
+        const momDiffDays = Math.round((targetDate - momStart) / (1000 * 60 * 60 * 24));
         const momDayInCycle = ((momDiffDays % 2) + 2) % 2;
         
         let isMorningShift = (momConfig.firstShift === 'morning' && momDayInCycle === 0) || (momConfig.firstShift !== 'morning' && momDayInCycle === 1);
@@ -1347,10 +1341,7 @@ createApp({
       }
     },
 
-    // 新功能：记录外买早餐
-    openTakeoutModal() {
-      this.takeoutModal = { show: true, name: '' };
-    },
+    openTakeoutModal() { this.takeoutModal = { show: true, name: '' }; },
     saveTakeout() {
       if (!this.takeoutModal.name.trim()) { alert("请输入外买了什么"); return; }
       const newDish = {
@@ -1358,13 +1349,13 @@ createApp({
         ingredients: [], steps: ["直接食用，可搭配家里现有的水果/牛奶/鸡蛋。"], portions: {}, isTakeout: true,
         completed: false, skipped: false, feedback: ''
       };
+      if(!this.currentDayDishes.breakfast) this.currentDayDishes.breakfast = [];
       this.currentDayDishes.breakfast.push(newDish);
       this.takeoutModal.show = false;
       alert("✅ 已记录外买并加入今日早餐！");
       this.pushToCloud();
     },
 
-    // 新功能：采购完毕自动入库
     finishPurchase() {
       const boughtItems = this.shoppingList.filter(i => i.bought);
       if (boughtItems.length === 0) {
@@ -1376,7 +1367,6 @@ createApp({
       let count = 0;
       
       boughtItems.forEach(item => {
-        // 智能判断入库到哪个库
         let targetLib = this.rawIngList;
         if (/果|莓|蕉|橘|橙|梨|桃|瓜/.test(item.name)) targetLib = this.fruitList;
         else if (/零食|坚果|饼干|酸奶/.test(item.name)) targetLib = this.snackList;
@@ -1385,8 +1375,7 @@ createApp({
         const existing = targetLib.find(i => i.name === item.name);
         if (existing) {
           existing.weight += item.weight;
-          existing.buyDate = todayStr; // 更新购买日期
-          // 稍微延长一点保质期（因为是新买的）
+          existing.buyDate = todayStr; 
           if (existing.expireDay < 7) existing.expireDay = 7; 
         } else {
           targetLib.push({ name: item.name, weight: item.weight, expireDay: 7, buyDate: todayStr, icon: '🍽️' });
@@ -1394,7 +1383,6 @@ createApp({
         count++;
       });
       
-      // 从购物清单中移除已买的
       this.shoppingList = this.shoppingList.filter(i => !i.bought);
       this.pushToCloud();
       alert(`✅ 采购完成！已将 ${count} 项食材自动补充进食材库。`);
@@ -1438,7 +1426,7 @@ createApp({
           rawIngList: this.rawIngList, fruitList: this.fruitList, snackList: this.snackList, preIngList: this.preIngList,
           weekMenuData: this.weekMenuData, memberData: this.memberData, memberTempStatus: this.memberTempStatus, memberTaboo: this.memberTaboo,
           momRestDays: this.momRestDays, sisterHolidays: this.sisterHolidays, brotherHolidays: this.brotherHolidays, historyData: this.historyData,
-          scheduleConfig: this.scheduleConfig // 修复：加入排班配置同步
+          scheduleConfig: this.scheduleConfig
         };
         const { error } = await this.supabaseClient.from('family_dashboard').update({ payload: payload, updated_at: new Date().toISOString() }).eq('id', 'family_data');
         if (error) throw error;
@@ -1456,7 +1444,20 @@ createApp({
           if (p.fruitList) this.fruitList = p.fruitList;
           if (p.snackList) this.snackList = p.snackList;
           if (p.preIngList) this.preIngList = p.preIngList;
-          if (p.weekMenuData) this.weekMenuData = p.weekMenuData;
+          if (p.weekMenuData) {
+             // 为旧数据补充缺失字段，防止白屏
+             const fixMenu = (menu) => {
+               if(!menu || !Array.isArray(menu)) return Array(7).fill(null).map(() => ({ breakfast: [], lunch: [], dinner: [], soup: [] }));
+               return menu.map(day => ({
+                 breakfast: (day.breakfast || []).map(d => ({...d, ingredients: d.ingredients || [], steps: d.steps || [], tag: d.tag || '日常'})),
+                 lunch: (day.lunch || []).map(d => ({...d, ingredients: d.ingredients || [], steps: d.steps || [], tag: d.tag || '日常'})),
+                 dinner: (day.dinner || []).map(d => ({...d, ingredients: d.ingredients || [], steps: d.steps || [], tag: d.tag || '日常'})),
+                 soup: (day.soup || []).map(d => ({...d, ingredients: d.ingredients || [], steps: d.steps || [], tag: d.tag || '日常'}))
+               }));
+             };
+             this.weekMenuData.current = fixMenu(p.weekMenuData.current);
+             this.weekMenuData.next = fixMenu(p.weekMenuData.next);
+          }
           if (p.memberData) this.memberData = p.memberData;
           if (p.memberTempStatus) this.memberTempStatus = p.memberTempStatus;
           if (p.memberTaboo) this.memberTaboo = p.memberTaboo;
@@ -1464,7 +1465,7 @@ createApp({
           if (p.sisterHolidays) this.sisterHolidays = p.sisterHolidays;
           if (p.brotherHolidays) this.brotherHolidays = p.brotherHolidays;
           if (p.historyData) this.historyData = p.historyData;
-          if (p.scheduleConfig) this.scheduleConfig = p.scheduleConfig; // 修复：拉取排班配置
+          if (p.scheduleConfig) this.scheduleConfig = p.scheduleConfig;
           if (!isSilent) alert("✅ 数据已从云端更新到本地！");
           this.showSyncSettingsModal = false;
         } else {
@@ -1581,21 +1582,19 @@ createApp({
     recalculateShoppingList() {
       let neededMap = {};
       const nextMenu = this.weekMenuData.next;
-      // 保留已勾选的状态
       const oldBoughtMap = {};
       this.shoppingList.forEach(i => { if (i.bought) oldBoughtMap[i.name] = true; });
 
       nextMenu.forEach(dayMenu => {
         ['breakfast', 'lunch', 'dinner', 'soup'].forEach(meal => {
           dayMenu[meal].forEach(dish => {
-            if (!dish.skipped) dish.ingredients.forEach(ing => { if (!neededMap[ing.name]) neededMap[ing.name] = 0; neededMap[ing.name] += ing.weight; });
+            if (!dish.skipped) (dish.ingredients || []).forEach(ing => { if (!neededMap[ing.name]) neededMap[ing.name] = 0; neededMap[ing.name] += ing.weight; });
           });
         });
       });
       
       let newShoppingList = []; let itemId = 1;
       
-      // 扫描“明天”的缺口（动态截胡）
       const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowIdx = (tomorrow.getDay() + 6) % 7;
       const tomorrowMenu = this.weekMenuData.current[tomorrowIdx];
@@ -1603,7 +1602,7 @@ createApp({
       if (tomorrowMenu) {
         ['breakfast', 'lunch', 'dinner', 'soup'].forEach(meal => {
           tomorrowMenu[meal].forEach(dish => {
-            if (!dish.skipped) dish.ingredients.forEach(ing => { if (!tomorrowNeeded[ing.name]) tomorrowNeeded[ing.name] = 0; tomorrowNeeded[ing.name] += ing.weight; });
+            if (!dish.skipped) (dish.ingredients || []).forEach(ing => { if (!tomorrowNeeded[ing.name]) tomorrowNeeded[ing.name] = 0; tomorrowNeeded[ing.name] += ing.weight; });
           });
         });
       }
@@ -1615,7 +1614,6 @@ createApp({
         
         if (buyWeight > 0) {
           let category = 'weekend';
-          // 易坏食材强制放入 daily
           const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬', '雪梨', '蕉', '莓', '葡萄', '菠菜', '生菜'];
           if (dailyKeywords.some(k => name.includes(k))) category = 'daily';
           
@@ -1624,18 +1622,13 @@ createApp({
           else if (/饺|丸|排|翅|冻|冰淇淋|汤圆/.test(name)) area = '冷冻区';
           else if (/油|盐|酱|醋|糖|椒|粉|料|酒|桂|角/.test(name)) area = '调料区';
 
-          // 判断是否为明日急用
           let isUrgent = false;
           if (tomorrowNeeded[name] && buyWeight > 0) {
             isUrgent = true;
-            category = 'daily'; // 急用的强制进日常
+            category = 'daily';
           }
           
-          newShoppingList.push({ 
-            id: itemId++, name: name, weight: buyWeight, category: category, area: area, 
-            bought: oldBoughtMap[name] || false, // 恢复已买状态
-            isUrgent: isUrgent
-          });
+          newShoppingList.push({ id: itemId++, name: name, weight: buyWeight, category: category, area: area, bought: oldBoughtMap[name] || false, isUrgent: isUrgent });
         }
       }
       
@@ -1701,7 +1694,7 @@ createApp({
     completeDish(dish) {
       if (dish.completed || dish.skipped) return;
       let deductedList = []; let missingList = [];
-      dish.ingredients.forEach(ing => {
+      (dish.ingredients || []).forEach(ing => {
         let target = this.rawIngList.find(i => i.name === ing.name) || this.fruitList.find(i => i.name === ing.name) || this.snackList.find(i => i.name === ing.name) || this.preIngList.find(i => i.name === ing.name);
         if (target) {
           if (target.weight >= ing.weight) { target.weight -= ing.weight; deductedList.push(ing.name + " " + ing.weight + "g"); } 
