@@ -2,11 +2,9 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <!-- 💡 修改：禁止用户缩放，适配 iOS 刘海屏 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>家庭膳食工作台</title>
   
-  <!-- 💡 新增：PWA 配置 -->
   <link rel="manifest" href="manifest.json">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -91,7 +89,7 @@
 
     .health-alert { background: #fff8f8; border: 1px dashed #fce8e8; border-radius: 12px; padding: 12px; margin-top: 12px; color: #d14a4a; font-size: 13px; font-weight: 500; display: flex; align-items: flex-start; gap: 8px; position: relative; }
     
-    /* 💡 新增：关闭按钮样式 */
+    /* 关闭按钮样式 */
     .close-alert-btn { position: absolute; top: 8px; right: 12px; background: none; border: none; font-size: 20px; color: #d14a4a; line-height: 1; opacity: 0.6; cursor: pointer; padding: 4px; }
     .close-alert-btn:active { opacity: 1; }
 
@@ -175,14 +173,15 @@
     <!-- 首页 -->
     <div v-if="view === 'home'">
 
-      <div v-if="smartShoppingReminder" class="health-alert" style="background: #eaf6ec; border-color: #cce5d2; color: #2b703b; font-size: 15px; border-radius: 16px; padding: 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between;">
-        <div><b>{{ smartShoppingReminder }}</b></div>
-        <button class="btn small" style="background: #2b703b; white-space: nowrap;" @click="view = 'todo'; todoTab = 'weekend'">去导出清单</button>
+      <!-- 💡 周末采购提醒，增加关闭按钮 -->
+      <div v-if="smartShoppingReminder && showShoppingReminder" class="health-alert" style="background: #eaf6ec; border-color: #cce5d2; color: #2b703b; font-size: 15px; border-radius: 16px; padding: 16px; padding-right: 45px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; position: relative;">
+        <button class="close-alert-btn" style="color: #2b703b; z-index: 999; right: 10px; top: 10px; font-size: 24px; font-weight: bold;" @click.stop="closeShoppingReminder">×</button>
+        <div style="flex: 1;"><b>{{ smartShoppingReminder }}</b></div>
+        <button class="btn small" style="background: #2b703b; white-space: nowrap; margin-left: 10px;" @click="view = 'todo'; todoTab = 'weekend'">去导出清单</button>
       </div>
 
-      <!-- 💡 修改：冰箱告急倒计时（增加关闭和推荐按钮） -->
+      <!-- 💡 冰箱告急倒计时（增加关闭和推荐按钮） -->
       <div v-if="expiringItems.length > 0 && showExpiryAlert" class="health-alert" style="background: #fff0f0; border: 1px solid #fce8e8; color: #d14a4a; margin-bottom: 16px; flex-direction: column; align-items: stretch; border-radius: 16px;">
-        <!-- 关闭按钮 -->
         <button class="close-alert-btn" @click="closeExpiryAlert">×</button>
         
         <div style="font-weight: 600; margin-bottom: 8px; font-size: 15px;">🚨 冰箱告急：以下食材快过期，请尽快食用！</div>
@@ -191,7 +190,6 @@
             {{ item.name }} (剩 {{ getRemainingDays(item) }} 天)
           </span>
         </div>
-        <!-- 智能推荐按钮 -->
         <button class="btn small" style="background: #2b703b; width: 100%; font-weight: 600;" @click="recommendRecipesByExpiring">
           ✨ 智能推荐消耗菜谱
         </button>
@@ -478,8 +476,8 @@
         <div class="switch-btn" :class="{active:todoTab==='weekend'}" @click="todoTab='weekend'">🛒 周末大采购</div>
       </div>
 
-            <div v-if="todoTab === 'daily'">
-        <!-- 💡 替换成了按早中晚拆分的明日待买清单 -->
+      <div v-if="todoTab === 'daily'">
+        <!-- 💡 明日备餐早中晚拆分 -->
         <div class="card" style="border: 2px solid #e6703b; padding: 16px;">
           <h2 style="color: #e6703b; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <span>🛒 明日备餐食材采购</span>
@@ -789,7 +787,7 @@
     </div>
   </div>
 
-  <!-- 💡 新增：记录外买早餐弹窗 -->
+  <!-- 记录外买早餐弹窗 -->
   <div class="modal-mask" v-if="takeoutModal.show" @click.self="takeoutModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">🛒 记录外买早餐</h3>
@@ -808,7 +806,7 @@
     </div>
   </div>
 
-  <!-- 💡 新增：智能推荐消耗菜谱弹窗 -->
+  <!-- 智能推荐消耗菜谱弹窗 -->
   <div class="modal-mask" v-if="recommendModal.show" @click.self="recommendModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">✨ 智能推荐消耗菜谱</h3>
@@ -1291,6 +1289,7 @@ createApp({
       // 💡 新增：控制告急框和推荐弹窗的变量
       showExpiryAlert: true,
       hideAlertDate: localStorage.getItem('hideAlertDate') || '',
+      showShoppingReminder: true, // 💡 新增：控制周末采购提醒的显示
       recommendModal: { show: false, list: [] },
       
       takeoutModal: { show: false, name: '' },
@@ -1369,10 +1368,13 @@ createApp({
         { name: "嫩豆腐", weight: 200, expireDay: 3, buyDate: todayStr }
       ],
       fruitList: [
-        { name: "苹果", weight: 1200, expireDay: 7, buyDate: todayStr, icon: "🍎" },
-        { name: "香蕉", weight: 750, expireDay: 2, buyDate: todayStr, icon: "🍌" },
-        { name: "橙子", weight: 1000, expireDay: 10, buyDate: todayStr, icon: "🍊" },
-        { name: "葡萄", weight: 500, expireDay: 3, buyDate: todayStr, icon: "🍇" }
+        { name: "苹果", weight: 1000, expireDay: 15, buyDate: todayStr, icon: "🍎" },
+        { name: "香蕉", weight: 500, expireDay: 5, buyDate: todayStr, icon: "🍌" },
+        { name: "橙子", weight: 1000, expireDay: 14, buyDate: todayStr, icon: "🍊" },
+        { name: "草莓", weight: 500, expireDay: 3, buyDate: todayStr, icon: "🍓" },
+        { name: "芒果", weight: 500, expireDay: 7, buyDate: todayStr, icon: "🥭" },
+        { name: "葡萄", weight: 500, expireDay: 5, buyDate: todayStr, icon: "🍇" },
+        { name: "小西红柿", weight: 500, expireDay: 7, buyDate: todayStr, icon: "🍅" }
       ],
       snackList: [
         { name: "原味核桃", weight: 200, expireDay: 30, buyDate: todayStr, icon: "🌰" },
@@ -1392,40 +1394,71 @@ createApp({
       
       recipeLibrary: {
         breakfast: [
+          // --- 经典快手搭配 ---
           { name: "燕麦牛奶粥+水煮蛋", tag: "高钙·快手", tool: "奶锅", time: "10分钟", ingredients: [{name:'燕麦', weight:200}, {name:'牛奶', weight:1000}, {name:'鸡蛋', weight:300}], steps: ['燕麦加水煮开', '倒入牛奶小火煮3分钟', '鸡蛋冷水下锅煮8分钟'], portions: { dad: '1碗+1个蛋', mom: '1碗+1个蛋', sister: '1碗+1个蛋', brother: '半碗+1个蛋' } },
           { name: "全麦面包+无糖酸奶+坚果", tag: "快手·优质脂肪", tool: "微波炉", time: "5分钟", ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], steps: ['面包微波加热30秒', '搭配酸奶', '坚果碾碎撒入'], portions: { dad: '2片+100g酸奶', mom: '2片+100g酸奶', sister: '2片+100g酸奶', brother: '1片+100g酸奶' } },
           { name: "紫薯小米粥+煎蛋", tag: "养胃·粗粮", tool: "电饭煲/平底锅", time: "25分钟", ingredients: [{name:'紫薯', weight:200}, {name:'小米', weight:100}, {name:'鸡蛋', weight:200}], steps: ['紫薯切块和小米同煮20分钟', '平底锅少油煎蛋'], portions: { dad: '1碗+1个蛋', mom: '1碗+1个蛋', sister: '1碗+1个蛋', brother: '半碗+1个蛋' } },
-          { name: "番茄鸡蛋面", tag: "营养均衡", tool: "炒锅", time: "15分钟", ingredients: [{name:'番茄', weight:200}, {name:'鸡蛋', weight:150}, {name:'面条', weight:250}], steps: ['番茄炒出汁', '加水烧开下面条', '淋入蛋液'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' } }
+          { name: "番茄鸡蛋面", tag: "营养均衡", tool: "炒锅", time: "15分钟", ingredients: [{name:'番茄', weight:200}, {name:'鸡蛋', weight:150}, {name:'面条', weight:250}], steps: ['番茄炒出汁', '加水烧开下面条', '淋入蛋液'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' } },
+          
+          // --- 闽北特色早餐 ---
+          { name: "茶树菇瘦肉煮粉", tag: "鲜香·快手", tool: "炒锅", time: "15分钟", ingredients: [{name:'干茶树菇', weight:20}, {name:'瘦猪肉', weight:100}, {name:'粉干/面条', weight:250}, {name:'青菜', weight:100}], steps: ['茶树菇洗净温水泡发切段', '肉丝炒熟加水和茶树菇煮开', '下粉干和青菜煮熟'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗(肉菜剪碎)' } },
+          { name: "菠菜瘦肉粥", tag: "补铁·易消化", tool: "电饭煲", time: "30分钟", ingredients: [{name:'菠菜', weight:100}, {name:'瘦猪肉', weight:100}, {name:'大米', weight:150}], steps: ['大米熬成粥', '肉末炒熟放入', '最后加入切碎的菠菜'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '1碗(菠菜切极碎)' } },
+          { name: "牛油果香蕉奶昔+吐司", tag: "健脑·高能量", tool: "榨汁机", time: "10分钟", ingredients: [{name:'牛油果', weight:100}, {name:'香蕉', weight:100}, {name:'牛奶', weight:300}, {name:'全麦面包', weight:150}], steps: ['食材切块放入榨汁机', '加入牛奶打碎', '搭配烤吐司'], portions: { dad: '1杯+2片面包', mom: '1杯+1片面包', sister: '半杯+1片', brother: '半杯+半片' } },
+
+          // --- 水果季节特辑 (春季) ---
+          { name: "草莓牛奶燕麦杯+煮蛋", tag: "春季·高维C", tool: "微波炉/奶锅", time: "10分钟", ingredients: [{name:'草莓', weight:150}, {name:'牛奶', weight:400}, {name:'燕麦', weight:100}, {name:'鸡蛋', weight:150}], steps: ['燕麦加牛奶微波加热2分钟', '铺上切块的草莓', '搭配水煮蛋'], portions: { dad: '1杯+1个蛋', mom: '1杯+1个蛋', sister: '1杯+1个蛋', brother: '半杯+1个蛋' } },
+          
+          // --- 水果季节特辑 (夏季) ---
+          { name: "芒果酸奶吐司塔", tag: "夏季·清爽开胃", tool: "无", time: "5分钟", ingredients: [{name:'芒果', weight:200}, {name:'无糖酸奶', weight:300}, {name:'全麦面包', weight:200}], steps: ['芒果切丁与酸奶拌匀', '铺在烤好的面包上'], portions: { dad: '2片', mom: '2片', sister: '2片', brother: '1片(芒果切极小丁)' } },
+          { name: "香蕉松饼+纯牛奶", tag: "夏季·快手烘焙", tool: "平底锅", time: "15分钟", ingredients: [{name:'香蕉', weight:150}, {name:'鸡蛋', weight:100}, {name:'面粉', weight:100}, {name:'牛奶', weight:400}], steps: ['香蕉压泥加鸡蛋面粉搅匀', '平底锅无油小火煎成小饼', '搭配牛奶'], portions: { dad: '3块+1杯奶', mom: '2块+1杯奶', sister: '2块+1杯奶', brother: '1块+半杯奶' } },
+
+          // --- 水果季节特辑 (秋季) ---
+          { name: "蜂蜜柚子茶+全麦煎蛋三明治", tag: "秋季·润燥", tool: "平底锅", time: "10分钟", ingredients: [{name:'柚子', weight:200}, {name:'全麦面包', weight:200}, {name:'鸡蛋', weight:150}, {name:'生菜', weight:50}], steps: ['柚子剥肉泡温水(可加少许蜂蜜)', '煎鸡蛋和生菜夹入面包'], portions: { dad: '1杯+1个三明治', mom: '1杯+1个三明治', sister: '1杯+半个', brother: '半杯+半个(去生菜)' } },
+          { name: "雪梨银耳羹+肉包子(外买)", tag: "秋季·润肺止咳", tool: "电饭煲", time: "40分钟", ingredients: [{name:'雪梨', weight:200}, {name:'银耳', weight:30}, {name:'肉包子', weight:300}], steps: ['银耳提前泡发，和雪梨块炖煮出胶', '包子蒸熟搭配'], portions: { dad: '1碗+2个包子', mom: '1碗+1个包子', sister: '1碗+1个包子', brother: '半碗+1个包子' } },
+
+          // --- 水果季节特辑 (冬季) ---
+          { name: "苹果肉桂烤燕麦+热牛奶", tag: "冬季·暖身饱腹", tool: "空气炸锅/烤箱", time: "20分钟", ingredients: [{name:'苹果', weight:150}, {name:'燕麦', weight:100}, {name:'牛奶', weight:400}, {name:'鸡蛋', weight:100}], steps: ['苹果切丁混合燕麦鸡蛋液', '烤15分钟', '搭配热牛奶'], portions: { dad: '1大份', mom: '1大份', sister: '1小份', brother: '半份(苹果切极碎)' } },
+          { name: "猕猴桃果汁+水煮蛋+蒸红薯", tag: "冬季·高维C促消化", tool: "榨汁机/蒸锅", time: "15分钟", ingredients: [{name:'猕猴桃', weight:150}, {name:'鸡蛋', weight:150}, {name:'红薯', weight:300}], steps: ['猕猴桃去皮榨汁', '鸡蛋和红薯提前蒸熟'], portions: { dad: '1杯+1蛋+1个红薯', mom: '1杯+1蛋+半个红薯', sister: '1杯+1蛋+半个', brother: '半杯+1蛋+小半个' } },
+
+          // --- 新增：葡萄与小西红柿特辑 ---
+          { name: "葡萄燕麦酸奶杯", tag: "秋季·抗氧化", tool: "无", time: "5分钟", ingredients: [{name:'葡萄', weight:150}, {name:'无糖酸奶', weight:300}, {name:'燕麦', weight:50}], steps: ['燕麦铺底，倒入酸奶', '葡萄洗净对半切开铺在上面'], portions: { dad: '1杯', mom: '1杯', sister: '1杯', brother: '半杯(葡萄去籽切小丁防呛)' } },
+          { name: "小番茄芝士厚蛋烧+牛奶", tag: "四季·补钙护眼", tool: "平底锅", time: "15分钟", ingredients: [{name:'小西红柿', weight:100}, {name:'鸡蛋', weight:150}, {name:'奶酪片', weight:20}, {name:'牛奶', weight:400}], steps: ['小番茄切碎与蛋液混合', '平底锅摊成蛋饼卷入奶酪', '搭配热牛奶'], portions: { dad: '1份+1杯奶', mom: '1份+1杯奶', sister: '1份+1杯奶', brother: '半份(切小块)+半杯奶' } }
         ],
         lunchMeat: [
           { name: "番茄炖瘦牛腩", tag: "补铁·高蛋白", tool: "陶瓷锅", time: "50分钟", ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:400}], steps: ['牛腩焯水', '番茄切块', '一起炖煮40分钟'], portions: { dad: '80g', mom: '100g', sister: '60g', brother: '50g(切碎)' } },
-          { name: "清蒸鲈鱼", tag: "优质蛋白·低脂", tool: "蒸锅", time: "15分钟", ingredients: [{name:'鲈鱼', weight:600}, {name:'姜葱', weight:20}], steps: ['鱼洗净', '水开蒸8分钟', '淋豉油'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g(挑刺)' } },
-          { name: "香菇蒸鸡", tag: "补气血·低脂", tool: "蒸锅", time: "20分钟", ingredients: [{name:'鸡腿肉', weight:400}, {name:'香菇', weight:100}], steps: ['鸡肉切块腌制', '香菇切片铺底', '蒸15分钟'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g' } },
+          { name: "清蒸溪鱼（如黄骨鱼/鲫鱼）", tag: "闽北特产·健脑", tool: "蒸锅", time: "15分钟", ingredients: [{name:'溪鱼', weight:600}, {name:'姜葱', weight:20}], steps: ['鱼洗净', '水开蒸8分钟', '淋少许豉油'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g(大人挑好刺)' } },
+          { name: "香菇蒸土鸡", tag: "补气血·高蛋白", tool: "蒸锅", time: "25分钟", ingredients: [{name:'鸡腿肉/土鸡块', weight:400}, {name:'干香菇', weight:30}], steps: ['鸡肉切块腌制', '香菇泡发切片铺底', '蒸20分钟'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g(鸡肉撕碎)' } },
           { name: "芹菜炒肉丝", tag: "膳食纤维·下饭", tool: "炒锅", time: "15分钟", ingredients: [{name:'芹菜', weight:200}, {name:'瘦猪肉', weight:200}], steps: ['肉丝滑熟盛出', '芹菜炒断生', '混合翻炒'], portions: { dad: '80g肉+菜', mom: '80g肉+菜', sister: '50g肉+菜', brother: '50g(切极碎)' } },
-          { name: "虾仁滑蛋", tag: "高蛋白·易消化", tool: "炒锅", time: "10分钟", ingredients: [{name:'虾仁', weight:200}, {name:'鸡蛋', weight:200}], steps: ['虾仁焯水', '鸡蛋打散', '混合小火滑熟'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } }
+          { name: "虾仁滑蛋", tag: "高蛋白·易消化", tool: "炒锅", time: "10分钟", ingredients: [{name:'虾仁', weight:200}, {name:'鸡蛋', weight:200}], steps: ['虾仁焯水', '鸡蛋打散', '混合小火滑熟'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } },
+          { name: "芦笋炒虾仁", tag: "减脂·排毒", tool: "炒锅", time: "10分钟", ingredients: [{name:'芦笋', weight:200}, {name:'虾仁', weight:150}], steps: ['芦笋去皮切段焯水', '虾仁滑熟', '混合大火快炒'], portions: { dad: '1份', mom: '1.5份', sister: '1份', brother: '半份(芦笋切小段)' } }
         ],
         lunchVeg: [
-          { name: "清炒西兰花", tag: "维生素", tool: "炒锅", time: "10分钟", ingredients: [{name:'西兰花', weight:300}], steps: ['西兰花焯水', '蒜爆香', '翻炒出锅'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g' } },
-          { name: "蒜蓉生菜", tag: "膳食纤维", tool: "炒锅", time: "5分钟", ingredients: [{name:'生菜', weight:300}], steps: ['生菜洗净', '蒜爆香', '大火快炒'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g' } },
-          { name: "凉拌黄瓜木耳", tag: "爽口·低卡", tool: "无", time: "10分钟", ingredients: [{name:'黄瓜', weight:200}, {name:'木耳', weight:100}], steps: ['木耳泡发焯水', '黄瓜拍碎', '加生抽醋拌匀'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '少量' } },
-          { name: "胡萝卜炒鸡蛋", tag: "护眼·优质蛋白", tool: "炒锅", time: "10分钟", ingredients: [{name:'胡萝卜', weight:200}, {name:'鸡蛋', weight:150}], steps: ['鸡蛋炒熟', '胡萝卜擦丝炒软', '混合翻炒'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } }
+          { name: "清炒地瓜叶", tag: "时令绿叶·润肠", tool: "炒锅", time: "5分钟", ingredients: [{name:'地瓜叶', weight:300}, {name:'蒜', weight:10}], steps: ['地瓜叶洗净', '蒜爆香', '大火快炒出锅'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(切碎)' } },
+          { name: "蒜蓉空心菜", tag: "夏季时蔬", tool: "炒锅", time: "5分钟", ingredients: [{name:'空心菜', weight:300}], steps: ['洗净切段', '大火爆炒', '加少许盐调味'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(切碎)' } },
+          { name: "凉拌黄瓜木耳", tag: "爽口·低卡", tool: "无", time: "10分钟", ingredients: [{name:'黄瓜', weight:200}, {name:'干木耳', weight:20}], steps: ['木耳泡发焯水', '黄瓜拍碎', '加生抽醋拌匀'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '少量' } },
+          { name: "胡萝卜炒鸡蛋", tag: "护眼·优质蛋白", tool: "炒锅", time: "10分钟", ingredients: [{name:'胡萝卜', weight:200}, {name:'鸡蛋', weight:150}], steps: ['鸡蛋炒熟', '胡萝卜擦丝炒软', '混合翻炒'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } },
+          { name: "清炒春笋/冬笋", tag: "闽北特产·高纤维", tool: "炒锅", time: "15分钟", ingredients: [{name:'鲜笋', weight:300}, {name:'葱', weight:10}], steps: ['笋切片焯水去涩', '热油葱花爆香', '下笋片翻炒焖熟'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(切碎)' } }
         ],
         dinnerMeat: [
           { name: "空气炸锅鸡翅", tag: "少油·解馋", tool: "空气炸锅", time: "20分钟", ingredients: [{name:'鸡翅', weight:500}], steps: ['腌制', '200度烤15分钟', '翻面再烤5分钟'], portions: { dad: '2个', mom: '2个', sister: '2个', brother: '1个(去皮)' } },
-          { name: "冬瓜肉丸汤", tag: "清淡·补水", tool: "陶瓷锅", time: "20分钟", ingredients: [{name:'冬瓜', weight:300}, {name:'猪肉丸', weight:200}], steps: ['水开下肉丸', '加冬瓜煮10分钟', '调味'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' } },
+          { name: "芋头蒸排骨", tag: "秋季时令·软糯", tool: "蒸锅", time: "40分钟", ingredients: [{name:'排骨', weight:400}, {name:'小芋头', weight:300}], steps: ['排骨腌制', '芋头切块铺底', '排骨铺面上锅蒸35分钟'], portions: { dad: '80g', mom: '80g', sister: '60g', brother: '芋头多给，排骨肉剔碎' } },
           { name: "洋葱炒牛肉", tag: "强体·补铁", tool: "炒锅", time: "15分钟", ingredients: [{name:'洋葱', weight:150}, {name:'牛肉', weight:250}], steps: ['牛肉切片滑熟', '洋葱炒香', '混合加黑胡椒'], portions: { dad: '80g', mom: '80g', sister: '60g', brother: '50g(切碎)' } },
-          { name: "清蒸龙利鱼", tag: "无刺·健脑", tool: "蒸锅", time: "10分钟", ingredients: [{name:'龙利鱼柳', weight:300}], steps: ['解冻吸干水分', '姜丝铺底', '水开蒸8分钟'], portions: { dad: '100g', mom: '100g', sister: '100g', brother: '100g(随便吃)' } }
+          { name: "肉末蒸豆腐", tag: "补钙·好消化", tool: "蒸锅", time: "15分钟", ingredients: [{name:'嫩豆腐', weight:300}, {name:'瘦猪肉', weight:100}], steps: ['豆腐切块铺盘', '肉末炒香铺在上面', '上锅蒸10分钟'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '1份(拌饭极佳)' } },
+          { name: "番茄龙利鱼（或巴沙鱼）", tag: "无刺·酸甜开胃", tool: "炒锅", time: "20分钟", ingredients: [{name:'龙利鱼柳', weight:300}, {name:'番茄', weight:200}], steps: ['鱼切块用淀粉抓匀', '番茄炒出汁加水', '下鱼块煮熟'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '1份(鱼块无刺放心吃)' } }
         ],
         dinnerVeg: [
           { name: "上汤娃娃菜", tag: "清淡好消化", tool: "炒锅", time: "10分钟", ingredients: [{name:'娃娃菜', weight:300}, {name:'皮蛋', weight:50}], steps: ['蒜末爆香', '加水和皮蛋煮开', '下娃娃菜煮软'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } },
           { name: "荷塘小炒", tag: "清脆爽口", tool: "炒锅", time: "15分钟", ingredients: [{name:'莲藕', weight:200}, {name:'荷兰豆', weight:100}], steps: ['食材切片焯水', '大火快炒', '加盐调味'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } },
-          { name: "番茄炒菜花", tag: "酸甜开胃", tool: "炒锅", time: "10分钟", ingredients: [{name:'番茄', weight:150}, {name:'菜花', weight:250}], steps: ['菜花焯水', '番茄炒出汁', '倒入菜花翻炒'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(切碎)' } }
+          { name: "番茄炒菜花", tag: "酸甜开胃", tool: "炒锅", time: "10分钟", ingredients: [{name:'番茄', weight:150}, {name:'菜花', weight:250}], steps: ['菜花焯水', '番茄炒出汁', '倒入菜花翻炒'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(切碎)' } },
+          { name: "南瓜蒸百合", tag: "秋日润燥·微甜", tool: "蒸锅", time: "20分钟", ingredients: [{name:'老南瓜', weight:300}, {name:'鲜百合', weight:50}], steps: ['南瓜切块', '百合洗净铺在南瓜上', '上锅蒸15分钟'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(压成泥)' } },
+          { name: "蒜蓉红薯叶", tag: "高纤维·抗炎", tool: "炒锅", time: "5分钟", ingredients: [{name:'红薯叶', weight:300}], steps: ['洗净掐段', '大火爆炒', '加盐出锅'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(切极碎)' } }
         ],
         soup: [
-          { name: "妈妈专属五红汤", tag: "补气血·暖宫", tool: "电饭煲", time: "40分钟", ingredients: [{name:'红枣', weight:30}, {name:'红豆', weight:50}, {name:'红皮花生', weight:30}, {name:'枸杞', weight:10}], steps: ['红豆泡2小时', '食材全放入电饭煲', '按煮粥键炖40分钟'], portions: {} },
+          { name: "茶树菇老鸭汤", tag: "滋阴润燥·鲜香", tool: "陶瓷锅", time: "60分钟", ingredients: [{name:'干茶树菇', weight:30}, {name:'老鸭', weight:400}], steps: ['茶树菇剪去根部泡发', '老鸭焯水去血沫', '一起炖煮50分钟'], portions: {} },
+          { name: "鲫鱼豆腐汤", tag: "补钙·下火", tool: "陶瓷锅", time: "30分钟", ingredients: [{name:'鲫鱼', weight:400}, {name:'嫩豆腐', weight:200}], steps: ['鲫鱼煎至两面金黄', '加开水大火煮10分钟', '放豆腐再煮10分钟'], portions: {} },
           { name: "儿童冰糖炖雪梨", tag: "润肺止咳", tool: "陶瓷锅", time: "30分钟", ingredients: [{name:'雪梨', weight:200}, {name:'冰糖', weight:10}], steps: ['雪梨去核切块', '加冰糖小火炖30分钟'], portions: {} },
-          { name: "银耳莲子羹", tag: "润燥养颜", tool: "陶瓷锅/电饭煲", time: "45分钟", ingredients: [{name:'银耳', weight:50}, {name:'莲子', weight:30}, {name:'红枣', weight:20}], steps: ['银耳泡发撕碎', '和莲子红枣同煮40分钟出胶'], portions: {} },
-          { name: "萝卜丝煎蛋汤", tag: "清淡消食", tool: "炒锅", time: "15分钟", ingredients: [{name:'白萝卜', weight:200}, {name:'鸡蛋', weight:100}], steps: ['鸡蛋煎熟', '加开水下萝卜丝', '煮10分钟至汤变白'], portions: {} }
+          { name: "萝卜丝煎蛋汤", tag: "冬日清润·消食", tool: "炒锅", time: "15分钟", ingredients: [{name:'白萝卜', weight:200}, {name:'鸡蛋', weight:100}], steps: ['鸡蛋煎熟', '加开水下萝卜丝', '煮10分钟至汤变白'], portions: {} },
+          { name: "妈妈专属五红汤", tag: "补气血·暖宫", tool: "电饭煲", time: "40分钟", ingredients: [{name:'红枣', weight:30}, {name:'红豆', weight:50}, {name:'红皮花生', weight:30}, {name:'枸杞', weight:10}], steps: ['红豆泡2小时', '食材全放入电饭煲', '按煮粥键炖40分钟'], portions: {} }
         ]
       },
       
@@ -1437,7 +1470,6 @@ createApp({
     }
   },
   created() {
-    // 💡 新增：检查关闭状态和注册 PWA
     this.checkAlertStatus();
     this.registerPWA();
 
@@ -1468,7 +1500,6 @@ createApp({
       const idx = (dayOfWeek + 6) % 7; 
       
       const dayData = weekMenu[idx] || {};
-      // 强力保障，返回的绝对全是数组，防止白屏！
       return {
         breakfast: Array.isArray(dayData.breakfast) ? dayData.breakfast : [],
         lunch: Array.isArray(dayData.lunch) ? dayData.lunch : [],
@@ -1480,7 +1511,6 @@ createApp({
     currentDayDishes() {
       const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
       const dayData = weekMenu[this.selDateIdx] || {};
-      // 强力保障，返回的绝对全是数组，防止白屏！
       return {
         breakfast: Array.isArray(dayData.breakfast) ? dayData.breakfast : [],
         lunch: Array.isArray(dayData.lunch) ? dayData.lunch : [],
@@ -1534,7 +1564,7 @@ createApp({
 
     weekendShoppingList() { return this.shoppingList.filter(i => i.category === 'weekend'); },
     dailyShoppingList() { return this.shoppingList.filter(i => i.category === 'daily' || i.isUrgent); },
-    // 💡 新增：按早、中、晚拆分明日待买清单
+    
     tomorrowShoppingByMeal() {
       const tomorrow = new Date(); 
       tomorrow.setDate(tomorrow.getDate() + 1);
@@ -1571,8 +1601,6 @@ createApp({
       processMeal(tomorrowMenu.breakfast || [], 'breakfast');
       processMeal(tomorrowMenu.lunch || [], 'lunch');
       processMeal(tomorrowMenu.dinner || [], 'dinner');
-      
-      // 如果汤羹也算在正餐里，可以把汤羹的食材加到午餐或晚餐里（这里暂不单独分，如果你想加，可以调用 processMeal(tomorrowMenu.soup, 'dinner')）
       
       return result;
     },
@@ -1650,7 +1678,6 @@ createApp({
     todayMembers(){
       const targetDateStr = this.homeDate;
       
-      // 修复：解决 iOS 时区差一天的问题
       const parseDateSafe = (str) => {
         if(!str) return new Date();
         const d = new Date(str.replace(/-/g, '/')); 
@@ -1668,7 +1695,6 @@ createApp({
 
       const result = [];
       
-      // 爸爸排班
       const dadConfig = this.scheduleConfig.dad;
       const dadStart = parseDateSafe(dadConfig.startDate);
       const dadDiffDays = Math.round((targetDate - dadStart) / (1000 * 60 * 60 * 24));
@@ -1682,7 +1708,6 @@ createApp({
       else { dadMeals = []; dadStatus = '全天上班'; dadStatusClass = 'status-work'; }
       result.push({ key: 'dad', name: '爸爸', icon: '👨', status: dadStatus, statusClass: dadStatusClass, meals: dadMeals, dateStr: targetDateStr });
 
-      // 妈妈排班（修复读取 firstShift 且解决时区）
       let momMeals = []; let momStatus = ""; let momStatusClass = "";
       if (isMomRest) { momMeals = ['早', '午', '晚']; momStatus = '休息日'; momStatusClass = 'status-rest'; } 
       else {
@@ -1717,22 +1742,34 @@ createApp({
     }
   },
   methods:{
-    // 💡 新增：检查告急框状态
     checkAlertStatus() {
       const today = new Date().toISOString().split('T')[0];
+      
       if (this.hideAlertDate === today) {
         this.showExpiryAlert = false;
       } else {
         this.showExpiryAlert = true;
       }
+
+      if (localStorage.getItem('hideShoppingReminderDate') === today) {
+        this.showShoppingReminder = false;
+      } else {
+        this.showShoppingReminder = true;
+      }
     },
-    // 💡 新增：关闭告急框
+    
+    closeShoppingReminder() {
+      this.showShoppingReminder = false;
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('hideShoppingReminderDate', today); 
+    },
+
     closeExpiryAlert() {
       this.showExpiryAlert = false;
       const today = new Date().toISOString().split('T')[0];
       localStorage.setItem('hideAlertDate', today);
     },
-    // 💡 新增：智能推荐快过期菜谱
+    
     recommendRecipesByExpiring() {
       const expiringNames = this.expiringItems.map(item => item.name);
       
@@ -1753,7 +1790,7 @@ createApp({
       this.recommendModal.list = matched;
       this.recommendModal.show = true;
     },
-    // 💡 新增：注册 PWA Service Worker
+    
     registerPWA() {
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
@@ -1793,7 +1830,7 @@ createApp({
       
       boughtItems.forEach(item => {
         let targetLib = this.rawIngList;
-        if (/果|莓|蕉|橘|橙|梨|桃|瓜/.test(item.name)) targetLib = this.fruitList;
+        if (/果|莓|蕉|橘|橙|梨|桃|瓜|柿/.test(item.name)) targetLib = this.fruitList;
         else if (/零食|坚果|饼干|酸奶/.test(item.name)) targetLib = this.snackList;
         else if (/预制|丸子|饺子/.test(item.name)) targetLib = this.preIngList;
         
@@ -1883,7 +1920,7 @@ createApp({
           sisterHolidays: this.sisterHolidays,
           brotherHolidays: this.brotherHolidays,
           historyData: this.historyData,
-          scheduleConfig: this.scheduleConfig // 💡 新增：加入排班配置同步
+          scheduleConfig: this.scheduleConfig 
         };
 
         const { error } = await this.supabaseClient
@@ -1921,7 +1958,6 @@ createApp({
           if (p.snackList) this.snackList = p.snackList;
           if (p.preIngList) this.preIngList = p.preIngList;
           if (p.weekMenuData) {
-            // 💡 新增：为旧数据补充缺失字段，防止白屏
             const fixMenu = (menu) => {
               if(!menu || !Array.isArray(menu)) return Array(7).fill(null).map(() => ({ breakfast: [], lunch: [], dinner: [], soup: [] }));
               return menu.map(day => ({
@@ -1941,7 +1977,7 @@ createApp({
           if (p.sisterHolidays) this.sisterHolidays = p.sisterHolidays;
           if (p.brotherHolidays) this.brotherHolidays = p.brotherHolidays;
           if (p.historyData) this.historyData = p.historyData;
-          if (p.scheduleConfig) this.scheduleConfig = p.scheduleConfig; // 💡 新增：拉取排班配置
+          if (p.scheduleConfig) this.scheduleConfig = p.scheduleConfig;
 
           if (!isSilent) alert("✅ 数据已从云端更新到本地！");
           this.showSyncSettingsModal = false;
@@ -2293,10 +2329,28 @@ createApp({
       
       const filterHealthy = (arr) => arr.filter(item => item.isHealthy !== false);
       
+      const expiringNames = [...this.rawIngList, ...this.fruitList, ...this.snackList, ...this.preIngList]
+        .filter(item => item.weight > 0 && this.getRemainingDays(item) <= 3)
+        .map(item => item.name);
+
       const getPools = (lib) => {
         const healthy = filterHealthy(lib);
-        const liked = this.shuffleArray(healthy.filter(i => !i.isDisliked));
-        const disliked = this.shuffleArray(healthy.filter(i => i.isDisliked));
+        
+        const scoreRecipe = (recipe) => {
+          if (!recipe.ingredients || expiringNames.length === 0) return 0;
+          let score = 0;
+          recipe.ingredients.forEach(ing => {
+            if (expiringNames.some(name => ing.name.includes(name) || name.includes(ing.name))) {
+              score += 1; 
+            }
+          });
+          return score;
+        };
+
+        const sortedHealthy = [...healthy].sort((a, b) => scoreRecipe(b) - scoreRecipe(a));
+
+        const liked = this.shuffleArray(sortedHealthy.filter(i => !i.isDisliked));
+        const disliked = this.shuffleArray(sortedHealthy.filter(i => i.isDisliked));
         return [...liked, ...disliked];
       };
 
@@ -2356,7 +2410,6 @@ createApp({
     recalculateShoppingList() {
       let neededMap = {};
       const nextMenu = this.weekMenuData.next;
-      // 保留打勾状态
       const oldBoughtMap = {};
       this.shoppingList.forEach(i => { if (i.bought) oldBoughtMap[i.name] = true; });
 
@@ -2376,7 +2429,6 @@ createApp({
       let newShoppingList = [];
       let itemId = 1;
       
-      // 动态截胡：计算明天需要的食材
       const tomorrow = new Date(); 
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowIdx = (tomorrow.getDay() + 6) % 7;
@@ -2406,20 +2458,18 @@ createApp({
         
         if (buyWeight > 0) {
           let category = 'weekend';
-          // 易坏食材，强制周末不买，放进日常跟进
-          const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬', '雪梨', '蕉', '莓', '葡萄', '菠菜', '生菜', '肉', '奶'];
+          const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬', '雪梨', '蕉', '莓', '葡萄', '菠菜', '生菜', '肉', '奶', '柿'];
           if (dailyKeywords.some(k => name.includes(k))) category = 'daily';
           
           let area = '其他区';
-          if (/菜|鱼|虾|肉|豆腐|番茄|瓜|葱|姜|蒜|果|菇|蛋|奶/.test(name)) area = '生鲜区';
+          if (/菜|鱼|虾|肉|豆腐|番茄|瓜|葱|姜|蒜|果|菇|蛋|奶|柿/.test(name)) area = '生鲜区';
           else if (/饺|丸|排|翅|冻|冰淇淋|汤圆/.test(name)) area = '冷冻区';
           else if (/油|盐|酱|醋|糖|椒|粉|料|酒|桂|角/.test(name)) area = '调料区';
 
-          // 动态截胡判断
           let isUrgent = false;
           if (tomorrowNeeded[name] && buyWeight > 0) {
             isUrgent = true;
-            category = 'daily'; // 急用的强制进日常
+            category = 'daily'; 
           }
           
           newShoppingList.push({ 
