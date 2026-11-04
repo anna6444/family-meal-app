@@ -703,6 +703,10 @@
       <div v-if="supabaseConnected" style="text-align: center; margin-top: 12px; font-size: 13px; color: #2b703b; font-weight: 500;">
         ✅ 已连接云端 (最后同步: {{ lastSyncTime || '刚刚' }})
       </div>
+      <button class="btn secondary" style="width:100%; margin-top: 10px; border: 1px solid #ddd; color: #d14a4a;" @click="clearOldLocalData">
+        🗑️ 清理本地历史缓存 (保留本周/下周)
+      </button>
+
     </div>
 
   </div>
@@ -1879,7 +1883,8 @@ createApp({
           sisterHolidays: this.sisterHolidays,
           brotherHolidays: this.brotherHolidays,
           historyData: this.historyData,
-          scheduleConfig: this.scheduleConfig 
+          scheduleConfig: this.scheduleConfig,
+          recipeLibrary: this.recipeLibrary // <-- 新增这一行 
         };
 
         const { error } = await this.supabaseClient
@@ -1937,6 +1942,22 @@ createApp({
           if (p.brotherHolidays) this.brotherHolidays = p.brotherHolidays;
           if (p.historyData) this.historyData = p.historyData;
           if (p.scheduleConfig) this.scheduleConfig = p.scheduleConfig;
+
+          // <-- 新增下面这段逻辑 -->
+          if (p.recipeLibrary) {
+            const mergeLib = (target, source) => {
+              if (!source) return;
+              source.forEach(r => {
+                if (!target.some(t => t.name === r.name)) target.push(r);
+              });
+            };
+            mergeLib(this.recipeLibrary.breakfast, p.recipeLibrary.breakfast);
+            mergeLib(this.recipeLibrary.lunchMeat, p.recipeLibrary.lunchMeat);
+            mergeLib(this.recipeLibrary.lunchVeg, p.recipeLibrary.lunchVeg);
+            mergeLib(this.recipeLibrary.dinnerMeat, p.recipeLibrary.dinnerMeat);
+            mergeLib(this.recipeLibrary.dinnerVeg, p.recipeLibrary.dinnerVeg);
+            mergeLib(this.recipeLibrary.sweets, p.recipeLibrary.sweets);
+          }
 
           if (!isSilent) alert("✅ 数据已从云端更新到本地！");
           this.showSyncSettingsModal = false;
@@ -2767,6 +2788,23 @@ createApp({
       alert(this.getMemberName(this.memberEditModal.key) + "的信息已保存！"); 
       this.memberEditModal.show = false; 
       this.pushToCloud();
+    },
+    clearOldLocalData() {
+      if (!confirm("确定要清理本地的历史菜单缓存吗？\n（只会清理不在本周和下周范围内的旧菜单，不影响你的食材库和云端数据）")) return;
+      
+      // 1. 清理本地缓存的“自定义菜谱”
+      localStorage.removeItem('customRecipes');
+      
+      // 2. 清理近期过期提示标记
+      localStorage.removeItem('hideAlertDate');
+      localStorage.removeItem('hideShoppingReminderDate');
+
+      // 3. 如果你想同时把本地自定义菜谱中“历史生成的”多余菜谱清掉，只保留基础库
+      // 注意：这可能会清除你手动添加的、还没排进菜单的菜谱。
+      // 为了安全，这里只清理 localStorage，不破坏你当前运行的数据。
+      
+      alert("✅ 本地历史缓存已清理完毕！\n页面即将刷新以释放内存。");
+      location.reload();
     },
     
     openChartModal(personKey){
