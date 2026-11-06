@@ -1,0 +1,3781 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>家庭膳食工作台</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-icon" href="icon-192x192.png">
+  <meta name="theme-color" content="#f9f6ef">
+
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; }
+    body { background-color: #f9f6ef; color: #333; padding-bottom: 100px; font-size: 15px; user-select: none; padding-top: env(safe-area-inset-top); }
+    .container { max-width: 740px; margin: 0 auto; padding: 18px; }
+
+    /* 底部导航 */
+    .tab-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid #ece7dc; display: flex; z-index: 99; height: 76px; align-items: center; justify-content: space-around; padding-bottom: env(safe-area-inset-bottom); }
+    .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 8px 0; position: relative; }
+    .tab-icon { font-size: 22px; filter: grayscale(1); opacity: 0.6; transition: all 0.2s; }
+    .tab-item.active .tab-icon { filter: grayscale(0); opacity: 1; }
+    .tab-label { font-size: 12px; color: #999; font-weight: 500; transition: all 0.2s; }
+    .tab-item.active .tab-label { color: #e6703b; font-weight: 600; }
+    
+    .tab-item-center { flex: 1; display: flex; flex-direction: column; align-items: center; position: relative; cursor: pointer; }
+    .tab-center-btn { width: 56px; height: 56px; background: #e6703b; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 26px; margin-top: -28px; box-shadow: 0 4px 12px rgba(230,112,59,0.4); position: relative; transition: transform 0.2s; }
+    .tab-item-center:active .tab-center-btn { transform: scale(0.95); }
+    .red-dot { position: absolute; top: 2px; right: 2px; width: 12px; height: 12px; border-radius: 50%; background: #ff4d4f; border: 2px solid #fff; }
+    .tab-center-text { font-size: 12px; color: #999; font-weight: 500; margin-top: 4px; }
+    .tab-item-center.active .tab-center-text { color: #e6703b; font-weight: 600; }
+
+    /* 卡片通用 */
+    .card { background: #fff; border-radius: 22px; padding: 22px; margin-bottom: 18px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
+    .card h2 { font-size: 19px; margin-bottom: 12px; font-weight: 600; }
+    .card-subtitle { font-size: 14px; color: #666; margin-bottom: 10px; }
+    .btn { background: #e6703b; color: #fff; border: none; border-radius: 14px; padding: 12px 16px; cursor: pointer; font-size: 15px; transition: all 0.2s; }
+    .btn:active { opacity: 0.8; }
+    .btn.secondary { background: #f1ede4; color: #333; }
+    .btn.small { padding: 9px 14px; font-size: 14px; border-radius: 12px; }
+    .btn.ai-btn { background: #4A90E2; color: white; }
+    .tag { display: inline-block; background: #f4ece3; color: #b06237; border-radius: 20px; padding: 5px 10px; font-size: 13px; margin: 3px; }
+    .tag.green { background: #eaf6ec; color: #2b703b; }
+    .tag.blue { background: #e6f0fa; color: #2b579b; }
+    .tag.orange { background: #fff1e6; color: #c46838; }
+    .tag.red { background: #fce8e8; color: #d14a4a; }
+
+    /* 顶部日期标签 */
+    .date-picker-wrapper { display: flex; align-items: center; justify-content: space-between; background: #fff5ef; border-radius: 14px; padding: 14px 18px; border: 1px solid #fce8df; margin-bottom:14px; gap: 10px;}
+    .date-picker-wrapper label { font-size: 16px; color: #c46838; font-weight: 600; margin: 0; white-space: nowrap; flex-shrink: 0; }
+    .date-picker-wrapper input[type="date"] { border: none; background: transparent; color: #333; font-size: 18px; font-weight: 700; outline: none; text-align: right; width: 100%; padding: 0; min-height: auto; }
+
+    .menu-preview-section { border-bottom: 1px dashed #eee; padding-bottom: 12px; margin-bottom: 12px; }
+    .menu-preview-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+    .menu-preview-title { font-weight: 600; font-size: 16px; margin-bottom: 8px; color: #c46838; }
+    .menu-preview-row { font-size: 14px; line-height: 1.7; color: #444; margin-bottom: 4px; }
+
+    .date-scroll { display: flex; gap: 12px; overflow-x: auto; padding: 6px 0 14px; position: sticky; top: 0; z-index: 10; background: #f9f6ef; box-shadow: 0 4px 6px -4px rgba(0,0,0,0.1); }
+    .date-item { min-width: 80px; padding: 12px 8px; border-radius: 16px; text-align: center; background: #fff; border: 1px solid #e8e2d6; cursor: pointer; flex-shrink: 0; font-size: 15px; }
+    .date-item.active { background: #f7e4d8; border-color: #e6703b; }
+
+    .input-wrap { margin: 14px 0; }
+    label { display: block; font-size: 14px; color: #555; margin-bottom: 6px; }
+    input, textarea, select { width: 100%; border: 1px solid #ddd8ce; border-radius: 14px; padding: 12px; font-size: 15px; background: #fff; outline: none; }
+    input[type="date"] { display: block; width: 100%; padding: 12px; appearance: none; -webkit-appearance: none; min-height: 48px; }
+
+    /* 菜品卡片 */
+    .dish-card { border-radius: 20px; background: #fff; padding: 20px; margin-bottom: 16px; border: 1px solid #f0ebe2; transition: all 0.3s; }
+    .dish-card.collapsed { padding: 16px 20px; cursor: pointer; }
+    .dish-header { display: flex; justify-content: space-between; align-items: center; }
+    .dish-title { font-size: 16px; font-weight: 600; color: #333; display: flex; align-items: center; gap: 8px;}
+    .dish-meta { font-size: 12px; color: #888; margin-top: 6px; display: flex; gap: 10px; }
+    .dish-expand-icon { font-size: 18px; color: #ccc; transition: transform 0.3s; }
+    .dish-card.expanded .dish-expand-icon { transform: rotate(180deg); }
+    
+    .dish-body { margin-top: 16px; border-top: 1px dashed #eee; padding-top: 16px; }
+    
+    .feedback-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .feedback-btn { border-radius: 14px; border: 1px solid #e2ddd2; padding: 12px 10px; text-align: center; cursor: pointer; font-size: 14px; transition: all 0.2s; }
+    .feedback-btn.selected { background: #f7e4d8; border-color: #e6703b; color: #e6703b; font-weight: 600; }
+
+    .tab-switch { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 18px; }
+    .switch-btn { padding: 10px 2px; border-radius: 10px; text-align: center; border: 1px solid #e8e2d6; cursor: pointer; font-size: 13px; }
+    .switch-btn.active { background: #e6703b; color: white; border-color: #e6703b; }
+    
+    .list-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid #f1ede4; font-size: 15px; gap: 10px; transition: all 0.2s; }
+    .empty-text { text-align: center; padding: 30px; color: #999; font-size: 14px; }
+    
+    .portion-box { background: #fcf9f5; border-radius: 12px; padding: 12px; margin-top: 12px; border-left: 3px solid #e6703b; }
+    .portion-title { font-size: 13px; font-weight: 600; color: #c46838; margin-bottom: 6px; }
+    .portion-row { display: flex; justify-content: space-between; font-size: 13px; color: #555; margin-bottom: 4px; }
+
+    .health-alert { background: #fff8f8; border: 1px dashed #fce8e8; border-radius: 12px; padding: 12px; margin-top: 12px; color: #d14a4a; font-size: 13px; font-weight: 500; display: flex; align-items: flex-start; gap: 8px; position: relative; }
+    
+    .close-alert-btn { position: absolute; top: 8px; right: 12px; background: none; border: none; font-size: 20px; color: #d14a4a; line-height: 1; opacity: 0.6; cursor: pointer; padding: 4px; }
+    .close-alert-btn:active { opacity: 1; }
+
+    .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+    .modal-box { background: #fff; border-radius: 22px; padding: 24px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; }
+    .member-block { border: 1px solid #eee6db; border-radius: 16px; padding: 14px; margin-bottom: 14px; }
+    .member-block h4 { margin-bottom: 10px; }
+    .pre-taboo-tag { display: inline-block; border: 1px solid #ddd; border-radius: 8px; padding: 4px 8px; margin: 4px; cursor: pointer; font-size: 13px; }
+    .pre-taboo-tag.active { background: #e6703b; color: white; border-color: #e6703b; }
+
+    .member-list-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 0; border-bottom: 1px solid #f1ede4; cursor: pointer; }
+    .member-list-item:last-child { border-bottom: none; }
+    .member-status-badge { font-size: 13px; padding: 4px 10px; border-radius: 12px; background: #f1ede4; color: #666; }
+    .status-work { background: #eaf6ec; color: #2b703b; }
+    .status-rest { background: #fff1e6; color: #c46838; }
+    .status-sick { background: #fce8e8; color: #d14a4a; }
+    .meal-label { display: inline-block; padding: 3px 8px; border-radius: 8px; background: #eaf6ec; color: #2b703b; font-size: 12px; margin-left: 4px; font-weight: 600;}
+    
+    .rest-day-tag { display: inline-flex; align-items: center; background: #fff1e6; color: #c46838; border-radius: 8px; padding: 6px 10px; font-size: 13px; margin: 4px; border: 1px solid #f7dcc8; }
+    .rest-day-tag span { margin-left: 6px; cursor: pointer; color: #999; font-weight: bold; }
+    
+    .row-danger { background-color: #fff8f8; border-left: 4px solid #d14a4a; padding-left: 12px; border-radius: 4px; margin: 4px 0; }
+    .row-danger > div:first-child { color: #d14a4a; font-weight: 600; }
+    .expire-warning { background-color: #fce8e8; color: #d14a4a; padding: 2px 6px; border-radius: 4px; font-size: 12px; margin-left: 6px; font-weight: bold; }
+
+    .replace-btn { background: #f0f0f0; color: #666; border: none; border-radius: 8px; padding: 4px 8px; font-size: 12px; cursor: pointer; margin-left: 8px; }
+    .tool-tag, .time-tag { font-size: 12px; padding: 4px 8px; border-radius: 8px; display: inline-flex; align-items: center; gap: 4px; }
+    .tool-tag { background: #e6f0fa; color: #2b579b; }
+    .time-tag { background: #fdf3d8; color: #b6862c; }
+
+    /* 做法详情 */
+    .steps-box { font-size: 14px; line-height: 1.7; color: #444; margin-top: 10px; background: #fafafa; padding: 12px; border-radius: 10px; }
+    .step-item { margin-bottom: 8px; }
+    .step-num { font-weight: bold; color: #e6703b; margin-right: 4px; }
+
+    /* AI 聊天界面 */
+    .chat-wrapper { position: fixed; inset: 0; background: #f4f1ea; z-index: 150; display: flex; flex-direction: column; }
+    .chat-header { background: #fff; padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; flex-shrink: 0; padding-top: calc(16px + env(safe-area-inset-top)); }
+    .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding: 15px; }
+    .chat-messages { flex: 1; overflow-y: auto; padding-bottom: 20px; }
+    .chat-bubble { max-width: 85%; padding: 12px 16px; border-radius: 16px; margin-bottom: 12px; font-size: 15px; line-height: 1.6; word-wrap: break-word; white-space: pre-wrap; }
+    .chat-user { background: #e6703b; color: #fff; align-self: flex-end; margin-left: auto; border-bottom-right-radius: 4px; }
+    .chat-ai { background: #fff; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); position: relative; }
+    
+    .import-btn { display: inline-block; margin-top: 10px; padding: 6px 12px; background: #eaf6ec; color: #2b703b; border: 1px solid #cce5d2; border-radius: 8px; font-size: 13px; cursor: pointer; font-weight: 600; }
+    .import-btn:active { background: #d1ead7; }
+
+    .chat-input-area { display: flex; align-items: center; gap: 8px; background: #fff; padding: 8px 12px; border-radius: 20px; margin-top: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); margin-bottom: calc(10px + env(safe-area-inset-bottom)); }
+    .chat-input-area input { flex: 1; border: none; outline: none; font-size: 15px; background: transparent; padding: 8px 4px; margin: 0; line-height: 1.5; }
+    .chat-send-btn { padding: 8px 16px; border-radius: 14px; background: #e6703b; color: #fff; border: none; font-weight: 600; flex-shrink: 0; }
+    .api-mask { position: absolute; inset: 0; background: #f4f1ea; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 200; padding: 20px; text-align: center; }
+
+    .quick-btn { background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 4px 8px; font-size: 13px; color: #555; cursor: pointer; }
+    .quick-btn:active { background: #f0f0f0; }
+
+    .action-sheet-mask { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 300; display: flex; align-items: flex-end; }
+    .action-sheet { background: #fff; width: 100%; border-radius: 22px 22px 0 0; padding: 24px; padding-bottom: calc(24px + env(safe-area-inset-bottom)); animation: slideUp 0.3s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+    #a4-print-area { position: absolute; top: -9999px; left: -9999px; width: 794px; min-height: 1123px; height: auto; background: #fff; padding-bottom: 40px; }
+    
+    /* 🌟 新增：新版周菜谱网格布局 */
+    .meal-section { background: #fff; border-radius: 16px; padding: 18px; margin-bottom: 16px; border: 1px solid #f0ebe2; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+    .meal-section-title { font-size: 17px; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .dish-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .dish-grid-item { background: #fdfaf6; border: 1px solid #f0e6d8; border-radius: 12px; padding: 12px 10px; text-align: center; cursor: pointer; transition: all 0.2s; display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; }
+    .dish-grid-item:active { transform: scale(0.96); background: #f7e4d8; }
+    .dish-grid-item.dish-completed { background: #eaf6ec; border-color: #cce5d2; color: #2b703b; }
+    .dish-grid-item.dish-skipped { background: #eee; border-color: #ddd; color: #999; text-decoration: line-through; }
+    .dish-name { font-size: 14px; font-weight: 600; margin-bottom: 4px; line-height: 1.3; }
+    .dish-meta-small { font-size: 11px; color: #888; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="container">
+
+    <!-- 首页 -->
+    <div v-if="view === 'home'">
+
+      <div v-if="smartShoppingReminder && showShoppingReminder" class="health-alert" style="background: #eaf6ec; border-color: #cce5d2; color: #2b703b; font-size: 15px; border-radius: 16px; padding: 16px; padding-right: 45px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; position: relative;">
+        <button class="close-alert-btn" style="color: #2b703b; z-index: 999; right: 10px; top: 10px; font-size: 24px; font-weight: bold;" @click.stop="closeShoppingReminder">×</button>
+        <div style="flex: 1;"><b>{{ smartShoppingReminder }}</b></div>
+        <button class="btn small" style="background: #2b703b; white-space: nowrap; margin-left: 10px;" @click="view = 'todo'; todoTab = 'weekend'">去导出清单</button>
+      </div>
+
+      <div v-if="expiringItems.length > 0 && showExpiryAlert" class="health-alert" style="background: #fff0f0; border: 1px solid #fce8e8; color: #d14a4a; margin-bottom: 16px; flex-direction: column; align-items: stretch; border-radius: 16px;">
+        <button class="close-alert-btn" @click="closeExpiryAlert">×</button>
+        <div style="font-weight: 600; margin-bottom: 8px; font-size: 15px;">🚨 冰箱告急：以下食材快过期，请尽快食用！</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;">
+          <span v-for="item in expiringItems" :key="item.name" class="tag red" style="font-size: 14px; padding: 6px 12px; background: white;">
+            {{ item.name }} (剩 {{ getRemainingDays(item) }} 天)
+          </span>
+        </div>
+        <button class="btn small" style="background: #2b703b; width: 100%; font-weight: 600;" @click="recommendRecipesByExpiring">
+          ✨ 智能推荐消耗菜谱
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="date-picker-wrapper">
+          <label>📅 今日状态</label>
+          <input type="date" v-model="homeDate" />
+        </div>
+        
+        <div v-if="globalHealthAlerts.length > 0" class="health-alert" style="margin-bottom: 14px; flex-direction: column;">
+          <div v-for="(alert, idx) in globalHealthAlerts" :key="idx" style="margin-bottom: 6px;">🚨 {{ alert }}</div>
+        </div>
+
+        <div v-if="tonightPrepReminder" class="health-alert" style="background: #fdf3d8; border-color: #fce8b2; color: #b6862c; margin-bottom: 14px;">
+          💡 <div><b>今晚备忘：</b>{{ tonightPrepReminder }}</div>
+        </div>
+
+        <div class="card-subtitle" style="margin-top: 14px;">今日就餐人员</div>
+        <div v-for="m in todayMembers" :key="m.key" class="list-row">
+          <div style="display: flex; align-items: center;">
+            <span style="margin-right: 8px;">{{m.icon}} {{m.name}}</span>
+            <span class="member-status-badge" :class="m.statusClass">{{m.status}}</span>
+          </div>
+          <div style="display: flex; gap: 2px;">
+            <span v-for="meal in m.meals" :key="meal" class="meal-label">{{meal}}</span>
+            <span v-if="m.meals.length === 0" class="tag" style="background:#eee; color:#999;">无</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>🍽️ 菜单预览</h2>
+        <div v-if="homeCurrentDayDishes">
+          <div class="menu-preview-section">
+            <div class="menu-preview-title">🌅 早餐</div>
+            <div class="menu-preview-row"><span style="font-weight:600;">全家共享：</span>{{ (homeCurrentDayDishes.breakfast || []).map(d => d.name).join('、') || '暂无安排' }}</div>
+            <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span style="font-weight:600;">👩 妈妈（早班外带）：</span>前一晚备好装盒</div>
+          </div>
+          <div class="menu-preview-section">
+            <div class="menu-preview-title">☀️ 午餐</div>
+            <div class="menu-preview-row"><span style="font-weight:600;">👧 姐姐（回家）：</span>{{ (homeCurrentDayDishes.lunch || []).map(d => d.name).join('、') || '暂无安排' }}</div>
+            <div class="menu-preview-row" style="color:#c46838" v-if="momIsMorningShift"><span style="font-weight:600;">👩 妈妈（早班）：</span>午餐在家或单位吃（按实际排班）</div>
+            <div class="menu-preview-row" style="color:#c46838" v-else><span style="font-weight:600;">👩 妈妈（下午班）：</span>{{ (homeCurrentDayDishes.lunch || []).map(d => d.name).join('、') || '暂无安排' }}</div>
+          </div>
+          <div class="menu-preview-section">
+            <div class="menu-preview-title">🌙 晚餐</div>
+            <div class="menu-preview-row"><span style="font-weight:600;">👨‍👩‍👧‍👦 全家：</span>{{ (homeCurrentDayDishes.dinner || []).map(d => d.name).join('、') || '暂无安排' }}</div>
+            <div class="menu-preview-row" style="color:#c46838"><span style="font-weight:600;">👦 弟弟专属：</span>肉丸/菜肴中混入菠菜碎+胡萝卜碎（隐形蔬菜）</div>
+          </div>
+          <div class="menu-preview-section" v-if="(homeCurrentDayDishes.sweets || []).length > 0">
+            <div class="menu-preview-title">🍵 饮品/甜汤</div>
+            <div class="menu-preview-row" v-for="sweet in homeCurrentDayDishes.sweets" :key="sweet.id">
+              👉 {{sweet.name}}（{{sweet.tool}} {{sweet.time}}）
+            </div>
+          </div>
+        </div>
+        <div v-else class="empty-text">暂无菜单数据，请先到「周菜谱」生成。</div>
+      </div>
+    </div>
+
+    <!-- 周菜谱 -->
+    <div v-if="view === 'weekMenu'">
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 14px;">
+        <div class="tab-switch" style="margin-bottom: 0; flex: 1; grid-template-columns: 1fr 1fr; max-width: 65%;">
+          <div class="switch-btn" :class="{active:viewWeekMode==='current'}" @click="viewWeekMode='current'">📅 本周食谱</div>
+          <div class="switch-btn" :class="{active:viewWeekMode==='next'}" @click="viewWeekMode='next'">🪄 下周食谱</div>
+        </div>
+        <button class="btn small secondary" @click="showMoreActions = true" style="padding: 9px 12px;">⚙️ 菜单操作</button>
+      </div>
+
+      <div class="date-scroll">
+        <div v-for="d in displayWeekDates" class="date-item" :class="{active:selDateIdx===d.idx}" @click="selDateIdx=d.idx">
+          <div style="font-size:13px">{{d.week}}</div>
+          <div style="font-size:19px">{{d.day}}</div>
+        </div>
+      </div>
+
+      <!-- 💡 修改：早餐独立，午餐/晚餐合并，甜汤独立 -->
+      <!-- 🌟 全新：区块网格布局 -->
+      <div v-if="currentDayDishes" style="margin-top: 20px;">
+        
+        <!-- 早餐区块 -->
+        <div class="meal-section">
+          <div class="meal-section-title" style="color: #c46838;">
+            🌅 早餐安排
+            <button class="btn small secondary" style="margin-left: auto; font-size: 12px; padding: 4px 8px;" @click="openTakeoutModal">🛒 外买</button>
+          </div>
+          <div v-if="currentDayDishes.breakfast.length === 0" class="empty-text" style="padding: 10px;">暂无安排</div>
+          <div v-else class="dish-grid">
+            <div v-for="(dish, idx) in currentDayDishes.breakfast" :key="dish.id" 
+                 class="dish-grid-item" 
+                 :class="{'dish-completed': dish.completed, 'dish-skipped': dish.skipped}"
+                 @click="openDishDetail('breakfast', idx)">
+              <div class="dish-name">{{dish.name}}</div>
+              <div class="dish-meta-small">{{dish.tool}} · {{dish.time}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 午餐区块 -->
+        <div class="meal-section">
+          <div class="meal-section-title" style="color: #2b703b;">☀️ 午餐安排</div>
+          <div v-if="currentDayDishes.lunch.length === 0" class="empty-text" style="padding: 10px;">暂无安排</div>
+          <div v-else class="dish-grid">
+            <div v-for="(dish, idx) in currentDayDishes.lunch" :key="dish.id" 
+                 class="dish-grid-item" 
+                 :class="{'dish-completed': dish.completed, 'dish-skipped': dish.skipped}"
+                 @click="openDishDetail('lunch', idx)">
+              <div class="dish-name">{{dish.name}}</div>
+              <div class="dish-meta-small">{{dish.tool}} · {{dish.time}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 晚餐区块 -->
+        <div class="meal-section">
+          <div class="meal-section-title" style="color: #4A90E2;">🌙 晚餐安排</div>
+          <div v-if="currentDayDishes.dinner.length === 0" class="empty-text" style="padding: 10px;">暂无安排</div>
+          <div v-else class="dish-grid">
+            <div v-for="(dish, idx) in currentDayDishes.dinner" :key="dish.id" 
+                 class="dish-grid-item" 
+                 :class="{'dish-completed': dish.completed, 'dish-skipped': dish.skipped}"
+                 @click="openDishDetail('dinner', idx)">
+              <div class="dish-name">{{dish.name}}</div>
+              <div class="dish-meta-small">{{dish.tool}} · {{dish.time}}</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 饮品/甜汤区块 -->
+        <div class="meal-section" v-if="(currentDayDishes.sweets || []).length > 0">
+          <div class="meal-section-title" style="color: #b6862c;">🍵 饮品/甜汤</div>
+          <div class="dish-grid">
+            <div v-for="(dish, idx) in currentDayDishes.sweets" :key="dish.id" 
+                 class="dish-grid-item" 
+                 :class="{'dish-completed': dish.completed, 'dish-skipped': dish.skipped}"
+                 @click="openDishDetail('sweets', idx)">
+              <div class="dish-name">{{dish.name}}</div>
+              <div class="dish-meta-small">{{dish.tool}} · {{dish.time}}</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 待操作 -->
+    <div v-if="view === 'todo'">
+      
+      <div class="tab-switch" style="margin-bottom: 14px; grid-template-columns: 1fr 1fr;">
+        <div class="switch-btn" :class="{active:todoTab==='daily'}" @click="todoTab='daily'">📅 日常跟进 (含急用)</div>
+        <div class="switch-btn" :class="{active:todoTab==='weekend'}" @click="todoTab='weekend'">🛒 周末大采购</div>
+      </div>
+
+      <div v-if="todoTab === 'daily'">
+        <div class="card" style="border: 2px solid #e6703b; padding: 16px;">
+          <h2 style="color: #e6703b; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+            <span>🛒 明日备餐食材采购</span>
+            <span style="font-size: 13px; color: #666; font-weight: normal;">缺货才显示，勾选后点下方入库</span>
+          </h2>
+
+          <!-- 早餐 -->
+          <div style="background: #fdfaf6; border-radius: 12px; padding: 12px; margin-bottom: 12px; border-left: 4px solid #f5a623;">
+            <div style="font-weight: 600; margin-bottom: 8px; color: #d17700;">🌅 早餐</div>
+            <div v-if="tomorrowShoppingByMeal.breakfast.length === 0" style="font-size: 13px; color: #999;">库存充足，无需购买</div>
+            <div v-for="item in tomorrowShoppingByMeal.breakfast" :key="item.id" class="list-row" style="padding: 8px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center;">
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" v-model="dailyBoughtItems" :value="item.id" style="width: 20px; height: 20px; accent-color: #2b703b;" />
+                <span style="font-size: 15px;">{{ item.name }}</span>
+              </label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 10px; font-weight: bold; border-radius: 8px;" @click="openDailyWeightModal(item, 'breakfast')">
+                  缺 {{ getDailyWeight(item, 'breakfast') }}g
+                </button>
+                <button class="btn small secondary" style="color: #d14a4a; padding: 6px 8px;" @click="removeDailyItem(item, 'breakfast')">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 午餐 -->
+          <div style="background: #f6fcf7; border-radius: 12px; padding: 12px; margin-bottom: 12px; border-left: 4px solid #4caf50;">
+            <div style="font-weight: 600; margin-bottom: 8px; color: #2b703b;">☀️ 午餐</div>
+            <div v-if="tomorrowShoppingByMeal.lunch.length === 0" style="font-size: 13px; color: #999;">库存充足，无需购买</div>
+            <div v-for="item in tomorrowShoppingByMeal.lunch" :key="item.id" class="list-row" style="padding: 8px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center;">
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" v-model="dailyBoughtItems" :value="item.id" style="width: 20px; height: 20px; accent-color: #2b703b;" />
+                <span style="font-size: 15px;">{{ item.name }}</span>
+              </label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 10px; font-weight: bold; border-radius: 8px;" @click="openDailyWeightModal(item, 'lunch')">
+                  缺 {{ getDailyWeight(item, 'lunch') }}g
+                </button>
+                <button class="btn small secondary" style="color: #d14a4a; padding: 6px 8px;" @click="removeDailyItem(item, 'lunch')">✕</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 晚餐 -->
+          <div style="background: #f4f6fa; border-radius: 12px; padding: 12px; border-left: 4px solid #4A90E2;">
+            <div style="font-weight: 600; margin-bottom: 8px; color: #2b579b;">🌙 晚餐</div>
+            <div v-if="tomorrowShoppingByMeal.dinner.length === 0" style="font-size: 13px; color: #999;">库存充足，无需购买</div>
+            <div v-for="item in tomorrowShoppingByMeal.dinner" :key="item.id" class="list-row" style="padding: 8px 0; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center;">
+              <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                <input type="checkbox" v-model="dailyBoughtItems" :value="item.id" style="width: 20px; height: 20px; accent-color: #2b703b;" />
+                <span style="font-size: 15px;">{{ item.name }}</span>
+              </label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 10px; font-weight: bold; border-radius: 8px;" @click="openDailyWeightModal(item, 'dinner')">
+                  缺 {{ getDailyWeight(item, 'dinner') }}g
+                </button>
+                <button class="btn small secondary" style="color: #d14a4a; padding: 6px 8px;" @click="removeDailyItem(item, 'dinner')">✕</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn" style="width: 100%; margin-top: 20px; background: #2b703b; font-size: 16px; padding: 16px;" @click="finishDailyPurchase">
+          ✅ 勾选食材已买到，一键入库
+        </button>
+        
+        <div class="card" style="margin-top: 20px;">
+          <h2>⏱️ 日常预处理（前夜准备）</h2>
+          <div class="section-title">📅 每天做饭前的小准备</div>
+          <div v-if="dailyPrepTasks.length === 0" class="empty-text">暂无预处理任务。</div>
+          <div v-for="(task, idx) in dailyPrepTasks" :key="idx" style="padding:10px 0;line-height:1.8;font-size:15px; border-bottom: 1px dashed #eee;">
+            <span style="font-weight: 600; color: #e6703b;">📌 {{task.title}}</span><br/>
+            <span style="font-size: 13px; color: #666;">{{task.desc}}</span>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="todoTab === 'weekend'">
+        <!-- 🌟 新增：生成清单操作区 -->
+        <div class="card" style="background: #fffbf5; border: 1px dashed #e6703b; margin-bottom: 16px;">
+          <div style="font-size: 14px; color: #c46838; margin-bottom: 12px; line-height: 1.5;">
+            <b>💡 提示：</b>菜谱更新或日常消耗后，清单不会自动变。请在去买菜前点击下方按钮，系统会从<b>明天开始往后 7 天</b>，重新计算所需食材和库存差额。
+          </div>
+          <button class="btn" style="width: 100%; background: #e6703b; font-size: 15px; padding: 14px;" @click="recalculateShoppingList()">
+            🔄 一键生成/刷新采购清单
+          </button>
+          <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555; cursor: pointer;">
+              <input type="checkbox" v-model="showOnlyUnbought" style="width: 18px; height: 18px; accent-color: #e6703b; margin: 0;" />
+              只显示未购买
+            </label>
+          </div>
+        </div>
+
+        <div class="card" v-for="group in groupedShoppingList" :key="group.area">
+          <!-- 计算过滤后该分类是否有数据 -->
+          <template v-if="group.items.filter(i => !showOnlyUnbought || !i.bought || i.isExtra).length > 0">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <h2>{{ group.area }}</h2>
+              <div v-if="group.area === '生鲜区'" style="display: flex; gap: 8px;">
+                <button class="btn small secondary" style="color: #e6703b; border: 1px solid #f7dcc8;" @click="exportShoppingList">🖨️ 导出A4</button>
+              </div>
+            </div>
+            
+            <!-- 🌟 过滤渲染 -->
+            <!-- 这里加了排序：把 isExtra 的排到最前面 -->
+            <div v-for="item in group.items.filter(i => !showOnlyUnbought || !i.bought).sort((a, b) => (b.isExtra ? 1 : 0) - (a.isExtra ? 1 : 0))" 
+                 :key="item.id" 
+                 class="list-row" 
+                 :style="item.isExtra ? 'background: #fff0f0; border-left: 4px solid #d14a4a; padding-left: 10px; margin-bottom: 6px; border-radius: 6px;' : (item.bought ? 'opacity: 0.6;' : '')">
+              
+              <!-- 左侧：勾选框 + 名称 -->
+              <label style="display: flex; align-items: center; gap: 10px; flex: 1; cursor: pointer; margin: 0;">
+                <input type="checkbox" v-model="item.bought" @change="pushToCloud()" style="width: 22px; height: 22px; cursor: pointer; accent-color: #2b703b; margin: 0; flex-shrink: 0;" />
+                <div style="font-size: 15px; font-weight: 500;" :style="item.bought ? 'text-decoration: line-through; color: #999;' : 'color: #333;'">
+                  {{item.name}}
+                  <span v-if="item.isExtra" style="font-size: 12px; background: #d14a4a; color: white; padding: 2px 6px; border-radius: 6px; margin-left: 6px; font-weight: bold;">多买的</span>
+                </div>
+              </label>
+
+              <!-- 右侧：数字按钮 + 删除按钮 -->
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <button class="btn small" :style="item.isExtra ? 'background: #fff; color: #d14a4a; border: 1px solid #d14a4a; padding: 6px 10px; font-weight: bold; border-radius: 8px;' : 'background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 10px; font-weight: bold; border-radius: 8px;'" @click="openQuickWeightModal(item)">
+                  {{item.weight}} g
+                </button>
+                <button class="btn small secondary" style="color: #d14a4a; padding: 6px 8px;" @click="removeShoppingItem(item)">
+                  ✕
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+        <!-- 🌟 新增：日常清单里的"多买的"提示 -->
+        <div v-if="extraItemsList.length > 0" class="card" style="border: 2px solid #d14a4a; margin-top: 16px;">
+          <h2 style="color: #d14a4a; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+            <span>🚨 多买的食材（已不需要）</span>
+            <button class="btn small" style="background: #d14a4a; color: #fff; padding: 6px 10px;" @click="showExtraModal = true">查看明细</button>
+          </h2>
+          <div style="font-size: 13px; color: #666; margin-bottom: 10px;">
+            以下食材因为换菜或调整，已经不需要了。如果还没放进购物车，请放回货架！
+          </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <span v-for="item in extraItemsList" :key="item.id" class="tag red" 
+                  style="font-size: 14px; padding: 6px 12px; background: #fff; border: 1px solid #d14a4a; display: inline-flex; align-items: center; gap: 6px;">
+              {{ item.name }} ({{ item.weight }}g) · 多买的
+              <span @click.stop="removeExtraItem(item)" 
+                    style="cursor: pointer; color: #d14a4a; font-weight: bold; font-size: 16px; line-height: 1; padding: 0 2px;">✕</span>
+            </span>
+          </div>
+        </div>
+        <button class="btn" style="width: 100%; margin-top: 20px; background: #2b703b; font-size: 16px; padding: 16px;" @click="finishPurchase">
+          ✅ 采购完毕，一键入库
+        </button>
+      </div>
+
+    </div>
+
+    <!-- 食材库 -->
+    <div v-if="view === 'ingredientLib'">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h2 style="margin: 0;">🥬 食材库</h2>
+        <div style="display: flex; gap: 8px;">
+          <template v-if="!isBatchDeleteMode">
+            <button class="btn small secondary" style="color: #2b703b; border: 1px solid #cce5d2;" @click="showBatchAddModal = true">📦 批量入库</button>
+            <button class="btn small secondary" style="color: #d14a4a; border: 1px solid #fce8e8;" @click="toggleBatchDeleteMode">🗑️ 批量删除</button>
+          </template>
+          <template v-else>
+            <button class="btn small secondary" @click="selectAllForDelete">☑️ 全选/反选</button>
+            <button class="btn small" style="background: #d14a4a; color: white;" @click="confirmBatchDelete">✅ 删除 ({{ selectedToDelete.length }})</button>
+            <button class="btn small secondary" @click="cancelBatchDelete">取消</button>
+          </template>
+        </div>
+      </div>
+
+      <div class="tab-switch">
+        <div class="switch-btn" :class="{active:ingTab==='raw'}" @click="ingTab='raw'">原材料</div>
+        <div class="switch-btn" :class="{active:ingTab==='fruit'}" @click="ingTab='fruit'">水果</div>
+        <div class="switch-btn" :class="{active:ingTab==='snack'}" @click="ingTab='snack'">零食</div>
+        <div class="switch-btn" :class="{active:ingTab==='pre'}" @click="ingTab='pre'">预制菜</div>
+      </div>
+      <div class="input-wrap">
+        <input v-model="searchIng" placeholder="🔍 搜索食材，输入关键字筛选"/>
+      </div>
+      
+      <div v-if="ingTab==='raw'">
+        <div v-for="item in filteredRawList" class="list-row" :class="{'row-danger': getRemainingDays(item) <= 3}">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input v-if="isBatchDeleteMode" type="checkbox" :value="item.name" v-model="selectedToDelete" style="width: 20px; height: 20px; margin: 0; accent-color: #d14a4a;">
+            <div>
+              {{item.name}} 
+              <span v-if="getRemainingDays(item) <= 3" class="expire-warning">剩{{ getRemainingDays(item) }}天</span>
+              <span v-else style="font-size: 12px; color: #999; margin-left: 6px;">(剩{{ getRemainingDays(item) }}天)</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 10px; font-weight: bold; border-radius: 8px; margin-right: 4px;" @click="openQuickStockModal(item)">
+              {{item.weight}} g
+            </button>
+          </div>
+        </div>
+        <div v-if="filteredRawList.length===0" class="empty-text">无匹配食材</div>
+      </div>
+
+      <div v-if="ingTab==='fruit'">
+        <div v-for="item in filteredFruitList" class="list-row" :class="{'row-danger': getRemainingDays(item) <= 3}">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input v-if="isBatchDeleteMode" type="checkbox" :value="item.name" v-model="selectedToDelete" style="width: 20px; height: 20px; margin: 0; accent-color: #d14a4a;">
+            <div>
+              {{item.name}} 
+              <span v-if="getRemainingDays(item) <= 3" class="expire-warning">剩{{ getRemainingDays(item) }}天</span>
+              <span v-else style="font-size: 12px; color: #999; margin-left: 6px;">(剩{{ getRemainingDays(item) }}天)</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 10px; font-weight: bold; border-radius: 8px; margin-right: 4px;" @click="openQuickStockModal(item)">
+              {{item.weight}} g
+            </button>
+          </div>
+        </div>
+        <div v-if="filteredFruitList.length===0" class="empty-text">暂无水果库存</div>
+      </div>
+
+      <div v-if="ingTab==='snack'">
+        <div v-for="item in filteredSnackList" class="list-row" :class="{'row-danger': getRemainingDays(item) <= 3}">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input v-if="isBatchDeleteMode" type="checkbox" :value="item.name" v-model="selectedToDelete" style="width: 20px; height: 20px; margin: 0; accent-color: #d14a4a;">
+            <div>
+              {{item.name}} 
+              <span v-if="getRemainingDays(item) <= 3" class="expire-warning">剩{{ getRemainingDays(item) }}天</span>
+              <span v-else style="font-size: 12px; color: #999; margin-left: 6px;">(剩{{ getRemainingDays(item) }}天)</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 10px; font-weight: bold; border-radius: 8px; margin-right: 4px;" @click="openQuickStockModal(item)">
+              {{item.weight}} g
+            </button>
+          </div>
+        </div>
+        <div v-if="filteredSnackList.length===0" class="empty-text">暂无零食库存</div>
+      </div>
+
+      <div v-if="ingTab==='pre'">
+        <div v-for="item in filteredPreList" class="list-row" :class="{'row-danger': getRemainingDays(item) <= 3}">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <input v-if="isBatchDeleteMode" type="checkbox" :value="item.name" v-model="selectedToDelete" style="width: 20px; height: 20px; margin: 0; accent-color: #d14a4a;">
+            <div>
+              {{item.name}} 
+              <span v-if="getRemainingDays(item) <= 3" class="expire-warning">剩{{ getRemainingDays(item) }}天</span>
+              <span v-else style="font-size: 12px; color: #999; margin-left: 6px;">(剩{{ getRemainingDays(item) }}天)</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 10px; font-weight: bold; border-radius: 8px; margin-right: 4px;" @click="openQuickStockModal(item)">
+              {{item.weight}} g
+            </button>
+          </div>
+        </div>
+        <div v-if="filteredPreList.length===0" class="empty-text">无匹配食材</div>
+      </div>
+
+      <button v-if="!isBatchDeleteMode" class="btn" style="margin-top:20px; width:100%;" @click="openAddIngModal">➕ 新增单项食材</button>
+    </div>
+
+    <!-- 我的页面 -->
+    <div v-if="view === 'setting'">
+      
+      <div class="card">
+        <h2>👨‍👩‍👧‍👦 人员管理</h2>
+        <div class="member-list-item" @click="openMemberEdit('dad')">
+          <div>👨 爸爸 <span class="tag" style="margin-left:6px">{{memberData.dad.schedule}}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+        <div class="member-list-item" @click="openMemberEdit('mom')">
+          <div>👩 妈妈 <span class="tag" style="margin-left:6px">{{memberData.mom.schedule}}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+        <div class="member-list-item" @click="openMemberEdit('sister')">
+          <div>👧 姐姐 <span class="tag" style="margin-left:6px">{{memberData.sister.schedule}}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+        <div class="member-list-item" @click="openMemberEdit('brother')">
+          <div>👦 弟弟 <span class="tag" style="margin-left:6px">{{memberData.brother.schedule}}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>⚠️ 成员临时状态与忌口</h2>
+        <div class="member-list-item" @click="openTempStatusModal('dad')">
+          <div>👨 爸爸 <span class="member-status-badge" :class="getStatusClass(memberTempStatus.dad)">{{ getStatusText(memberTempStatus.dad, 'dad') }}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+        <div class="member-list-item" @click="openTempStatusModal('mom')">
+          <div>👩 妈妈 <span class="member-status-badge" :class="getStatusClass(memberTempStatus.mom)">{{ getStatusText(memberTempStatus.mom, 'mom') }}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+        <div class="member-list-item" @click="openTempStatusModal('sister')">
+          <div>👧 姐姐 <span class="member-status-badge" :class="getStatusClass(memberTempStatus.sister)">{{ getStatusText(memberTempStatus.sister, 'sister') }}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+        <div class="member-list-item" @click="openTempStatusModal('brother')">
+          <div>👦 弟弟 <span class="member-status-badge" :class="getStatusClass(memberTempStatus.brother)">{{ getStatusText(memberTempStatus.brother, 'brother') }}</span></div>
+          <button class="btn small secondary">编辑</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📈 身体数据趋势</h2>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div style="display: flex; gap: 4px;">
+            <button class="btn small" style="flex:1" @click="openChartModal('dad')">👨爸爸体重</button>
+            <button class="btn small secondary" style="padding: 0 10px;" @click="openLogModal('dad')">➕</button>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <button class="btn small" style="flex:1" @click="openChartModal('mom')">👩妈妈体重</button>
+            <button class="btn small secondary" style="padding: 0 10px;" @click="openLogModal('mom')">➕</button>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <button class="btn small" style="flex:1" @click="openChartModal('sister_height')">👧姐姐身高</button>
+            <button class="btn small secondary" style="padding: 0 10px;" @click="openLogModal('sister')">➕</button>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <button class="btn small" style="flex:1" @click="openChartModal('sister_weight')">👧姐姐体重</button>
+            <button class="btn small secondary" style="padding: 0 10px;" @click="openLogModal('sister')">➕</button>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <button class="btn small" style="flex:1" @click="openChartModal('brother_height')">👦弟弟身高</button>
+            <button class="btn small secondary" style="padding: 0 10px;" @click="openLogModal('brother')">➕</button>
+          </div>
+          <div style="display: flex; gap: 4px;">
+            <button class="btn small" style="flex:1" @click="openChartModal('brother_weight')">👦弟弟体重</button>
+            <button class="btn small secondary" style="padding: 0 10px;" @click="openLogModal('brother')">➕</button>
+          </div>
+        </div>
+      </div>
+
+      
+      <div v-if="supabaseConnected" style="text-align: center; margin-top: 12px; font-size: 13px; color: #2b703b; font-weight: 500;">
+        ✅ 已连接云端 (最后同步: {{ lastSyncTime || '刚刚' }})
+      </div>
+      <button class="btn secondary" style="width:100%; margin-top: 10px; border: 1px solid #ddd; color: #d14a4a;" @click="clearOldLocalData">
+        🗑️ 清理本地历史缓存 (保留本周/下周)
+      </button>
+
+    </div>
+
+  </div>
+
+  <!-- 底部导航 -->
+  <div class="tab-bar" v-if="view !== 'ai'">
+    <div class="tab-item" :class="{active:view==='home'}" @click="view='home'">
+      <span class="tab-icon">🏠</span>
+      <span class="tab-label">首页</span>
+    </div>
+    <div class="tab-item" :class="{active:view==='weekMenu'}" @click="view='weekMenu'">
+      <span class="tab-icon">📅</span>
+      <span class="tab-label">周菜谱</span>
+    </div>
+    <div class="tab-item-center" @click="view='todo'" :class="{active:view==='todo'}">
+      <div class="tab-center-btn">
+        <span>📝</span>
+        <span class="red-dot" v-if="hasUnfinishedTask"></span>
+      </div>
+      <span class="tab-center-text">待操作</span>
+    </div>
+    <div class="tab-item" :class="{active:view==='ingredientLib'}" @click="view='ingredientLib'">
+      <span class="tab-icon">🥬</span>
+      <span class="tab-label">食材库</span>
+    </div>
+    <div class="tab-item" :class="{active:view==='setting'}" @click="view='setting'">
+      <span class="tab-icon">👤</span>
+      <span class="tab-label">我的</span>
+    </div>
+  </div>
+
+  <!-- 底部操作面板 -->
+  <div class="action-sheet-mask" v-if="showMoreActions" @click.self="showMoreActions = false">
+    <div class="action-sheet">
+      <h3 style="margin-bottom: 16px; text-align: center;">⚙️ 菜单操作</h3>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <button class="btn secondary" style="padding: 16px 0;" @click="generateWeekPlan(viewWeekMode); showMoreActions = false;">🪄 本地一键生成</button>
+        <button class="btn secondary" style="padding: 16px 0;" @click="openAddRecipeModal(); showMoreActions = false;">➕ 手动添加菜谱</button>
+        <button class="btn ai-btn" style="padding: 16px 0;" @click="openAiPromptModal">🤖 生成AI提示词</button>
+        <button class="btn" style="padding: 16px 0; background: #2b703b;" @click="batchImportModal.show = true; showMoreActions = false;">📥 批量导入菜单</button>
+      </div>
+      <button class="btn secondary" style="width: 100%; margin-top: 16px; background: #f1ede4;" @click="showMoreActions = false">取消</button>
+    </div>
+  </div>
+
+  <!-- 🌟 新增：快捷修改库存重量弹窗 -->
+  <div class="modal-mask" v-if="quickStockModal.show" @click.self="quickStockModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px; text-align:center;">修改库存：{{quickStockModal.item?.name}}</h3>
+      
+      <div class="input-wrap" style="margin-top: 20px;">
+        <input type="number" v-model.number="quickStockModal.weight" style="font-size: 24px; text-align: center; font-weight: bold; color: #e6703b; height: 60px;" />
+      </div>
+
+      <!-- 快捷加减区 -->
+      <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
+        <button class="btn secondary" @click="quickStockModal.weight -= 100">-100g</button>
+        <button class="btn secondary" @click="quickStockModal.weight -= 50">-50g</button>
+        <button class="btn secondary" @click="quickStockModal.weight += 50">+50g</button>
+        <button class="btn secondary" @click="quickStockModal.weight += 100">+100g</button>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:24px">
+        <button class="btn secondary" style="flex:1" @click="quickStockModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveQuickStock">确认修改</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- 🌟 新增：日常修改重量弹窗 -->
+  <div class="modal-mask" v-if="dailyWeightModal.show" @click.self="dailyWeightModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px; text-align:center;">修改采购量：{{dailyWeightModal.item?.name}}</h3>
+      <div class="input-wrap" style="margin-top: 20px;">
+        <input type="number" v-model.number="dailyWeightModal.weight" style="font-size: 24px; text-align: center; font-weight: bold; color: #e6703b; height: 60px;" />
+      </div>
+      <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
+        <button class="btn secondary" @click="dailyWeightModal.weight -= 50">-50g</button>
+        <button class="btn secondary" @click="dailyWeightModal.weight += 50">+50g</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:24px">
+        <button class="btn secondary" style="flex:1" @click="dailyWeightModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveDailyWeight">确认修改</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 🌟 新增：多买食材明细弹窗 -->
+  <div class="modal-mask" v-if="showExtraModal" @click.self="showExtraModal=false">
+    <div class="modal-box" style="border: 2px solid #d14a4a;">
+      <h3 style="margin-bottom:14px; text-align:center; color: #d14a4a;">🚨 多买的食材清单</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 16px; text-align: center;">以下食材由于换菜或调整，已不需要购买。如果还没放进购物车，请放回货架！</p>
+      <div style="display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto;">
+        <div v-for="item in extraItemsList" :key="item.id" style="display: flex; justify-content: space-between; align-items: center; background: #fff8f8; padding: 12px; border-radius: 12px; border: 1px solid #fce8e8;">
+          <div style="font-weight: 600; color: #d14a4a; font-size: 15px;">
+            {{ item.name }} <span style="font-size: 13px; color: #999; margin-left: 6px;">({{ item.weight }}g)</span>
+          </div>
+          <button class="btn small" style="background: #d14a4a; color: #fff; padding: 6px 12px;" @click="removeExtraItem(item)">我已放回/删除</button>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button class="btn secondary" style="flex:1" @click="clearAllExtraItems">清空所有多买项</button>
+        <button class="btn" style="flex:1" @click="showExtraModal=false">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 🌟 新增：快捷修改采购重量弹窗 -->
+  <div class="modal-mask" v-if="quickWeightModal.show" @click.self="quickWeightModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px; text-align:center;">修改采购重量：{{quickWeightModal.name}}</h3>
+      
+      <div class="input-wrap" style="margin-top: 20px;">
+        <input type="number" v-model.number="quickWeightModal.weight" style="font-size: 24px; text-align: center; font-weight: bold; color: #e6703b; height: 60px;" />
+      </div>
+
+      <!-- 快捷加减区 -->
+      <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
+        <button class="btn secondary" @click="quickWeightModal.weight -= 100">-100g</button>
+        <button class="btn secondary" @click="quickWeightModal.weight -= 50">-50g</button>
+        <button class="btn secondary" @click="quickWeightModal.weight += 50">+50g</button>
+        <button class="btn secondary" @click="quickWeightModal.weight += 100">+100g</button>
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:24px">
+        <button class="btn secondary" style="flex:1" @click="quickWeightModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveQuickWeight">确认修改</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 记录外买早餐弹窗 -->
+  <div class="modal-mask" v-if="takeoutModal.show" @click.self="takeoutModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">🛒 记录外买早餐</h3>
+      <div class="input-wrap">
+        <label>买了什么？</label>
+        <input v-model="takeoutModal.name" placeholder="例如：包子、油条、豆浆" />
+      </div>
+      <div class="input-wrap" style="background: #eaf6ec; padding: 12px; border-radius: 12px; border: 1px solid #cce5d2;">
+        <label style="color: #2b703b; font-weight: 600;">💡 家里现有食材搭配建议：</label>
+        <p style="font-size: 13px; color: #2b703b; margin-top: 4px;">鸡蛋、牛奶、香蕉、苹果、无糖酸奶</p>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="takeoutModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveTakeout">记录并加入菜单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 智能推荐消耗菜谱弹窗 -->
+  <div class="modal-mask" v-if="recommendModal.show" @click.self="recommendModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">✨ 智能推荐消耗菜谱</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 16px;">根据冰箱快过期的食材，为你找到以下菜谱：</p>
+      
+      <div v-if="recommendModal.list.length === 0" class="empty-text">
+        你的菜谱库里暂时没有包含这些食材的菜。去手动添加一个吧！
+      </div>
+      <div v-else style="display: flex; flex-direction: column; gap: 10px; max-height: 50vh; overflow-y: auto;">
+        <div v-for="recipe in recommendModal.list" :key="recipe.name" style="border: 1px solid #eee; padding: 12px; border-radius: 12px;">
+          <div style="font-weight: 600; color: #c46838; margin-bottom: 4px;">
+            🍲 {{recipe.name}}
+          </div>
+          <div style="font-size: 13px; color: #666;">食材：{{(recipe.ingredients || []).map(i => i.name).join('、')}}</div>
+          <div style="font-size: 12px; color: #999; margin-top: 4px;">工具：{{recipe.tool}} | 耗时：{{recipe.time}}</div>
+        </div>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:16px" @click="recommendModal.show=false">关闭</button>
+    </div>
+  </div>
+
+  <!-- 图表数据录入弹窗 -->
+  <div class="modal-mask" v-if="logModal.show" @click.self="logModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">📝 记录身体数据</h3>
+      <div class="input-wrap">
+        <label>记录日期</label>
+        <input type="date" v-model="logModal.date" />
+      </div>
+      <div class="input-wrap" v-if="logModal.target === 'sister' || logModal.target === 'brother'">
+        <label>身高 (cm)</label>
+        <input type="number" v-model.number="logModal.height" placeholder="例如：138" />
+      </div>
+      <div class="input-wrap">
+        <label>体重 (kg)</label>
+        <input type="number" v-model.number="logModal.weight" placeholder="例如：31" />
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="logModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveLog">保存记录</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量入库弹窗 -->
+  <div class="modal-mask" v-if="showBatchAddModal" @click.self="showBatchAddModal=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:10px">📦 批量入库</h3>
+      <div class="input-wrap">
+        <label>默认入库分类</label>
+        <select v-model="batchAddType">
+          <option value="raw">原材料</option>
+          <option value="fruit">水果</option>
+          <option value="snack">零食</option>
+          <option value="pre">预制菜</option>
+        </select>
+      </div>
+      <p style="font-size: 13px; color: #666; margin-bottom: 8px;">
+        每行输入，格式：<b>名称 克数 [保质期天数]</b>（后两项可选）。<br>例如：<br>鸡蛋 500 14<br>苹果, 1000
+      </p>
+      <textarea v-model="batchAddText" rows="8" placeholder="鸡蛋 500 14&#10;苹果, 1000" style="width: 100%; font-family: monospace; font-size: 14px;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="showBatchAddModal=false">取消</button>
+        <button class="btn" style="flex:1; background: #2b703b;" @click="processBatchAdd">✅ 确认入库</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 云端同步设置弹窗 -->
+  <div class="modal-mask" v-if="showSyncSettingsModal" @click.self="showSyncSettingsModal=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">☁️ 云端同步配置</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 16px;">配置后，所有数据将自动同步到云端，多设备共享。</p>
+      
+      <div class="input-wrap">
+        <label>Supabase URL</label>
+        <input v-model="supabaseConfig.url" placeholder="https://xxxxxx.supabase.co" />
+      </div>
+      <div class="input-wrap">
+        <label>Supabase Anon Key</label>
+        <input v-model="supabaseConfig.key" placeholder="eyJh..." type="password" />
+      </div>
+      
+      <div style="display: flex; gap: 10px; margin-top: 20px;">
+        <button class="btn secondary" style="flex:1" @click="showSyncSettingsModal = false">关闭</button>
+        <button class="btn" style="flex:1; background: #4A90E2;" @click="connectSupabase">连接并测试</button>
+      </div>
+      
+      <button v-if="supabaseConnected" class="btn secondary" style="width:100%; margin-top: 12px; background: #fee; color: #d14a4a; border: 1px solid #fcc;" @click="disconnectSupabase">断开连接并清除配置</button>
+    </div>
+  </div>
+
+  <!-- AI 提示词定制器 -->
+  <div class="modal-mask" v-if="aiPromptModal.show" @click.self="aiPromptModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">🤖 定制 AI 提示词</h3>
+      
+      <div class="input-wrap">
+        <label>生成范围</label>
+        <select v-model="aiPromptModal.scope">
+          <option value="week">生成本周（周一至周日）</option>
+          <option value="day">生成单天</option>
+          <option value="single_meal">生成单餐</option>
+        </select>
+      </div>
+      
+      <div class="input-wrap" v-if="aiPromptModal.scope === 'day'">
+        <label>选择哪一天</label>
+        <select v-model="aiPromptModal.dayIdx">
+          <option :value="0">周一</option>
+          <option :value="1">周二</option>
+          <option :value="2">周三</option>
+          <option :value="3">周四</option>
+          <option :value="4">周五</option>
+          <option :value="5">周六</option>
+          <option :value="6">周日</option>
+        </select>
+      </div>
+
+      <!-- 💡 新增：单餐选择 -->
+      <div class="input-wrap" v-if="aiPromptModal.scope === 'single_meal'">
+        <label>选择哪一餐</label>
+        <select v-model="aiPromptModal.targetMeal">
+          <option value="breakfast">早餐</option>
+          <option value="lunch">午餐</option>
+          <option value="dinner">晚餐</option>
+          <option value="sweets">饮品/甜汤</option>
+        </select>
+      </div>
+
+      <label style="margin-top: 12px;">家庭成员特殊状态</label>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px;">
+        <div class="input-wrap" style="margin: 0;">
+          <select v-model="aiPromptModal.momStatus" style="border-color: #fce8e8;">
+            <option value="normal">妈妈：正常</option>
+            <option value="period">妈妈：经期(温补)</option>
+            <option value="cold">妈妈：感冒(清淡)</option>
+            <option value="fever">妈妈：发烧(流食)</option>
+            <option value="gastro">妈妈：肠胃炎</option>
+          </select>
+        </div>
+        <div class="input-wrap" style="margin: 0;">
+          <select v-model="aiPromptModal.dadStatus">
+            <option value="normal">爸爸：正常</option>
+            <option value="cold">爸爸：感冒(清淡)</option>
+            <option value="fever">爸爸：发烧(流食)</option>
+            <option value="gastro">爸爸：肠胃炎</option>
+          </select>
+        </div>
+        <div class="input-wrap" style="margin: 0;">
+          <select v-model="aiPromptModal.sisterStatus">
+            <option value="normal">姐姐：正常</option>
+            <option value="cold">姐姐：感冒(清淡)</option>
+            <option value="fever">姐姐：发烧(流食)</option>
+            <option value="gastro">姐姐：肠胃炎</option>
+          </select>
+        </div>
+        <div class="input-wrap" style="margin: 0;">
+          <select v-model="aiPromptModal.brotherStatus">
+            <option value="normal">弟弟：正常</option>
+            <option value="cold">弟弟：感冒(清淡)</option>
+            <option value="fever">弟弟：发烧(流食)</option>
+            <option value="gastro">弟弟：肠胃炎</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="input-wrap" style="margin-top: 12px;">
+        <label>其他要求（选填）</label>
+        <input v-model="aiPromptModal.extraNote" placeholder="如：想吃鱼、不要鸡蛋、多用空气炸锅..." />
+      </div>
+
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="aiPromptModal.show=false">取消</button>
+        <button class="btn" style="flex:1; background: #4A90E2;" @click="generateAndCopyPrompt">📋 生成并复制</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 批量导入菜单弹窗 -->
+  <div class="modal-mask" v-if="batchImportModal.show" @click.self="batchImportModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:10px">📥 批量导入外部菜单</h3>
+      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">
+        请把 DeepSeek 生成的 <b>JSON 代码</b> 粘贴到这里。系统会自动清洗并覆盖到【{{ viewWeekMode === 'current' ? '本周' : '下周' }}】的排期表中。
+      </p>
+      <textarea v-model="batchImportModal.text" rows="10" placeholder="直接粘贴 AI 生成的 JSON 格式数据..." style="width: 100%; font-family: monospace; font-size: 13px;"></textarea>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="batchImportModal.show=false">取消</button>
+        <button class="btn" style="flex:1; background: #2b703b;" @click="doBatchImport">✅ 解析并导入</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加自定义菜谱弹窗 -->
+  <div class="modal-mask" v-if="addRecipeModal.show" @click.self="addRecipeModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">添加自定义菜谱</h3>
+      
+      <div style="background: #eaf6ec; padding: 12px; border-radius: 12px; margin-bottom: 16px;">
+        <label style="color: #2b703b; font-weight: 600;">✨ 智能解析粘贴板</label>
+        <p style="font-size: 12px; color: #666; margin-bottom: 8px;">把提取的菜谱文字粘贴到这里，系统帮你自动拆分！</p>
+        <textarea v-model="addRecipeModal.rawText" rows="4" placeholder="把小红书提取的文字全部粘贴到这里..."></textarea>
+        <button class="btn small" style="width: 100%; margin-top: 8px; background: #2b703b;" @click="parseRawText">🪄 一键智能拆分</button>
+      </div>
+
+      <div class="input-wrap">
+        <label>菜名</label>
+        <input v-model="addRecipeModal.name" placeholder="例如：小红书同款番茄肥牛" />
+      </div>
+      <div class="input-wrap">
+        <label>添加到哪一餐</label>
+        <select v-model="addRecipeModal.type">
+          <option value="breakfast">🌅 早餐</option>
+          <option value="main">☀️🌙 正餐（午餐/晚餐通用）</option>
+          <option value="sweets">🍵 饮品/甜汤/下午茶</option>
+        </select>
+      </div>
+      
+      <div class="input-wrap" style="background: #fff8f8; padding: 12px; border-radius: 12px; border: 1px solid #fce8e8;">
+        <label style="color: #d14a4a; font-weight: 600;">🛡️ 健康评级（非常重要）</label>
+        <select v-model="addRecipeModal.isHealthy" style="border-color: #fce8e8;">
+          <option :value="true">家庭常规（健康减脂，自动排入下周）</option>
+          <option :value="false">偶尔解馋（高油/高糖，不自动排餐，仅手动替换）</option>
+        </select>
+      </div>
+
+      <div class="input-wrap" style="display:flex;gap:10px;">
+        <div style="flex:1">
+          <label>使用工具</label>
+          <input v-model="addRecipeModal.tool" placeholder="如：空气炸锅" />
+        </div>
+        <div style="flex:1">
+          <label>预计耗时</label>
+          <input v-model="addRecipeModal.time" placeholder="如：20分钟" />
+        </div>
+      </div>
+      <div class="input-wrap">
+        <label>核心食材 (用逗号分隔)</label>
+        <input v-model="addRecipeModal.ingredientsText" placeholder="如：肥牛卷, 番茄, 金针菇" />
+      </div>
+      <!-- 🌟 新增：预处理选项 -->
+      <div class="input-wrap" style="background: #fff5ef; padding: 12px; border-radius: 12px; border: 1px solid #fce8df;">
+        <label style="color: #c46838; font-weight: 600;">🌙 前夜预处理提醒（选填）</label>
+        <select v-model="addRecipeModal.prepType">
+          <option value="">不需要提前处理</option>
+          <option value="thaw">需要提前解冻（肉类/海鲜）</option>
+          <option value="soak">需要提前浸泡（粗粮/干货）</option>
+          <option value="porridge">破壁机米糊/豆浆（需预约）</option>
+          <option value="fruit">水果需提前切块</option>
+        </select>
+      </div>
+      <div class="input-wrap">
+        <label>做法步骤</label>
+        <textarea v-model="addRecipeModal.stepsText" rows="3" placeholder="1. 肥牛焯水..."></textarea>
+      </div>
+      <!-- 🌟 新增：营养分类标签 -->
+      <div class="input-wrap" style="background: #f4f6fa; padding: 12px; border-radius: 12px; border: 1px solid #e6f0fa;">
+        <label style="color: #2b579b; font-weight: 600;">🏷️ 营养标签（用于系统智能搭配）</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;">
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 14px; cursor: pointer;">
+            <input type="checkbox" value="主食" v-model="addRecipeModal.tags" style="width: 16px; height: 16px; margin: 0; accent-color: #4A90E2;" /> 主食
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 14px; cursor: pointer;">
+            <input type="checkbox" value="肉" v-model="addRecipeModal.tags" style="width: 16px; height: 16px; margin: 0; accent-color: #4A90E2;" /> 肉/蛋白
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 14px; cursor: pointer;">
+            <input type="checkbox" value="蔬菜" v-model="addRecipeModal.tags" style="width: 16px; height: 16px; margin: 0; accent-color: #4A90E2;" /> 蔬菜
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 14px; cursor: pointer;">
+            <input type="checkbox" value="饮品" v-model="addRecipeModal.tags" style="width: 16px; height: 16px; margin: 0; accent-color: #4A90E2;" /> 饮品
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 14px; cursor: pointer;">
+            <input type="checkbox" value="水果" v-model="addRecipeModal.tags" style="width: 16px; height: 16px; margin: 0; accent-color: #4A90E2;" /> 水果
+          </label>
+          <label style="display: flex; align-items: center; gap: 4px; font-size: 14px; cursor: pointer;">
+            <input type="checkbox" value="坚果" v-model="addRecipeModal.tags" style="width: 16px; height: 16px; margin: 0; accent-color: #4A90E2;" /> 坚果
+          </label>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="addRecipeModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveCustomRecipe">保存菜谱</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <!-- 🌟 新增：菜品详情弹窗 -->
+  <div class="modal-mask" v-if="dishDetailModal.show && dishDetailModal.dish" @click.self="dishDetailModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px; display: flex; align-items: center; gap: 8px;">
+        {{dishDetailModal.dish.name}} 
+        <span v-if="dishDetailModal.dish.skipped" class="tag red">已跳过</span>
+        <span v-if="dishDetailModal.dish.completed" class="tag green">已完成</span>
+      </h3>
+      
+      <div style="margin-bottom: 12px;">
+        <span class="tag green">{{dishDetailModal.dish.tag || '日常'}}</span>
+        <span class="tag blue">🛠️ {{dishDetailModal.dish.tool}}</span>
+        <span class="tag orange">⏱️ {{dishDetailModal.dish.time}}</span>
+      </div>
+
+      <div class="card-subtitle" style="margin-bottom: 12px; line-height: 1.5;">
+        <b>核心食材：</b>{{(dishDetailModal.dish.ingredients || []).map(i => i.name + ' ' + i.weight + 'g').join('，') || '无'}}
+      </div>
+
+      <div class="portion-box" v-if="dishDetailModal.dish.portions && Object.keys(dishDetailModal.dish.portions).length > 0" style="margin-bottom: 12px;">
+        <div class="portion-title">👨‍👩‍👧‍👦 分餐建议</div>
+        <div class="portion-row" v-if="dishDetailModal.dish.portions.dad"><span>👨 爸爸：</span><span>{{dishDetailModal.dish.portions.dad}}</span></div>
+        <div class="portion-row" v-if="dishDetailModal.dish.portions.mom"><span>👩 妈妈：</span><span>{{dishDetailModal.dish.portions.mom}}</span></div>
+        <div class="portion-row" v-if="dishDetailModal.dish.portions.sister"><span>👧 姐姐：</span><span>{{dishDetailModal.dish.portions.sister}}</span></div>
+        <div class="portion-row" v-if="dishDetailModal.dish.portions.brother"><span>👦 弟弟：</span><span>{{dishDetailModal.dish.portions.brother}}</span></div>
+      </div>
+
+      <div v-if="getDishWarning(dishDetailModal.dish).length > 0" class="health-alert" style="margin-bottom: 12px;">
+        <div><div v-for="(warn, wIdx) in getDishWarning(dishDetailModal.dish)" :key="wIdx">🚨 {{ warn }}</div></div>
+      </div>
+
+      <div class="steps-box" v-if="!dishDetailModal.dish.skipped" style="margin-bottom: 16px;">
+        <div style="font-weight: 600; margin-bottom: 8px; color: #333;">📖 详细做法：</div>
+        <div v-for="(step, sIdx) in (dishDetailModal.dish.steps || [])" :key="sIdx" class="step-item"><span class="step-num">Step {{sIdx+1}}:</span>{{step}}</div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; margin-bottom: 12px;" v-if="!dishDetailModal.dish.skipped">
+        <button class="replace-btn" @click="openReplaceModalFromDetail" style="font-size: 14px; padding: 8px 12px;">🔄 替换此菜</button>
+      </div>
+
+      <div style="margin-bottom: 16px;" v-if="!dishDetailModal.dish.skipped">
+        <div class="feedback-row">
+          <div class="feedback-btn" :class="{selected: dishDetailModal.dish.feedback === 'love'}" @click="setDishFeedback(dishDetailModal.dish, 'love')">😋 爱吃</div>
+          <div class="feedback-btn" :class="{selected: dishDetailModal.dish.feedback === 'ok'}" @click="setDishFeedback(dishDetailModal.dish, 'ok')">🙂 一般</div>
+          <div class="feedback-btn" :class="{selected: dishDetailModal.dish.feedback === 'dislike'}" @click="setDishFeedback(dishDetailModal.dish, 'dislike')">😐 不爱吃</div>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 10px;" v-if="!dishDetailModal.dish.skipped">
+        <button class="btn" style="flex:1;" @click="completeDishFromDetail" :disabled="dishDetailModal.dish.completed">{{dishDetailModal.dish.completed ? '✅ 已完成制作' : '确认完成 (扣库存)'}}</button>
+        <button class="btn secondary" style="flex:1; color: #d14a4a;" @click="skipDishFromDetail" :disabled="dishDetailModal.dish.completed">⏭️ 今天不吃了</button>
+      </div>
+      <button class="btn secondary" style="width:100%; margin-top: 10px; color: #d14a4a; border: 1px solid #fce8e8;" @click="deleteDishPermanently">
+        🗑️ 从当前菜单移除并拉黑此菜谱
+      </button>
+      <button class="btn secondary" style="width:100%; margin-top: 16px;" @click="dishDetailModal.show=false">关闭</button>
+    </div>
+  </div>
+
+  <!-- 替换菜品弹窗 -->
+  <div class="modal-mask" v-if="replaceModal.show" @click.self="replaceModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">替换菜品</h3>
+      <div style="font-size: 14px; color: #666; margin-bottom: 12px;">当前：{{replaceModal.currentName}}</div>
+      <div style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto;">
+        <div v-for="recipe in availableReplacements" :key="recipe.name" 
+             style="border: 1px solid #eee; padding: 12px; border-radius: 12px; cursor: pointer;"
+             @click="doReplaceDish(recipe)">
+          <div style="font-weight: 600; color: #c46838; margin-bottom: 4px;">
+            {{recipe.name}} 
+            <span v-if="recipe.isHealthy === false" style="font-size: 11px; background: #fce8e8; color: #d14a4a; padding: 2px 4px; border-radius: 4px;">高油解馋</span>
+          </div>
+          <div style="font-size: 13px; color: #888;">{{recipe.tag}} | {{recipe.tool}}</div>
+        </div>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:16px" @click="replaceModal.show=false">取消</button>
+    </div>
+  </div>
+
+  <!-- 临时状态与忌口弹窗 -->
+  <div class="modal-mask" v-if="tempStatusModal.show" @click.self="tempStatusModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">设置 {{getMemberName(tempStatusModal.key)}} 的状态与忌口</h3>
+      <div class="member-block" v-if="tempStatusModal.key">
+        <div class="input-wrap">
+          <label>当前状态</label>
+          <select v-model="memberTempStatus[tempStatusModal.key]">
+            <option value="normal">正常</option>
+            <option value="cold">感冒</option>
+            <option value="fever">发烧</option>
+            <option value="gastro">肠胃炎</option>
+            <option v-if="tempStatusModal.key === 'mom'" value="period">姨妈期</option>
+          </select>
+        </div>
+        <label>忌口选择</label>
+        <div>
+          <span v-for="word in getTabooOptions(tempStatusModal.key)" :key="word"
+                class="pre-taboo-tag"
+                :class="{active:memberTaboo[tempStatusModal.key].includes(word)}"
+                @click="toggleTaboo(tempStatusModal.key, word)">
+            {{word}}
+          </span>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn" style="flex:1" @click="tempStatusModal.show=false">完成</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 成员编辑弹窗 -->
+  <div class="modal-mask" v-if="memberEditModal.show" @click.self="memberEditModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">编辑 {{getMemberName(memberEditModal.key)}} 信息</h3>
+      <div class="member-block" v-if="memberEditModal.key">
+        <div class="two-col-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="input-wrap"><label>年龄</label><input v-model.number="memberData[memberEditModal.key].age" type="number"/></div>
+          <div class="input-wrap"><label>身高cm</label><input v-model.number="memberData[memberEditModal.key].height" type="number"/></div>
+        </div>
+        <div class="two-col-row" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="input-wrap"><label>体重kg</label><input v-model.number="memberData[memberEditModal.key].weight" type="number"/></div>
+          <div class="input-wrap"><label>排班/上学状态</label><input v-model="memberData[memberEditModal.key].schedule" placeholder="例如：4天在家4天不在"/></div>
+        </div>
+        <div class="input-wrap"><label>身体情况</label><textarea v-model="memberData[memberEditModal.key].health" rows="1"></textarea></div>
+        <div class="input-wrap"><label>基础忌口</label><input v-model="memberData[memberEditModal.key].taboo"/></div>
+        
+        <div v-if="memberEditModal.key === 'dad' || memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">📅 排班周期设置</h4>
+          <div v-if="memberEditModal.key === 'dad'">
+            <div class="input-wrap"><label>起始日期</label><input type="date" v-model="scheduleConfig.dad.startDate"/></div>
+            <div class="input-wrap"><label>在家天数</label><input type="number" v-model.number="scheduleConfig.dad.homeDays"/></div>
+            <div class="input-wrap"><label>不在家天数</label><input type="number" v-model.number="scheduleConfig.dad.awayDays"/></div>
+          </div>
+          <div v-if="memberEditModal.key === 'mom'">
+            <div class="input-wrap"><label>起始日期</label><input type="date" v-model="scheduleConfig.mom.startDate"/></div>
+            <div class="input-wrap"><label>起始班次</label>
+              <select v-model="scheduleConfig.mom.firstShift"><option value="morning">早班</option><option value="afternoon">下午班</option></select>
+            </div>
+          </div>
+        </div>
+        
+        <div v-if="memberEditModal.key === 'mom'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 特殊休息日设置</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="date" v-model="newMomRestForm.start" style="flex: 1; min-height: 44px;" />
+              <span>至</span>
+              <input type="date" v-model="newMomRestForm.end" style="flex: 1; min-height: 44px;" />
+            </div>
+            <button class="btn small" style="width: 100%;" @click="addMomRestDay">添加休息日</button>
+          </div>
+          <div v-if="momRestDays.length > 0">
+            <div><span v-for="(h, idx) in momRestDays" :key="idx" class="rest-day-tag">{{h.start}} 至 {{h.end}} <span @click="removeMomRestDay(idx)">✕</span></span></div>
+          </div>
+        </div>
+        
+        <div v-if="memberEditModal.key === 'sister' || memberEditModal.key === 'brother'" style="margin-top: 16px; border-top: 1px dashed #eee; padding-top: 14px;">
+          <h4 style="margin-bottom: 10px; font-size: 14px; color: #c46838;">🛌 节假日/请假设置</h4>
+          <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px;">
+            <input type="text" v-model="newHolidayForm[memberEditModal.key].name" placeholder="假期名称" style="width: 100%;" />
+            <div style="display: flex; gap: 10px; align-items: center;">
+              <input type="date" v-model="newHolidayForm[memberEditModal.key].start" style="flex: 1; min-height: 44px;" />
+              <span>至</span>
+              <input type="date" v-model="newHolidayForm[memberEditModal.key].end" style="flex: 1; min-height: 44px;" />
+            </div>
+            <button class="btn small" style="width: 100%;" @click="addHoliday(memberEditModal.key)">添加假期</button>
+          </div>
+          <div v-if="(memberEditModal.key === 'sister' && sisterHolidays.length > 0) || (memberEditModal.key === 'brother' && brotherHolidays.length > 0)">
+            <div>
+              <span v-for="(h, idx) in (memberEditModal.key === 'sister' ? sisterHolidays : brotherHolidays)" :key="idx" class="rest-day-tag">
+                {{h.name}}：{{h.start}} 至 {{h.end}} <span @click="removeHoliday(memberEditModal.key, idx)">✕</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="memberEditModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveMemberEdit">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 食材库存修改弹窗 -->
+  <div class="modal-mask" v-if="stockModal.show" @click.self="stockModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">{{stockModal.item.name}}</h3>
+      <div class="card-subtitle" style="margin-bottom:14px">当前库存：{{stockModal.item.weight}}g</div>
+      <div class="input-wrap">
+        <label>填写克数</label>
+        <input v-model.number="stockModal.inputGram" type="number" placeholder="例如：50"/>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="changeStockByModal(-1)">减少库存</button>
+        <button class="btn" style="flex:1" @click="changeStockByModal(1)">增加库存</button>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:10px" @click="stockModal.show=false">取消</button>
+    </div>
+  </div>
+
+  <!-- 新增单项食材弹窗 -->
+  <div class="modal-mask" v-if="addIngModal.show" @click.self="addIngModal.show=false">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">新增单项食材</h3>
+      <div class="input-wrap">
+        <label>食材名称</label>
+        <input v-model="addIngModal.name" placeholder="例如：苹果、核桃" />
+      </div>
+      <div class="input-wrap">
+        <label>类型</label>
+        <select v-model="addIngModal.type">
+          <option value="raw">原材料</option>
+          <option value="fruit">水果</option>
+          <option value="snack">零食</option>
+          <option value="pre">预制菜</option>
+        </select>
+      </div>
+      <div class="input-wrap">
+        <label>初始重量（g）</label>
+        <input v-model.number="addIngModal.weight" type="number" placeholder="例如：500" />
+      </div>
+      <div class="input-wrap">
+        <label>保质期（天）</label>
+        <input v-model.number="addIngModal.expireDay" type="number" placeholder="例如：5" />
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn secondary" style="flex:1" @click="addIngModal.show=false">取消</button>
+        <button class="btn" style="flex:1" @click="saveNewIngredient">保存入库</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 趋势图弹窗 -->
+  <div class="modal-mask" v-if="chartModal.show" @click.self="closeChartModal">
+    <div class="modal-box">
+      <h3 style="margin-bottom:14px">{{chartModal.title}}</h3>
+      <div style="width:100%;height:280px;margin-top:10px;position: relative;">
+        <canvas ref="chartCanvasRef" :key="chartModal.target"></canvas>
+      </div>
+      <button class="btn secondary" style="width:100%;margin-top:16px" @click="closeChartModal">关闭</button>
+    </div>
+  </div>
+
+  <!-- A4 图片预览弹窗 -->
+  <div class="modal-mask" v-if="showImagePreview" @click.self="showImagePreview=false" style="z-index: 9999; background: rgba(0,0,0,0.85);">
+    <div class="modal-box" style="padding: 10px; max-height: 90vh; background: #333; display: flex; flex-direction: column;">
+      <p style="color: white; text-align: center; margin-bottom: 10px; font-size: 14px; font-weight: 600;">👇 长按下方图片，选择“保存图片”或“发给家人”</p>
+      <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;">
+        <img :src="exportedImageUrl" style="width: 100%; border-radius: 8px; display: block;" />
+      </div>
+      <button class="btn secondary" style="width: 100%; margin-top: 10px; flex-shrink: 0;" @click="showImagePreview=false">关闭</button>
+    </div>
+  </div>
+
+  <!-- 隐藏的 A4 打印渲染区域 -->
+  <div id="a4-print-area" style="display: none;"></div>
+
+</div>
+
+<script>
+const { createApp } = Vue;
+createApp({
+  data(){
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
+
+    return{
+      view: 'home',
+      homeDate: todayStr,
+      selDateIdx: 0,
+      viewWeekMode: 'current',
+      mealTab: 'breakfast', 
+      expandedDishes: {}, 
+      todoTab: 'weekend',
+      showOnlyUnbought: false, 
+      dailyBoughtItems: [], 
+      dailyOverrides: {},   
+      ingTab: 'raw',
+      searchIng: '',
+      
+      apiKey: localStorage.getItem('ai_api_key') || '',
+      tempKey: '',
+      chatInput: '',
+      chatHistory: [],
+      isTyping: false,
+      showSettingsModal: false,
+      abortController: null,
+
+      showMoreActions: false,
+      aiPromptModal: {
+        show: false,
+        scope: 'week',
+        dayIdx: 0,
+        targetMeal: 'lunch',
+        momStatus: 'normal',
+        dadStatus: 'normal',
+        sisterStatus: 'normal',
+        brotherStatus: 'normal',
+        extraNote: ''
+      },
+
+      batchImportModal: { show: false, text: '' },
+
+      showExpiryAlert: true,
+      hideAlertDate: localStorage.getItem('hideAlertDate') || '',
+      showShoppingReminder: true, 
+      recommendModal: { show: false, list: [] },
+      
+      takeoutModal: { show: false, name: '' },
+      quickWeightModal: { show: false, itemId: null, name: '', weight: 0 }, 
+      showExtraModal: false, 
+      quickStockModal: { show: false, item: null, weight: 0 },
+      dailyWeightModal: { show: false, item: null, meal: '', weight: 0, key: '' }, 
+
+      logModal: {
+        show: false,
+        target: '', 
+        date: todayStr,
+        height: null,
+        weight: null
+      },
+
+      showBatchAddModal: false,
+      batchAddText: '',
+      batchAddType: 'raw',
+
+      isBatchDeleteMode: false,
+      selectedToDelete: [],
+
+      supabaseConfig: {
+        url: 'https://mubucjoyklpxoobgjyva.supabase.co',
+        key: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11YnVjam95a2xweG9vYmdqeXZhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc2Mzc4MDMsImV4cCI6MjEwMzIxMzgwM30.YfnUWqXIcnGY99Qbvz3vDIPnFf9ECC9M0dbM40cCr8k'
+      },
+      supabaseClient: null,
+      supabaseConnected: false,
+      lastSyncTime: '',
+      isSyncing: false,
+      showSyncSettingsModal: false,
+
+      scheduleConfig: {
+        dad: { startDate: '2026-10-15', homeDays: 4, awayDays: 4 },
+        mom: { startDate: '2026-10-16', firstShift: 'morning' }
+      },
+      momRestDays: [{ start: '2026-10-20', end: '2026-10-20', name: '休息日' }], 
+      newMomRestForm: { start: '', end: '' },
+      sisterHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
+      brotherHolidays: [{ start: '2026-10-01', end: '2026-10-07', name: '国庆假期' }],
+      newHolidayForm: { sister: { name: '', start: '', end: '' }, brother: { name: '', start: '', end: '' } },
+      
+      memberData:{
+        dad:{age:35, height:176, weight:90, schedule:"4天在家4天不在", health:"轻微脂肪肝，肾结石", taboo:"高草酸蔬菜需焯水，不吃内脏"},
+        mom:{age:35, height:150, weight:50, schedule:"早班/下午班交替", health:"气血不足，二胎后大肚腩", taboo:"无"},
+        sister:{age:8, height:138, weight:31, schedule:"上学日", health:"有点性早熟，需避激素食物", taboo:"蜂王浆、花粉、滋补品"},
+        brother:{age:5, height:107, weight:19, schedule:"上学日", health:"不爱吃青菜", taboo:"坚果整颗（防呛噎）"}
+      },
+      memberTempStatus:{ dad:'normal', mom:'normal', sister:'normal', brother:'normal' },
+      memberTaboo:{ dad:[], mom:[], sister:[], brother:[] },
+      chartModal:{ show:false, title:'', target:'' },
+      currentChart:null,
+      memberEditModal: { show: false, key: 'dad' },
+      tempStatusModal: { show: false, key: 'dad' },
+      stockModal: { show: false, item: { name: '', weight: 0 }, source: '', inputGram: null },
+      addIngModal: { show: false, name: '', type: 'raw', weight: null, expireDay: null },
+      
+      dayNutritionTags: [],
+      addRecipeModal: { show: false, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '', rawText: '', isHealthy: true, prepType: '', tags: [] },
+      replaceModal: { show: false, mealType: '', dishIdx: -1, currentName: '' },
+      dishDetailModal: { show: false, dish: null, mealType: '', dishIdx: -1 },
+      pendingReplaceQueue: [], 
+      pendingReplaceReturnTab: '', 
+      exportedImageUrl: '',
+      showImagePreview: false,
+
+      historyData: {
+        dad: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [92, 91.5, 91, 90.5, 90, 90] },
+        mom: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [52, 51.5, 51, 50.5, 50, 50] },
+        sister: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], height: [132, 134, 135, 136, 137, 138], weight: [28, 29, 29.5, 30, 30.5, 31] },
+        brother: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], height: [102, 103, 104, 105, 106, 107], weight: [17, 17.5, 18, 18.3, 18.6, 19] }
+      },
+      
+      rawIngList: [],
+      fruitList: [],
+      snackList: [],
+      preIngList: [],
+      
+      weekMenuData: {
+        current: Array(7).fill(null).map(() => ({ breakfast: [], lunch: [], dinner: [], sweets: [] })),
+        next: Array(7).fill(null).map(() => ({ breakfast: [], lunch: [], dinner: [], sweets: [] }))
+      },
+      
+      recipeLibrary: {
+        breakfast: [
+          { name: "全麦面包+无糖酸奶+坚果", tag: "极速·免煮", tool: "无", time: "2分钟", ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], steps: ['全麦面包取出，直接装盘（若天冷可微波炉加热20秒）。', '将无糖酸奶倒入碗中。', '核桃剥壳，用刀背压碎，撒在酸奶表面增加口感。'], portions: { dad: '2片+100g酸奶', mom: '2片+100g酸奶', sister: '2片+100g酸奶', brother: '1片+100g酸奶' } },
+          { name: "小番茄芝士厚蛋烧+牛奶", tag: "极速·补钙", tool: "平底锅", time: "10分钟", ingredients: [{name:'小西红柿', weight:100}, {name:'鸡蛋', weight:150}, {name:'奶酪片', weight:20}, {name:'牛奶', weight:400}], steps: ['小番茄洗净切成小碎丁。', '鸡蛋打散，加入小番茄丁和少许盐搅匀。', '平底锅刷薄油，倒入一半蛋液，微微凝固时放上奶酪片。', '将蛋饼卷起推到锅边，再倒入剩余蛋液，重复卷起，出锅切段。'], portions: { dad: '1份+1杯奶', mom: '1份+1杯奶', sister: '1份+1杯奶', brother: '半份+半杯奶' } },
+          { name: "外买包子/馒头+水煮蛋+热牛奶", tag: "省事·外买搭配", tool: "蒸锅", time: "10分钟", ingredients: [{name:'外买包子', weight:300}, {name:'鸡蛋', weight:150}, {name:'牛奶', weight:400}], steps: ['外买包子放入蒸锅，水开后蒸5-8分钟热透（或微波炉洒水加热1分钟）。', '鸡蛋提前用煮蛋器煮好。', '牛奶微波炉加热1分钟。直接搭配食用。'], portions: { dad: '2个+1蛋+1杯奶', mom: '1个+1蛋+1杯奶', sister: '1个+1蛋+1杯奶', brother: '1个+1蛋+半杯奶' } },
+          { name: "经典五谷豆浆+全麦面包+白煮蛋", tag: "健脑益智·免看火", tool: "破壁机", time: "0分钟", ingredients: [{name:'黄豆', weight:50}, {name:'燕麦', weight:20}, {name:'原味核桃', weight:15}, {name:'全麦面包', weight:200}, {name:'鸡蛋', weight:150}], steps: ['前一晚睡前：黄豆洗净（无需提前泡），与燕麦、核桃一起放入破壁机。', '加入800ml清水，选择“豆浆”模式并设置“预约6-8小时”。', '早起豆浆自动打好。搭配微波炉热10秒的面包和煮蛋器做好的鸡蛋。'], portions: { dad: '1大杯+2片面包+1个蛋', mom: '1大杯+1片面包+1个蛋', sister: '1杯+1片面包+1个蛋', brother: '半杯+1片面包+1个蛋' } },
+          { name: "紫薯燕麦米糊", tag: "减脂饱腹·高纤维", tool: "破壁机", time: "0分钟", ingredients: [{name:'紫薯', weight:150}, {name:'燕麦', weight:40}, {name:'大米', weight:20}], steps: ['紫薯去皮切小丁。', '将紫薯丁、燕麦、大米洗净放入破壁机，加水800ml。', '选择米糊模式，预约6小时。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
+          { name: "苹果山药小米糊", tag: "消积健脾·第一阶段", tool: "破壁机", time: "0分钟", ingredients: [{name:'苹果', weight:100}, {name:'铁棍山药', weight:50}, {name:'小米', weight:30}], steps: ['苹果洗净去核切块，山药去皮切段，小米洗净。', '所有食材放入破壁机，加清水约600ml。', '选择“米糊”或“豆浆”模式。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
+          { name: "绿豆百合小米糊", tag: "清热润肺·第二阶段", tool: "破壁机", time: "0分钟", ingredients: [{name:'红豆', weight:20}, {name:'绿豆', weight:20}, {name:'干百合', weight:10}, {name:'小米', weight:20}], steps: ['红豆提前浸泡，所有食材洗净。', '放入破壁机，加清水约600ml。', '选择“米糊”或“豆浆”模式。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
+          { name: "南瓜红枣小米糊", tag: "健脾养胃·第三阶段", tool: "破壁机", time: "0分钟", ingredients: [{name:'老南瓜', weight:100}, {name:'红枣', weight:20}, {name:'小米', weight:40}], steps: ['老南瓜去皮切块，红枣去核，小米洗净。', '所有食材放入破壁机，加清水约600ml。', '选择“米糊”或“豆浆”模式。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
+          { name: "红豆小米花生糊", tag: "强体质·第四阶段", tool: "破壁机", time: "0分钟", ingredients: [{name:'红枣', weight:20}, {name:'红皮花生', weight:20}, {name:'枸杞', weight:10}, {name:'小米', weight:30}], steps: ['红枣去核，所有食材洗净。', '放入破壁机，加清水约600ml。', '选择“米糊”或“豆浆”模式。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
+          { name: "山药小米粥", tag: "健脾养胃·易消化", tool: "奶锅", time: "30分钟", ingredients: [{name:'铁棍山药', weight:100}, {name:'小米', weight:50}, {name:'枸杞', weight:5}], steps: ['山药去皮切小块，小米洗净。', '一起放入锅中加水煮30分钟。', '出锅前撒上几颗枸杞点缀。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '1小碗' } },
+          { name: "蒸鸡蛋", tag: "嫩滑·优质蛋白", tool: "蒸锅", time: "10分钟", ingredients: [{name:'鸡蛋', weight:150}, {name:'温水', weight:200}, {name:'葱花', weight:5}], steps: ['鸡蛋打散，加入1.5倍温水和少许盐搅匀。', '撇去表面浮沫。', '盖上保鲜膜（扎几个孔），水开后上锅蒸8分钟。', '出锅滴几滴香油，撒上葱花。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '1碗(主力)' } },
+          { name: "南瓜蒸糕", tag: "香甜松软·护眼", tool: "蒸锅", time: "20分钟", ingredients: [{name:'老南瓜', weight:100}, {name:'面粉', weight:100}, {name:'酵母', weight:2}], steps: ['南瓜蒸熟压成泥，稍微放凉。', '加入面粉和酵母，揉成面团，发酵至两倍大。', '揉面排气，整成糕状，上锅蒸熟切块。'], portions: { dad: '2块', mom: '2块', sister: '2块', brother: '1块' } },
+          { name: "小米鸡蛋饼", tag: "松软细腻·高蛋白", tool: "平底锅", time: "10分钟", ingredients: [{name:'小米粉', weight:100}, {name:'鸡蛋', weight:100}, {name:'温水', weight:50}], steps: ['小米粉加入鸡蛋和温水调成面糊。', '平底锅小火，舀一勺面糊摊平。', '煎至两面金黄即可。'], portions: { dad: '3张', mom: '2张', sister: '2张', brother: '1张' } },
+          { name: "山药紫薯饼", tag: "膳食纤维·软糯", tool: "平底锅", time: "15分钟", ingredients: [{name:'铁棍山药', weight:100}, {name:'紫薯', weight:100}], steps: ['山药和紫薯分别蒸熟压成泥。', '混合揉匀，做成小饼状。', '小火煎至两面微黄即可。'], portions: { dad: '2个', mom: '2个', sister: '2个', brother: '1个' } },
+          { name: "鸡蛋软饼", tag: "营养均衡·极简", tool: "平底锅", time: "10分钟", ingredients: [{name:'鸡蛋', weight:100}, {name:'面粉', weight:100}], steps: ['鸡蛋加入面粉调成面糊。', '平底锅刷油，倒入面糊摊平。', '小火煎熟即可。'], portions: { dad: '1大张', mom: '1张', sister: '1张', brother: '半张' } },
+          { name: "蒸苹果", tag: "软糯果胶·收敛止泻", tool: "蒸锅", time: "15分钟", ingredients: [{name:'苹果', weight:150}], steps: ['苹果去皮去核切块。', '放入蒸锅大火蒸15分钟即可。'], portions: { dad: '适量', mom: '适量', sister: '适量', brother: '主力(好消化)' } },
+          { name: "蒸南瓜", tag: "香甜软糯·补维A", tool: "蒸锅", time: "15分钟", ingredients: [{name:'老南瓜', weight:200}], steps: ['南瓜去皮切块。', '放入蒸锅大火蒸15分钟即可。'], portions: { dad: '适量', mom: '适量', sister: '适量', brother: '适量(压成泥)' } },
+          { name: "玉米山药羹", tag: "细腻浓稠·粗粮", tool: "破壁机", time: "0分钟", ingredients: [{name:'玉米粒', weight:100}, {name:'铁棍山药', weight:50}], steps: ['玉米和山药蒸熟。', '加入适量温水，打成细腻浓稠的羹即可。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' } },
+          { name: "蒸玉米", tag: "粗粮·促进肠胃蠕动", tool: "蒸锅", time: "15分钟", ingredients: [{name:'甜玉米', weight:200}], steps: ['甜玉米洗净切小段。', '上锅大火蒸15分钟即可。'], portions: { dad: '1大段', mom: '1段', sister: '1段', brother: '半段(剥粒防呛)' } },
+          { name: "南瓜芡实软饼", tag: "中式养胃·健脾祛湿", tool: "平底锅", time: "15分钟", ingredients: [{name:'老南瓜', weight:70}, {name:'芡实粉', weight:15}, {name:'低筋面粉', weight:40}], steps: ['南瓜蒸熟压泥。', '加入芡实粉、面粉，少量温水调成稀面糊。', '平底锅少油，摊成小软饼即可。'], portions: { dad: '2张', mom: '2张', sister: '2张', brother: '1张' } },
+          { name: "羊肚菌鸡肉碎烂面条", tag: "高蛋白·鲜美养胃", tool: "炒锅", time: "15分钟", ingredients: [{name:'儿童面条', weight:60}, {name:'羊肚菌', weight:10}, {name:'鸡胸肉', weight:40}, {name:'青菜', weight:40}], steps: ['羊肚菌泡发洗净切碎，鸡胸肉剁成肉末。', '锅里少许油，炒香肉末和羊肚菌，加水煮开。', '下入面条煮软，最后放青菜碎，少许盐调味。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '1小碗(面条剪短)' } },
+          { name: "红枣莲子杂粮饭团", tag: "健脾安神·粗粮细作", tool: "电饭煲", time: "30分钟", ingredients: [{name:'大米', weight:50}, {name:'小米', weight:20}, {name:'去芯莲子', weight:15}, {name:'红枣', weight:15}], steps: ['全部杂粮洗净，红枣去核。', '一起放入电饭煲焖熟。', '放温后，用保鲜膜捏成小饭团即可。'], portions: { dad: '2个', mom: '1个', sister: '1个', brother: '1个(小号)' } }
+        ],
+        lunchStaple: [
+          { name: "白米饭", tag: "碳水·基础主食", tool: "电饭煲", time: "30分钟", ingredients: [{name:'大米', weight:200}], steps: ['大米洗净，加水放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗' } },
+          { name: "杂粮饭", tag: "粗粮·高纤维", tool: "电饭煲", time: "40分钟", ingredients: [{name:'杂粮米', weight:200}], steps: ['杂粮米提前浸泡2小时，放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗' } },
+          { name: "南瓜蒸饭", tag: "香甜软糯·护眼", tool: "电饭煲", time: "30分钟", ingredients: [{name:'大米', weight:150}, {name:'老南瓜', weight:100}], steps: ['南瓜去皮切小块，与洗净的大米一同放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗(南瓜压泥)' } },
+          { name: "地瓜蒸饭", tag: "润肠通便·粗粮", tool: "电饭煲", time: "30分钟", ingredients: [{name:'大米', weight:150}, {name:'红薯', weight:100}], steps: ['红薯去皮切块，与洗净的大米一同放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗' } }
+        ],
+        dinnerStaple: [
+          { name: "番茄鸡蛋肉丝面", tag: "一锅出·快手", tool: "炒锅/奶锅", time: "15分钟", ingredients: [{name:'面条', weight:150}, {name:'番茄', weight:100}, {name:'鸡蛋', weight:50}, {name:'瘦肉', weight:50}, {name:'青菜', weight:50}], steps: ['番茄炒出汁，加水烧开。', '下肉丝和面条煮熟。', '打入蛋花，放入青菜，加盐调味。'], portions: { dad: '1大碗', mom: '1小碗', sister: '1小碗', brother: '半碗(剪短)' } },
+          { name: "青菜肉丝炒面", tag: "干香·饱腹", tool: "炒锅", time: "15分钟", ingredients: [{name:'面条', weight:150}, {name:'瘦肉', weight:50}, {name:'青菜', weight:100}], steps: ['面条煮熟捞出过凉水。', '肉丝滑熟，下青菜炒软。', '倒入面条，加生抽老抽大火翻炒均匀。'], portions: { dad: '1大碗', mom: '1小碗', sister: '1小碗', brother: '半碗(剪短)' } }
+        ],        
+        lunchMeat: [
+          { name: "番茄炖瘦牛腩", tag: "补铁·高蛋白", tool: "陶瓷锅", time: "50分钟", ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:400}], steps: ['牛腩切块，冷水下锅加姜片焯水，捞出洗净浮沫。', '番茄顶部划十字，开水烫去皮，切小块。', '锅中少油，下番茄块炒出浓郁红汁，加入牛腩翻炒。', '加开水没过食材，转小火炖煮40分钟至牛腩软烂，加盐调味。'], portions: { dad: '80g', mom: '100g', sister: '60g', brother: '50g(切极碎)' } },
+          { name: "清蒸溪鱼（如黄骨鱼/鲫鱼）", tag: "闽北特产·健脑", tool: "蒸锅", time: "15分钟", ingredients: [{name:'溪鱼', weight:600}, {name:'姜葱', weight:20}], steps: ['鱼杀好洗净，盘底铺姜片，鱼身放葱段。', '水开后上锅大火蒸8分钟（视鱼大小调整）。', '出锅倒掉蒸出的腥水，挑去葱姜。', '淋上蒸鱼豉油，撒上新鲜葱丝，泼少许热油激发香味。'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g(大人仔细挑刺后喂)' } },
+          { name: "香菇蒸土鸡", tag: "补气血·高蛋白", tool: "蒸锅", time: "25分钟", ingredients: [{name:'鸡腿肉/土鸡块', weight:400}, {name:'干香菇', weight:30}], steps: ['干香菇提前温水泡发，切片。', '鸡肉切块，加生抽、少许淀粉、姜丝抓匀腌制10分钟。', '香菇铺在盘底，上面放鸡肉。', '水开上锅蒸15-20分钟，至鸡肉熟透。'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g(鸡肉撕碎，香菇切碎)' } },
+          { name: "芹菜炒肉丝", tag: "膳食纤维·下饭", tool: "炒锅", time: "15分钟", ingredients: [{name:'芹菜', weight:200}, {name:'瘦猪肉', weight:200}], steps: ['瘦肉切丝，加生抽、淀粉抓匀；芹菜切段。', '热锅凉油，下肉丝滑熟盛出。', '锅留底油，下芹菜大火快炒至断生。', '倒入肉丝，加少许盐翻炒均匀出锅。'], portions: { dad: '80g肉+菜', mom: '80g肉+菜', sister: '50g肉+菜', brother: '50g(切极碎拌饭)' } },
+          { name: "鲫鱼豆腐汤", tag: "补钙·下火·正餐汤", tool: "陶瓷锅", time: "30分钟", ingredients: [{name:'鲫鱼', weight:400}, {name:'嫩豆腐', weight:200}], steps: ['鲫鱼洗净擦干，热锅少油煎至两面微黄。', '关键：一定要加开水！大火煮10分钟至汤色变白。', '加入豆腐块，转中火再煮10分钟，加盐、葱花出锅。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗(注意挑刺)' } }
+        ],
+        lunchVeg: [
+          { name: "清炒地瓜叶", tag: "时令绿叶·润肠", tool: "炒锅", time: "5分钟", ingredients: [{name:'地瓜叶', weight:300}, {name:'蒜', weight:10}], steps: ['地瓜叶洗净，摘下嫩叶和茎。', '蒜切末，热锅凉油爆香蒜末。', '下地瓜叶大火快炒，变软后加盐出锅。'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(切极碎)' } },
+          { name: "蒜蓉空心菜", tag: "夏季时蔬", tool: "炒锅", time: "5分钟", ingredients: [{name:'空心菜', weight:300}], steps: ['空心菜洗净，切长段，梗和叶分开放。', '蒜末爆香，先下梗炒半分钟，再下叶子。', '大火翻炒变软，加少许盐调味。'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(切极碎)' } },
+          { name: "凉拌黄瓜木耳", tag: "爽口·低卡", tool: "无", time: "10分钟", ingredients: [{name:'黄瓜', weight:200}, {name:'干木耳', weight:20}], steps: ['木耳提前泡发，下开水锅焯水2分钟，捞出过凉水。', '黄瓜洗净拍碎切块。', '混合木耳黄瓜，加蒜末、生抽、陈醋、少许香油拌匀。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '少量(木耳切小)' } },
+          { name: "胡萝卜炒鸡蛋", tag: "护眼·优质蛋白", tool: "炒锅", time: "10分钟", ingredients: [{name:'胡萝卜', weight:200}, {name:'鸡蛋', weight:150}], steps: ['胡萝卜去皮擦细丝，鸡蛋打散。', '热油炒熟鸡蛋盛出。', '底油下胡萝卜丝炒软（胡萝卜素需油脂才能释放）。', '倒入鸡蛋混合翻炒，加盐出锅。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } }
+        ],
+        dinnerMeat: [
+          { name: "空气炸锅鸡翅", tag: "少油·解馋", tool: "空气炸锅", time: "20分钟", ingredients: [{name:'鸡翅', weight:500}], steps: ['鸡翅正反面划两刀，加生抽、蚝油、姜蒜腌制半小时。', '空气炸锅200度预热3分钟。', '铺入鸡翅，200度烤15分钟。', '翻面，再烤5分钟至表皮焦脆。'], portions: { dad: '2个', mom: '2个', sister: '2个', brother: '1个(去皮撕碎)' } },
+          { name: "芋头蒸排骨", tag: "秋季时令·软糯", tool: "蒸锅", time: "40分钟", ingredients: [{name:'排骨', weight:400}, {name:'小芋头', weight:300}], steps: ['排骨洗净，加豆豉、生抽、蒜末、淀粉抓匀腌制15分钟。', '芋头去皮切滚刀块，铺在深盘底部。', '腌好的排骨铺在芋头上。', '上锅大火蒸35分钟，至排骨脱骨软烂。'], portions: { dad: '80g', mom: '80g', sister: '60g', brother: '多给芋头，排骨肉剔碎' } },
+          { name: "洋葱炒牛肉", tag: "强体·补铁", tool: "炒锅", time: "15分钟", ingredients: [{name:'洋葱', weight:150}, {name:'牛肉', weight:250}], steps: ['牛肉逆纹理切片，加生抽、黑胡椒、淀粉腌10分钟。', '洋葱切丝。', '热油大火快炒牛肉至变色盛出。', '下洋葱炒香变软，倒回牛肉，翻炒均匀。'], portions: { dad: '80g', mom: '80g', sister: '60g', brother: '50g(切极碎)' } },
+          { name: "肉末蒸豆腐", tag: "补钙·好消化", tool: "蒸锅", time: "15分钟", ingredients: [{name:'嫩豆腐', weight:300}, {name:'瘦猪肉', weight:100}], steps: ['嫩豆腐切小块，放入碗中。', '瘦肉剁成末，热油炒香，加生抽调味。', '将炒好的肉末连汁铺在豆腐上。', '上锅蒸10分钟，出锅撒葱花。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '1份(拌饭极佳)' } },
+          { name: "番茄龙利鱼（或巴沙鱼）", tag: "无刺·酸甜开胃", tool: "炒锅", time: "20分钟", ingredients: [{name:'龙利鱼柳', weight:300}, {name:'番茄', weight:200}], steps: ['龙利鱼解冻切块，加盐、淀粉抓匀。', '番茄去皮切小丁，下锅炒出汁。', '加一碗水煮开。', '下鱼块煮3分钟，汤汁浓稠加盐出锅。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '1份(鱼块无刺放心吃)' } },
+          { name: "茶树菇老鸭汤", tag: "滋阴润燥·正餐汤", tool: "陶瓷锅", time: "60分钟", ingredients: [{name:'干茶树菇', weight:30}, {name:'老鸭', weight:400}], steps: ['茶树菇剪去根部，温水泡发。', '老鸭斩块，冷水下锅焯水去血沫。', '将鸭肉、茶树菇、姜片放入砂锅，加足量水。', '大火烧开转小火炖煮50分钟，加盐调味。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' } }
+        ],
+        dinnerVeg: [
+          { name: "上汤娃娃菜", tag: "清淡好消化", tool: "炒锅", time: "10分钟", ingredients: [{name:'娃娃菜', weight:300}, {name:'皮蛋', weight:50}], steps: ['娃娃菜洗净切长条。', '蒜末和皮蛋丁下锅炒香。', '加入一碗开水煮开，下娃娃菜煮3-5分钟变软。', '加少许盐和枸杞出锅。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(切碎)' } },
+          { name: "荷塘小炒", tag: "清脆爽口", tool: "炒锅", time: "15分钟", ingredients: [{name:'莲藕', weight:200}, {name:'荷兰豆', weight:100}], steps: ['莲藕切片泡水，荷兰豆撕去老筋。', '两者下开水锅焯水1分钟捞出。', '热油下锅大火快炒，加盐和少许鸡精出锅。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } },
+          { name: "番茄炒菜花", tag: "酸甜开胃", tool: "炒锅", time: "10分钟", ingredients: [{name:'番茄', weight:150}, {name:'菜花', weight:250}], steps: ['菜花掰小朵焯水。', '番茄去皮切块炒出汁。', '倒入菜花翻炒均匀，煮2分钟入味。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(切碎)' } },
+          { name: "南瓜蒸百合", tag: "秋日润燥·微甜", tool: "蒸锅", time: "20分钟", ingredients: [{name:'老南瓜', weight:300}, {name:'鲜百合', weight:50}], steps: ['老南瓜去皮切厚片，摆盘。', '鲜百合洗净掰开，铺在南瓜上。', '上锅蒸15分钟，至南瓜软烂即可（南瓜本身有甜味，无需加糖）。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(压成泥)' } }
+        ],
+        sweets: [
+          { name: "儿童冰糖炖雪梨", tag: "润肺止咳·下午茶", tool: "陶瓷锅", time: "30分钟", ingredients: [{name:'雪梨', weight:200}, {name:'冰糖', weight:10}], steps: ['雪梨洗净去核（可带皮）切块。', '放入炖盅或小锅中，加冰糖和少许水。', '小火慢炖30分钟至梨肉透明。'], portions: {} },
+          { name: "妈妈专属五红汤", tag: "补气血·暖宫", tool: "电饭煲", time: "40分钟", ingredients: [{name:'红枣', weight:30}, {name:'红豆', weight:50}, {name:'红皮花生', weight:30}, {name:'枸杞', weight:10}], steps: ['红豆和花生提前浸泡2小时。', '所有食材（除枸杞外）放入电饭煲，加足量水。', '按煮粥键炖40分钟。', '出锅前5分钟加入枸杞。'], portions: {} },
+          { name: "苹果热橙茶", tag: "补充维C·果茶", tool: "养生壶/奶锅", time: "15分钟", ingredients: [{name:'苹果', weight:100}, {name:'橙子', weight:100}, {name:'红茶包', weight:5}], steps: ['苹果和橙子用盐搓洗干净，切片。', '放入锅中加适量清水，煮10分钟出果香。', '放入红茶包泡2分钟，可加少许冰糖。'], portions: {} }
+        ]
+      },
+      
+      shoppingList: [],
+      prepTasks: [],
+      
+      thisWeekDates: [],
+      nextWeekDates: []
+    }
+  },
+  created() {
+    this.checkAlertStatus();
+    this.registerPWA();
+
+    this.getCurrentWeekDates();
+
+    const localData = localStorage.getItem('familyDataLocal');
+    if (localData) {
+      try {
+        const p = JSON.parse(localData);
+        if (p.rawIngList) this.rawIngList = p.rawIngList;
+        if (p.fruitList) this.fruitList = p.fruitList;
+        if (p.snackList) this.snackList = p.snackList;
+        if (p.preIngList) this.preIngList = p.preIngList;
+        if (p.weekMenuData) this.weekMenuData = p.weekMenuData;
+        if (p.memberData) this.memberData = p.memberData;
+        if (p.memberTempStatus) this.memberTempStatus = p.memberTempStatus;
+        if (p.memberTaboo) this.memberTaboo = p.memberTaboo;
+        if (p.momRestDays) this.momRestDays = p.momRestDays;
+        if (p.sisterHolidays) this.sisterHolidays = p.sisterHolidays;
+        if (p.brotherHolidays) this.brotherHolidays = p.brotherHolidays;
+        if (p.historyData) this.historyData = p.historyData;
+        if (p.scheduleConfig) this.scheduleConfig = p.scheduleConfig;
+        if (p.recipeLibrary) this.recipeLibrary = p.recipeLibrary;
+      } catch(e) {
+        console.error('本地缓存解析失败', e);
+      }
+    }
+
+    this.loadCustomRecipes(); 
+    this.generateWeekPlan('current', true);
+    this.generateWeekPlan('next', true);
+
+    if (this.supabaseConfig.url && this.supabaseConfig.key) {
+      this.initSupabase(true);
+    }
+  },
+  computed: {
+    expiringItems() {
+      const all = [...this.rawIngList, ...this.fruitList, ...this.snackList, ...this.preIngList];
+      return all.filter(item => item.weight > 0 && this.getRemainingDays(item) <= 3)
+                 .sort((a, b) => this.getRemainingDays(a) - this.getRemainingDays(b));
+    },
+
+    homeCurrentDayDishes() {
+      if (!this.homeDate) return null;
+      const parts = this.homeDate.split('-');
+      const targetDate = new Date(parts[0], parts[1]-1, parts[2]);
+      
+      const isNextWeek = this.nextWeekDates.some(d => d.dateStr === this.homeDate);
+      const weekMenu = isNextWeek ? this.weekMenuData.next : this.weekMenuData.current;
+      const dayOfWeek = targetDate.getDay(); 
+      const idx = (dayOfWeek + 6) % 7; 
+      
+      const dayData = weekMenu[idx] || {};
+      return {
+        breakfast: Array.isArray(dayData.breakfast) ? dayData.breakfast : [],
+        lunch: Array.isArray(dayData.lunch) ? dayData.lunch : [],
+        dinner: Array.isArray(dayData.dinner) ? dayData.dinner : [],
+        sweets: Array.isArray(dayData.sweets) ? dayData.sweets : []
+      };
+    },
+    
+    currentDayDishes() {
+      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      const dayData = weekMenu[this.selDateIdx] || {};
+      return {
+        breakfast: Array.isArray(dayData.breakfast) ? dayData.breakfast : [],
+        lunch: Array.isArray(dayData.lunch) ? dayData.lunch : [],
+        dinner: Array.isArray(dayData.dinner) ? dayData.dinner : [],
+        sweets: Array.isArray(dayData.sweets) ? dayData.sweets : []
+      };
+    },
+
+    filteredRawList(){ 
+      const kw = this.searchIng.trim().toLowerCase(); 
+      let list = kw ? this.rawIngList.filter(i => i.name.toLowerCase().includes(kw)) : this.rawIngList; 
+      return list.sort((a, b) => this.getRemainingDays(a) - this.getRemainingDays(b));
+    },
+    filteredFruitList(){ 
+      const kw = this.searchIng.trim().toLowerCase(); 
+      let list = kw ? this.fruitList.filter(i => i.name.toLowerCase().includes(kw)) : this.fruitList; 
+      return list.sort((a, b) => this.getRemainingDays(a) - this.getRemainingDays(b));
+    },
+    filteredSnackList(){ 
+      const kw = this.searchIng.trim().toLowerCase(); 
+      let list = kw ? this.snackList.filter(i => i.name.toLowerCase().includes(kw)) : this.snackList; 
+      return list.sort((a, b) => this.getRemainingDays(a) - this.getRemainingDays(b));
+    },
+    filteredPreList(){ 
+      const kw = this.searchIng.trim().toLowerCase(); 
+      let list = kw ? this.preIngList.filter(i => i.name.toLowerCase().includes(kw)) : this.preIngList; 
+      return list.sort((a, b) => this.getRemainingDays(a) - this.getRemainingDays(b));
+    },
+
+    extraItemsList() {
+      return this.shoppingList.filter(i => i.isExtra);
+    },
+    extraItemsCount() {
+      return this.extraItemsList.length;
+    },
+
+    groupedShoppingList() {
+      const groups = { '肉类': [], '果蔬': [], '配菜': [], '主食': [], '干货': [], '调料': [], '其他': [] };
+      
+      this.shoppingList.filter(i => i.category === 'weekend').forEach(item => {
+        if (!item.area || !groups[item.area]) {
+          item.area = '其他';
+        }
+        groups[item.area].push(item);
+      });
+      
+      const result = [];
+      for (const [area, items] of Object.entries(groups)) {
+        if (items.length > 0) result.push({ area, items });
+      }
+      return result;
+    },
+
+    weekendShoppingList() { return this.shoppingList.filter(i => i.category === 'weekend'); },
+    dailyShoppingList() { return this.shoppingList.filter(i => i.category === 'daily' || i.isUrgent); },
+    
+    tomorrowShoppingByMeal() {
+      const tomorrow = new Date(); 
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowIdx = (tomorrow.getDay() + 6) % 7;
+      const tomorrowMenu = this.weekMenuData.current[tomorrowIdx] || { breakfast: [], lunch: [], dinner: [], sweets: [] };
+      
+      const result = { breakfast: [], lunch: [], dinner: [] };
+      
+      const processMeal = (mealData, mealKey) => {
+        let needed = {};
+        mealData.forEach(dish => {
+          if (!dish.skipped && !dish.completed && dish.ingredients) {
+            dish.ingredients.forEach(ing => {
+              if (!needed[ing.name]) needed[ing.name] = 0;
+              needed[ing.name] += ing.weight;
+            });
+          }
+        });
+        
+        for (let [name, totalWeight] of Object.entries(needed)) {
+          let stock = this.rawIngList.find(i => i.name === name) || 
+                      this.preIngList.find(i => i.name === name) ||
+                      this.fruitList.find(i => i.name === name) ||
+                      this.snackList.find(i => i.name === name);
+          
+          let stockWeight = stock ? stock.weight : 0;
+          let buyWeight = totalWeight - stockWeight;
+          
+          if (buyWeight > 0) {
+            let key = name + '_' + mealKey;
+            if (!result[mealKey].some(item => item.name === name)) {
+                result[mealKey].push({ name, buyWeight, isUrgent: true, id: key });
+            }
+          }
+        }
+      };
+
+      processMeal(tomorrowMenu.breakfast || [], 'breakfast');
+      processMeal(tomorrowMenu.lunch || [], 'lunch');
+      processMeal(tomorrowMenu.dinner || [], 'dinner');
+      
+      return result;
+    },
+
+    weekendPrepTasks() { return this.prepTasks.filter(t => t.type === 'weekend'); },
+    dailyPrepTasks() { return this.prepTasks.filter(t => t.type === 'daily'); },
+    hasUnfinishedTask(){ return this.shoppingList.some(i => !i.bought); },
+    
+    smartShoppingReminder() {
+      const today = new Date();
+      const dayOfWeek = today.getDay();
+      const isWeekend = dayOfWeek === 5 || dayOfWeek === 6 || dayOfWeek === 0;
+      const hasNextWeekMenu = this.weekMenuData.next.some(day => day.breakfast.length > 0 || day.lunch.length > 0 || day.dinner.length > 0);
+      const hasUnboughtItems = this.shoppingList.some(item => !item.bought);
+
+      if (isWeekend && hasNextWeekMenu && hasUnboughtItems) {
+        return "📅 周末大采购时间到啦！下周菜单已生成，带着孩子一起去超市采购吧！";
+      }
+      return "";
+    },
+
+    displayWeekDates() { return this.viewWeekMode === 'current' ? this.thisWeekDates : this.nextWeekDates; },
+    momIsMorningShift() { const today = this.todayMembers.find(m => m.key === 'mom'); return today && today.status.includes('早班'); },
+    
+    availableReplacements() {
+      if (!this.replaceModal.mealType) return [];
+      let pool = [];
+      
+      if (this.replaceModal.mealType === 'lunch' || this.replaceModal.mealType === 'dinner') {
+        pool = [
+          ...this.recipeLibrary.lunchStaple, 
+          ...this.recipeLibrary.dinnerStaple,
+          ...this.recipeLibrary.lunchMeat, ...this.recipeLibrary.lunchVeg, 
+          ...this.recipeLibrary.dinnerMeat, ...this.recipeLibrary.dinnerVeg
+        ];
+      } else {
+        pool = this.recipeLibrary[this.replaceModal.mealType] || [];
+      }
+      
+      pool = pool.filter(r => r.name !== this.replaceModal.currentName);
+
+      const currentDish = this.currentDayDishes[this.replaceModal.mealType][this.replaceModal.dishIdx];
+      if (currentDish) {
+         const isMeat = (dish) => /肉|鱼|虾|鸡|鸭|牛|羊|排骨|翅|蛋|肠|海鲜/.test(dish.name);
+         const isStaple = (dish) => /饭|面|粉|粥|包|馒头|饺|饼|红薯|玉米|土豆|燕麦|吐司/.test(dish.name);
+         
+         const isCurrentMeat = isMeat(currentDish);
+         const isCurrentStaple = isStaple(currentDish);
+         
+         pool.sort((a, b) => {
+             let scoreA = 0, scoreB = 0;
+             if (isCurrentMeat && isMeat(a)) scoreA += 10;
+             if (isCurrentMeat && isMeat(b)) scoreB += 10;
+             if (!isCurrentMeat && !isCurrentStaple && !isMeat(a) && !isStaple(a)) scoreA += 10; 
+             if (!isCurrentMeat && !isCurrentStaple && !isMeat(b) && !isStaple(b)) scoreB += 10;
+             if (isCurrentStaple && isStaple(a)) scoreA += 10;
+             if (isCurrentStaple && isStaple(b)) scoreB += 10;
+             return scoreB - scoreA; 
+         });
+      }
+      return pool;
+    },
+    tonightPrepReminder() {
+      if (!this.currentDayDishes) return '';
+      let reminders = [];
+      const allDishes = [...this.currentDayDishes.breakfast, ...this.currentDayDishes.lunch, ...this.currentDayDishes.dinner];
+      allDishes.forEach(dish => {
+        (dish.ingredients || []).forEach(ing => {
+          if (['牛腩', '鸡翅', '龙利鱼柳', '虾仁', '猪肉丸'].some(m => ing.name.includes(m))) {
+            reminders.push(ing.name);
+          }
+        });
+      });
+      if (reminders.length > 0) {
+        return `请把明天要用的 ${[...new Set(reminders)].join('、')} 从冷冻室拿到冷藏室解冻。`;
+      }
+      return '';
+    },
+    
+    globalHealthAlerts() {
+      let alerts = [];
+      const m = this.memberTempStatus;
+      
+      if (m.sister === 'cold') alerts.push('姐姐感冒了：推荐【葱白姜糖水】(葱白3段、生姜3片、红糖10g，煮水10分钟)，饮食清淡，多喝温水。');
+      if (m.sister === 'fever') alerts.push('姐姐发烧了：推荐【小米绿豆粥】(小米50g、绿豆30g，熬至软烂)，补充水分和电解质，吃易消化的流食。');
+      if (m.sister === 'gastro') alerts.push('姐姐肠胃炎：推荐【清汤面】(面条50g煮软，加少许盐和生抽，不加一滴油)，减轻肠胃负担。');
+      
+      if (m.brother === 'cold') alerts.push('弟弟感冒了：推荐【白萝卜蜂蜜水】(白萝卜切丁煮水，放温后加少许蜂蜜)，饮食需极度清淡。');
+      if (m.brother === 'fever') alerts.push('弟弟发烧了：推荐【南瓜泥】(南瓜100g蒸熟压成泥)，易吞咽且补充维生素。');
+      if (m.brother === 'gastro') alerts.push('弟弟肠胃炎：推荐【焦米汤】(大米50g干炒至焦黄，加水熬煮取汤汁)，止泻效果极好。');
+      
+      if (m.dad === 'cold') alerts.push('爸爸感冒了：推荐【姜丝瘦肉粥】(瘦肉50g切丝，加姜丝与大米50g同煮)，发汗驱寒。');
+      if (m.dad === 'fever') alerts.push('爸爸发烧了：推荐【冬瓜虾皮汤】(冬瓜200g、虾皮少许煮汤)，利尿退烧。');
+      if (m.dad === 'gastro') alerts.push('爸爸肠胃炎：推荐【山药小米粥】(山药100g切碎与小米50g熬粥)，养胃护胃。');
+      
+      if (m.mom === 'cold') alerts.push('妈妈感冒了：推荐【番茄热汤面】(番茄1个炒出汁加水，下面条50g)，补充维C。');
+      if (m.mom === 'fever') alerts.push('妈妈发烧了：推荐【绿豆百合汤】(绿豆30g、百合10g煮汤)，注意多休息。');
+      if (m.mom === 'gastro') alerts.push('妈妈肠胃炎：推荐【蒸苹果】(苹果切块蒸熟)，熟苹果有收敛止泻的作用。');
+      
+      if (m.mom === 'period') alerts.push('妈妈处于姨妈期，汤羹已自动避开寒凉食材，注意保暖。');
+      return alerts;
+    },
+
+    todayMembers(){
+      const targetDateStr = this.homeDate;
+      
+      const parseDateSafe = (str) => {
+        if(!str) return new Date();
+        const d = new Date(str.replace(/-/g, '/')); 
+        d.setHours(0,0,0,0);
+        return d;
+      };
+      
+      const targetDate = parseDateSafe(targetDateStr);
+      const dayOfWeek = targetDate.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+      const isMomRest = this.momRestDays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
+      const isSisterHoliday = this.sisterHolidays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
+      const isBrotherHoliday = this.brotherHolidays.some(h => targetDateStr >= h.start && targetDateStr <= h.end);
+
+      const result = [];
+      
+      const dadConfig = this.scheduleConfig.dad;
+      const dadStart = parseDateSafe(dadConfig.startDate);
+      const dadDiffDays = Math.round((targetDate - dadStart) / (1000 * 60 * 60 * 24));
+      const dadCycle = Number(dadConfig.homeDays) + Number(dadConfig.awayDays);
+      const dadDayInCycle = dadCycle > 0 ? ((dadDiffDays % dadCycle) + dadCycle) % dadCycle : 0;
+      
+      let dadMeals = []; let dadStatus = ""; let dadStatusClass = "";
+      if (dadDayInCycle === 0) { dadMeals = ['晚']; dadStatus = '下午回家'; dadStatusClass = 'status-rest'; } 
+      else if (dadDayInCycle >= 1 && dadDayInCycle <= 3) { dadMeals = ['早', '午', '晚']; dadStatus = '在家休息'; dadStatusClass = 'status-rest'; } 
+      else if (dadDayInCycle === 4) { dadMeals = ['早', '午']; dadStatus = '下午上班'; dadStatusClass = 'status-work'; } 
+      else { dadMeals = []; dadStatus = '全天上班'; dadStatusClass = 'status-work'; }
+      result.push({ key: 'dad', name: '爸爸', icon: '👨', status: dadStatus, statusClass: dadStatusClass, meals: dadMeals, dateStr: targetDateStr });
+
+      let momMeals = []; let momStatus = ""; let momStatusClass = "";
+      if (isMomRest) { momMeals = ['早', '午', '晚']; momStatus = '休息日'; momStatusClass = 'status-rest'; } 
+      else {
+        const momConfig = this.scheduleConfig.mom;
+        const momStart = parseDateSafe(momConfig.startDate);
+        const momDiffDays = Math.round((targetDate - momStart) / (1000 * 60 * 60 * 24));
+        const momDayInCycle = ((momDiffDays % 2) + 2) % 2;
+        
+        let isMorningShift = false;
+        if (momConfig.firstShift === 'morning') {
+           isMorningShift = (momDayInCycle === 0); 
+        } else {
+           isMorningShift = (momDayInCycle === 1); 
+        }
+        
+        if (isMorningShift) { momMeals = ['早（外带）', '午', '晚']; momStatus = '早班 (外带)'; momStatusClass = 'status-work'; } 
+        else { momMeals = ['早', '午', '晚']; momStatus = '下午班'; momStatusClass = 'status-work'; }
+      }
+      result.push({ key: 'mom', name: '妈妈', icon: '👩', status: momStatus, statusClass: momStatusClass, meals: momMeals, isRest: isMomRest, dateStr: targetDateStr });
+
+      let sisterMeals = []; let sisterStatus = "";
+      if (isWeekend || isSisterHoliday) { sisterMeals = ['早', '午', '晚']; sisterStatus = isSisterHoliday ? '假期' : '休息日'; } 
+      else { sisterMeals = ['早', '午', '晚']; sisterStatus = '上学日'; }
+      result.push({ key: 'sister', name: '姐姐', icon: '👧', status: sisterStatus, statusClass: (isWeekend || isSisterHoliday) ? 'status-rest' : 'status-work', meals: sisterMeals, dateStr: targetDateStr });
+
+      let brotherMeals = []; let brotherStatus = "";
+      if (isWeekend || isBrotherHoliday) { brotherMeals = ['早', '午', '晚']; brotherStatus = isBrotherHoliday ? '假期' : '休息日'; } 
+      else { brotherMeals = ['早', '晚']; brotherStatus = '上学日'; }
+      result.push({ key: 'brother', name: '弟弟', icon: '👦', status: brotherStatus, statusClass: (isWeekend || isBrotherHoliday) ? 'status-rest' : 'status-work', meals: brotherMeals, dateStr: targetDateStr });
+
+      return result;
+    }
+  },
+  methods:{
+    formatDate(date) {
+      return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    },
+    toggleExpand(dishId) {
+      this.expandedDishes[dishId] = !this.expandedDishes[dishId];
+    },
+
+    checkAlertStatus() {
+      const today = new Date().toISOString().split('T')[0];
+      
+      if (this.hideAlertDate === today) {
+        this.showExpiryAlert = false;
+      } else {
+        this.showExpiryAlert = true;
+      }
+
+      if (localStorage.getItem('hideShoppingReminderDate') === today) {
+        this.showShoppingReminder = false;
+      } else {
+        this.showShoppingReminder = true;
+      }
+    },
+    
+    closeShoppingReminder() {
+      this.showShoppingReminder = false;
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('hideShoppingReminderDate', today); 
+    },
+
+    closeExpiryAlert() {
+      this.showExpiryAlert = false;
+      const today = new Date().toISOString().split('T')[0];
+      localStorage.setItem('hideAlertDate', today);
+    },
+    
+    recommendRecipesByExpiring() {
+      const expiringNames = this.expiringItems.map(item => item.name);
+      
+      const allLibs = [
+        ...this.recipeLibrary.breakfast,
+        ...this.recipeLibrary.lunchMeat, ...this.recipeLibrary.lunchVeg,
+        ...this.recipeLibrary.dinnerMeat, ...this.recipeLibrary.dinnerVeg,
+        ...this.recipeLibrary.sweets
+      ];
+
+      const matched = allLibs.filter(dish => {
+        if (!dish.ingredients) return false;
+        return dish.ingredients.some(ing => 
+          expiringNames.some(name => ing.name.includes(name) || name.includes(ing.name))
+        );
+      });
+
+      this.recommendModal.list = matched;
+      this.recommendModal.show = true;
+    },
+    
+    registerPWA() {
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('service-worker.js')
+            .then(reg => console.log('PWA 注册成功'))
+            .catch(err => console.log('PWA 注册失败', err));
+        });
+      }
+    },
+
+    openTakeoutModal() {
+      this.takeoutModal = { show: true, name: '' };
+    },
+    saveTakeout() {
+      if (!this.takeoutModal.name.trim()) { alert("请输入外买了什么"); return; }
+      const newDish = {
+        id: Date.now(), name: "外买：" + this.takeoutModal.name, tag: "外买", tool: "外卖/店铺", time: "-",
+        ingredients: [], steps: ["直接食用，可搭配家里现有的水果/牛奶/鸡蛋。"], portions: {}, isTakeout: true,
+        completed: false, skipped: false, feedback: ''
+      };
+      if(!this.currentDayDishes.breakfast) this.currentDayDishes.breakfast = [];
+      this.currentDayDishes.breakfast.push(newDish);
+      this.takeoutModal.show = false;
+      alert("✅ 已记录外买并加入今日早餐！");
+      this.pushToCloud();
+    },
+
+    getDailyWeight(item, meal) {
+      let key = item.name + '_' + meal;
+      if (this.dailyOverrides[key] !== undefined) return this.dailyOverrides[key];
+      return item.buyWeight;
+    },
+    removeDailyItem(item, meal) {
+      const tomorrow = new Date(); 
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowIdx = (tomorrow.getDay() + 6) % 7;
+      const tomorrowMenu = this.weekMenuData.current[tomorrowIdx];
+
+      let affectedDishes = [];
+      
+      if (tomorrowMenu) {
+        ['breakfast', 'lunch', 'dinner', 'sweets'].forEach(m => {
+          (tomorrowMenu[m] || []).forEach((dish, dishIdx) => {
+            if (!dish.skipped && !dish.completed) {
+              const hasIngredient = (dish.ingredients || []).some(ing =>
+                ing.name.includes(item.name) || item.name.includes(ing.name)
+              );
+              if (hasIngredient) {
+                affectedDishes.push({ dayIdx: tomorrowIdx, meal: m, dishIdx, name: dish.name, week: 'current', dish: dish });
+              }
+            }
+          });
+        });
+      }
+
+      if (affectedDishes.length === 0) {
+        if (!confirm("确定明天不买【" + item.name + "】了吗？")) return;
+        let key = item.name + '_' + meal;
+        this.dailyOverrides[key] = -1;
+        return;
+      }
+
+      let relatedIngredients = [];
+      affectedDishes.forEach(task => {
+        (task.dish.ingredients || []).forEach(ing => {
+          if (ing.name !== item.name) {
+            let shopItem = this.shoppingList.find(s => s.name === ing.name && !s.bought);
+            if (shopItem && !relatedIngredients.some(r => r.name === ing.name)) {
+              relatedIngredients.push(shopItem);
+            }
+          }
+        });
+      });
+
+      let dishNames = [...new Set(affectedDishes.map(d => d.name))].join('、');
+      let extraMsg = "";
+      if (relatedIngredients.length > 0) {
+        extraMsg = `\n\n💡 智能检测：这道菜里的其他配菜（${relatedIngredients.map(r => r.name).join('、')}）你还没买，要一起从清单里删掉吗？`;
+      }
+
+      let msg = `⚠️ 你没有买【${item.name}】，影响了明天（${this.displayWeekDates[tomorrowIdx]?.week || ''}）的 ${affectedDishes.length} 道菜：\n👉 ${dishNames}${extraMsg}\n\n接下来系统将引导你替换它们，是否继续？`;
+
+      if (confirm(msg)) {
+        let key = item.name + '_' + meal;
+        this.dailyOverrides[key] = -1;
+
+        relatedIngredients.forEach(relItem => {
+          const rIdx = this.shoppingList.indexOf(relItem);
+          if (rIdx > -1) this.shoppingList.splice(rIdx, 1);
+        });
+
+        this.pendingReplaceQueue = [...affectedDishes];
+        this.pendingReplaceReturnTab = 'daily'; 
+        this.pushToCloud();
+        
+        this.processNextPendingReplace();
+      }
+    },
+    openDailyWeightModal(item, meal) {
+      let key = item.name + '_' + meal;
+      this.dailyWeightModal = {
+        show: true, item: item, meal: meal, weight: this.getDailyWeight(item, meal), key: key
+      };
+    },
+    saveDailyWeight() {
+      if (this.dailyWeightModal.weight < 0) this.dailyWeightModal.weight = 0;
+      this.dailyOverrides[this.dailyWeightModal.key] = this.dailyWeightModal.weight;
+      this.dailyWeightModal.show = false;
+    },
+
+    finishDailyPurchase() {
+      if (this.dailyBoughtItems.length === 0) {
+        alert("请先勾选你买到的食材哦！");
+        return;
+      }
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      let count = 0;
+      
+      const allTomorrowItems = [
+        ...this.tomorrowShoppingByMeal.breakfast,
+        ...this.tomorrowShoppingByMeal.lunch,
+        ...this.tomorrowShoppingByMeal.dinner
+      ];
+
+      this.dailyBoughtItems.forEach(id => {
+        const item = allTomorrowItems.find(i => i.id === id);
+        if (item) {
+          let targetLib = this.rawIngList;
+          if (/果|莓|蕉|橘|橙|梨|桃|瓜|柿/.test(item.name)) targetLib = this.fruitList;
+          else if (/零食|坚果|饼干|酸奶/.test(item.name)) targetLib = this.snackList;
+          else if (/预制|丸子|饺子/.test(item.name)) targetLib = this.preIngList;
+          
+          const existing = targetLib.find(i => i.name === item.name);
+          if (existing) {
+            existing.weight += item.buyWeight; 
+            existing.buyDate = todayStr; 
+            if (existing.expireDay < 7) existing.expireDay = 7; 
+          } else {
+            targetLib.push({ name: item.name, weight: item.buyWeight, expireDay: 7, buyDate: todayStr, icon: '🍽️' });
+          }
+          count++;
+        }
+      });
+
+      this.dailyBoughtItems = []; 
+      this.pushToCloud();
+      alert(`✅ 日常采购完成！已将 ${count} 项食材补充进食材库。`);
+    },
+
+    finishPurchase() {
+      const boughtItems = this.shoppingList.filter(i => i.bought);
+      if (boughtItems.length === 0) {
+        alert("你还没有勾选任何已采购的食材哦！");
+        return;
+      }
+      
+      const todayStr = new Date().toISOString().split('T')[0];
+      let count = 0;
+      
+      boughtItems.forEach(item => {
+        let targetLib = this.rawIngList;
+        if (/果|莓|蕉|橘|橙|梨|桃|瓜|柿/.test(item.name)) targetLib = this.fruitList;
+        else if (/零食|坚果|饼干|酸奶/.test(item.name)) targetLib = this.snackList;
+        else if (/预制|丸子|饺子/.test(item.name)) targetLib = this.preIngList;
+        
+        const existing = targetLib.find(i => i.name === item.name);
+        if (existing) {
+          existing.weight += item.weight;
+          existing.buyDate = todayStr; 
+          if (existing.expireDay < 7) existing.expireDay = 7; 
+        } else {
+          targetLib.push({ name: item.name, weight: item.weight, expireDay: 7, buyDate: todayStr, icon: '🍽️' });
+        }
+        count++;
+      });
+      
+      this.shoppingList = this.shoppingList.filter(i => !i.bought);
+      this.pushToCloud();
+      alert(`✅ 采购完成！已将 ${count} 项食材自动补充进食材库。`);
+    },
+
+    getRemainingDays(item) {
+      if (!item.expireDay) return 999;
+      const today = new Date();
+      today.setHours(0,0,0,0);
+      let buyDateObj = new Date(item.buyDate || today);
+      buyDateObj.setHours(0,0,0,0);
+      const diffTime = today - buyDateObj;
+      const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      const remain = item.expireDay - diffDays;
+      return remain > 0 ? remain : 0;
+    },
+
+    initSupabase(isAutoLoad = false) {
+      try {
+        if (typeof supabase === 'undefined') return; 
+        if (!this.supabaseConfig.url || !this.supabaseConfig.key) return;
+        
+        this.supabaseClient = supabase.createClient(this.supabaseConfig.url, this.supabaseConfig.key);
+        this.supabaseConnected = true;
+        if (isAutoLoad) {
+          this.pullFromCloud(true); 
+        } else {
+          this.pullFromCloud(); 
+        }
+      } catch (e) {
+        console.error("初始化失败", e);
+        this.supabaseConnected = false;
+        alert("连接失败，请检查 URL 和 Key 格式。");
+      }
+    },
+
+    connectSupabase() {
+      const url = this.supabaseConfig.url.trim();
+      const key = this.supabaseConfig.key.trim();
+      if (!url || !key) { alert("请填写完整的配置信息"); return; }
+      
+      localStorage.setItem('sb_url', url);
+      localStorage.setItem('sb_key', key);
+      this.initSupabase();
+    },
+
+    disconnectSupabase() {
+      if (confirm("断开后将不再自动同步，确定吗？")) {
+        localStorage.removeItem('sb_url');
+        localStorage.removeItem('sb_key');
+        this.supabaseConfig = { url: '', key: '' };
+        this.supabaseConnected = false;
+        this.supabaseClient = null;
+        this.showSyncSettingsModal = false;
+      }
+    },
+
+    async pushToCloud() {
+      localStorage.setItem('familyDataLocal', JSON.stringify({
+        rawIngList: this.rawIngList,
+        fruitList: this.fruitList,
+        snackList: this.snackList,
+        preIngList: this.preIngList,
+        weekMenuData: this.weekMenuData,
+        memberData: this.memberData,
+        memberTempStatus: this.memberTempStatus,
+        memberTaboo: this.memberTaboo,
+        momRestDays: this.momRestDays,
+        sisterHolidays: this.sisterHolidays,
+        brotherHolidays: this.brotherHolidays,
+        historyData: this.historyData,
+        scheduleConfig: this.scheduleConfig,
+        recipeLibrary: this.recipeLibrary
+      }));
+
+      if (!this.supabaseClient) return;
+      this.isSyncing = true;
+      try {
+        const payload = {
+          rawIngList: this.rawIngList,
+          fruitList: this.fruitList,
+          snackList: this.snackList,
+          preIngList: this.preIngList,
+          weekMenuData: this.weekMenuData,
+          memberData: this.memberData,
+          memberTempStatus: this.memberTempStatus,
+          memberTaboo: this.memberTaboo,
+          momRestDays: this.momRestDays,
+          sisterHolidays: this.sisterHolidays,
+          brotherHolidays: this.brotherHolidays,
+          historyData: this.historyData,
+          scheduleConfig: this.scheduleConfig,
+          recipeLibrary: this.recipeLibrary 
+        };
+
+        const { error } = await this.supabaseClient
+          .from('family_dashboard')
+          .update({ payload: payload, updated_at: new Date().toISOString() })
+          .eq('id', 'family_data');
+
+        if (error) throw error;
+        
+        const now = new Date();
+        this.lastSyncTime = `${now.getHours()}:${String(now.getMinutes()).padStart(2,'0')}`;
+      } catch (e) {
+        console.error("云端保存失败", e);
+      } finally {
+        this.isSyncing = false;
+      }
+    },
+
+    async pullFromCloud(isSilent = false) {
+      if (!this.supabaseClient) return;
+      
+      try {
+        const { data, error } = await this.supabaseClient
+          .from('family_dashboard')
+          .select('payload, updated_at')
+          .eq('id', 'family_data')
+          .single();
+
+        if (error) throw error;
+
+        if (data && data.payload && Object.keys(data.payload).length > 0) {
+          const p = data.payload;
+          if (p.rawIngList) this.rawIngList = p.rawIngList;
+          if (p.fruitList) this.fruitList = p.fruitList;
+          if (p.snackList) this.snackList = p.snackList;
+          if (p.preIngList) this.preIngList = p.preIngList;
+          if (p.weekMenuData) {
+            const fixMenu = (menu) => {
+              if(!menu || !Array.isArray(menu)) return Array(7).fill(null).map(() => ({ breakfast: [], lunch: [], dinner: [], sweets: [] }));
+              return menu.map(day => ({
+                breakfast: (day.breakfast || []).map(d => ({...d, ingredients: d.ingredients || [], steps: d.steps || [], tag: d.tag || '日常'})),
+                lunch: (day.lunch || []).map(d => ({...d, ingredients: d.ingredients || [], steps: d.steps || [], tag: d.tag || '日常'})),
+                dinner: (day.dinner || []).map(d => ({...d, ingredients: d.ingredients || [], steps: d.steps || [], tag: d.tag || '日常'})),
+                sweets: (day.sweets || day.soup || []).map(d => ({...d, ingredients: d.ingredients || [], steps: d.steps || [], tag: d.tag || '日常'})) 
+              }));
+            };
+            this.weekMenuData.current = fixMenu(p.weekMenuData.current);
+            this.weekMenuData.next = fixMenu(p.weekMenuData.next);
+          }
+          if (p.memberData) this.memberData = p.memberData;
+          if (p.memberTempStatus) this.memberTempStatus = p.memberTempStatus;
+          if (p.memberTaboo) this.memberTaboo = p.memberTaboo;
+          if (p.momRestDays) this.momRestDays = p.momRestDays;
+          if (p.sisterHolidays) this.sisterHolidays = p.sisterHolidays;
+          if (p.brotherHolidays) this.brotherHolidays = p.brotherHolidays;
+          if (p.historyData) this.historyData = p.historyData;
+          if (p.scheduleConfig) this.scheduleConfig = p.scheduleConfig;
+
+          if (p.recipeLibrary) {
+            const mergeLib = (target, source) => {
+              if (!source) return;
+              source.forEach(r => {
+                if (!target.some(t => t.name === r.name)) target.push(r);
+              });
+            };
+            mergeLib(this.recipeLibrary.breakfast, p.recipeLibrary.breakfast);
+            mergeLib(this.recipeLibrary.lunchStaple, p.recipeLibrary.lunchStaple); 
+            mergeLib(this.recipeLibrary.lunchMeat, p.recipeLibrary.lunchMeat);
+            mergeLib(this.recipeLibrary.lunchVeg, p.recipeLibrary.lunchVeg);
+            mergeLib(this.recipeLibrary.dinnerMeat, p.recipeLibrary.dinnerMeat);
+            mergeLib(this.recipeLibrary.dinnerVeg, p.recipeLibrary.dinnerVeg);
+            mergeLib(this.recipeLibrary.sweets, p.recipeLibrary.sweets);
+          }
+
+          if (!isSilent) alert("✅ 数据已从云端更新到本地！");
+          this.showSyncSettingsModal = false;
+        } else {
+          if (!isSilent) alert("云端暂无数据，当前本地数据将在修改时自动上传。");
+          this.showSyncSettingsModal = false;
+        }
+      } catch (e) {
+        console.error("拉取失败", e);
+        if (!isSilent) alert("拉取云端数据失败：" + e.message);
+      }
+    },
+
+    openLogModal(target) {
+      this.logModal = {
+        show: true,
+        target: target,
+        date: new Date().toISOString().split('T')[0],
+        height: null,
+        weight: null
+      };
+    },
+    saveLog() {
+      const { target, date, height, weight } = this.logModal;
+      if (!date) { alert("请选择日期"); return; }
+      
+      const targetData = this.historyData[target];
+      if (!targetData) return;
+
+      const dateObj = new Date(date);
+      const dateStr = `${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
+
+      let idx = targetData.labels.indexOf(dateStr);
+      if (idx === -1) {
+        targetData.labels.push(dateStr);
+        if (target === 'dad' || target === 'mom') targetData.weight.push(weight);
+        else {
+          targetData.height.push(height);
+          targetData.weight.push(weight);
+        }
+        const sortIndices = targetData.labels.map((l, i) => i).sort((a, b) => targetData.labels[a].localeCompare(targetData.labels[b]));
+        targetData.labels = sortIndices.map(i => targetData.labels[i]);
+        targetData.weight = sortIndices.map(i => targetData.weight[i]);
+        if (targetData.height) targetData.height = sortIndices.map(i => targetData.height[i]);
+      } else {
+        if (target === 'dad' || target === 'mom') targetData.weight[idx] = weight;
+        else {
+          targetData.height[idx] = height;
+          targetData.weight[idx] = weight;
+        }
+      }
+
+      this.logModal.show = false;
+      this.pushToCloud();
+      alert("✅ 数据已记录！");
+      
+      if (this.chartModal.show && (this.chartModal.target.includes(target) || this.chartModal.target === target)) {
+        this.renderSingleChart(this.chartModal.target);
+      }
+    },
+
+    skipDish(dish) {
+      if (dish.completed) return;
+      if (!confirm("确定要跳过这道菜吗？不会扣减库存。")) return;
+      dish.skipped = true;
+      this.pushToCloud();
+    },
+
+    toggleBatchDeleteMode() {
+      this.isBatchDeleteMode = true;
+      this.selectedToDelete = [];
+    },
+    cancelBatchDelete() {
+      this.isBatchDeleteMode = false;
+      this.selectedToDelete = [];
+    },
+    selectAllForDelete() {
+      const currentTabNames = 
+        this.ingTab === 'raw' ? this.filteredRawList.map(i => i.name) :
+        this.ingTab === 'fruit' ? this.filteredFruitList.map(i => i.name) :
+        this.ingTab === 'snack' ? this.filteredSnackList.map(i => i.name) :
+        this.filteredPreList.map(i => i.name);
+
+      const allSelected = currentTabNames.every(name => this.selectedToDelete.includes(name));
+      
+      if (allSelected) {
+        this.selectedToDelete = this.selectedToDelete.filter(name => !currentTabNames.includes(name));
+      } else {
+        const newSelected = new Set([...this.selectedToDelete, ...currentTabNames]);
+        this.selectedToDelete = Array.from(newSelected);
+      }
+    },
+    confirmBatchDelete() {
+      if (this.selectedToDelete.length === 0) {
+        alert("请先勾选要删除的食材");
+        return;
+      }
+      if (!confirm(`确定要删除选中的 ${this.selectedToDelete.length} 项食材吗？`)) return;
+
+      const filterFn = (list) => list.filter(item => !this.selectedToDelete.includes(item.name));
+      
+      this.rawIngList = filterFn(this.rawIngList);
+      this.fruitList = filterFn(this.fruitList);
+      this.snackList = filterFn(this.snackList);
+      this.preIngList = filterFn(this.preIngList);
+
+      this.pushToCloud();
+      alert(`✅ 成功删除 ${this.selectedToDelete.length} 项食材！`);
+      this.cancelBatchDelete();
+    },
+    clearBoughtItems() {
+      if (this.shoppingList.filter(i => i.bought).length === 0) {
+        alert("当前没有已采购的物品哦。");
+        return;
+      }
+      if (!confirm("确定要清空所有已采购的物品吗？（未采购的会保留）")) return;
+      
+      this.shoppingList = this.shoppingList.filter(i => !i.bought);
+      this.pushToCloud();
+    },
+
+    processBatchAdd() {
+      const text = this.batchAddText.trim();
+      if (!text) { alert("请输入要入库的内容"); return; }
+
+      const lines = text.split('\n');
+      let addedCount = 0;
+      const todayStr = new Date().toISOString().split('T')[0];
+
+      let targetLib = this.rawIngList;
+      if (this.batchAddType === 'fruit') targetLib = this.fruitList;
+      else if (this.batchAddType === 'snack') targetLib = this.snackList;
+      else if (this.batchAddType === 'pre') targetLib = this.preIngList;
+
+      lines.forEach(line => {
+        line = line.trim();
+        if (!line) return;
+        
+        const match = line.match(/^(.+?)[\s,，:：]+(\d+(?:\.\d+)?)(?:[\s,，:：]+(\d+))?/);
+        if (match) {
+          const name = match[1].trim();
+          const weight = parseFloat(match[2]);
+          const expire = match[3] ? parseInt(match[3]) : 7;
+          
+          const existing = targetLib.find(i => i.name === name);
+          if (existing) {
+            existing.weight += weight;
+            if (match[3]) existing.expireDay = expire;
+            existing.buyDate = todayStr;
+          } else {
+            targetLib.push({ name: name, weight: weight, expireDay: expire, buyDate: todayStr }); 
+          }
+          addedCount++;
+        }
+      });
+
+      if (addedCount > 0) {
+        this.pushToCloud();
+        alert(`✅ 成功批量入库 ${addedCount} 项食材！`);
+        this.showBatchAddModal = false;
+        this.batchAddText = '';
+        this.ingTab = this.batchAddType;
+      } else {
+        alert("格式识别失败，请检查格式是否为：名称 重量 [保质期]（如：鸡蛋 500 14）");
+      }
+    },
+
+    saveApiKey() {
+      const key = this.tempKey.trim();
+      if (!key) { alert("请输入有效的 Key"); return; }
+      this.apiKey = key;
+      localStorage.setItem('ai_api_key', this.apiKey);
+      alert("✅ API Key 保存成功！");
+    },
+    confirmClearKey() {
+      if (confirm("⚠️ 确定要重置 API Key 吗？\n重置后您需要重新输入才能继续对话。")) {
+        localStorage.removeItem('ai_api_key');
+        this.apiKey = '';
+        this.tempKey = '';
+        this.showSettingsModal = false;
+      }
+    },
+
+    quickAdjustStock(item, gram) {
+      const newWeight = item.weight + gram;
+      if (newWeight >= 0) {
+        item.weight = newWeight;
+        this.pushToCloud(); 
+      } else {
+        item.weight = 0;
+        this.pushToCloud();
+      }
+    },
+
+    importAiToRecipe(content) {
+      this.addRecipeModal.rawText = content;
+      this.addRecipeModal.show = true;
+      this.addRecipeModal.name = ''; 
+      this.addRecipeModal.ingredientsText = '';
+      this.addRecipeModal.stepsText = '';
+      this.view = 'weekMenu'; 
+      setTimeout(() => { this.parseRawText(); }, 100);
+    },
+
+    async sendMessage() {
+      if (!this.chatInput.trim() || this.isTyping) return;
+      
+      const userText = this.chatInput;
+      this.chatInput = '';
+      this.chatHistory.push({ role: 'user', content: userText });
+      this.isTyping = true;
+      this.scrollToBottom();
+
+      const familyInfo = "1. 爸爸：" + this.memberData.dad.health + "。忌口：" + this.memberData.dad.taboo + "。\n2. 妈妈：" + this.memberData.mom.health + "。忌口：" + this.memberData.mom.taboo + "。" + (this.memberTempStatus.mom === 'period' ? '【当前处于经期，忌寒凉】' : '') + (this.memberTempStatus.mom === 'sick' ? '【当前生病，需清淡】' : '') + "\n3. 姐姐：" + this.memberData.sister.health + "。忌口：" + this.memberData.sister.taboo + "。\n4. 弟弟：" + this.memberData.brother.health + "。忌口：" + this.memberData.brother.taboo + "。";
+
+      const systemPrompt = "你现在是一位拥有10年经验的国家高级注册营养师，专门为中国家庭提供健康、减脂、儿童成长和特殊人群（如经期）的营养规划。\n【家庭情况】\n" + familyInfo + "\n【常用厨具】电饭煲、陶瓷锅、微波炉、空气炸锅。\n\n【核心规则】\n1. **意图判断**：判断用户是要“安排计划”还是“查菜谱”。\n2. **安排计划模式**：绝不能只给单一菜品。必须给出组合搭配（如：碳水+蛋白质+维生素），分析营养元素，并给出针对妈妈减脂和孩子长身体的分餐建议。\n3. **查菜谱模式**：必须严格按照以下格式输出，方便前端解析入库：\n【菜名】XXX\n【食材】A 50g，B 100g\n【做法】1. 第一步；2. 第二步...\n【特殊建议】针对孕妇/减脂/孩子的调整说明。\n4. 如果用户的输入包含语音识别错别字（如“牛难”），请自行纠错，不要反问。\n5. 字数控制在 400 字以内。";
+
+      this.abortController = new AbortController();
+      const timeoutId = setTimeout(() => this.abortController.abort(), 45000);
+
+      try {
+        const response = await fetch("https://api.siliconflow.cn/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + this.apiKey
+          },
+          signal: this.abortController.signal,
+          body: JSON.stringify({
+            model: "Qwen/Qwen2.5-7B-Instruct", 
+            messages: [
+              { role: "system", content: systemPrompt },
+              ...this.chatHistory.slice(-5).map(h => ({ role: h.role, content: h.content })),
+              { role: "user", content: userText }
+            ],
+            temperature: 0.7,
+            max_tokens: 1000
+          })
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+           if(response.status === 401) throw new Error("API Key 无效或已过期");
+           if(response.status === 429) throw new Error("请求太频繁，请稍后再试");
+           throw new Error("请求失败，状态码: " + response.status);
+        }
+
+        const data = await response.json();
+        const aiReply = data.choices[0].message.content;
+        
+        this.chatHistory.push({ role: 'assistant', content: aiReply });
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          this.chatHistory.push({ role: 'assistant', content: "出错了：AI 思考时间过长（超过45秒）。可能是网络卡顿，请重试。" });
+        } else {
+          this.chatHistory.push({ role: 'assistant', content: "出错了：" + error.message });
+        }
+      } finally {
+        this.isTyping = false;
+        this.scrollToBottom();
+      }
+    },
+
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const box = document.getElementById('chatMsgBox');
+        if (box) box.scrollTop = box.scrollHeight;
+      });
+    },
+
+    getDishWarning(dish) {
+      let warnings = [];
+      if (this.memberTempStatus.sister === 'sick' || this.memberTempStatus.sister === 'cold' || this.memberTempStatus.sister === 'fever' || this.memberTempStatus.sister === 'gastro') {
+        if (dish.tag.includes('少油') || dish.tag.includes('油炸') || dish.tag.includes('补铁')) {
+          warnings.push(`姐姐生病中，这道菜可能偏油腻/难消化，建议给姐姐单独做点清淡的。`);
+        } else if (dish.name.includes('凉拌') || dish.name.includes('雪梨')) {
+          warnings.push(`姐姐生病中，注意避开生冷食物。`);
+        }
+      }
+      if (this.memberTempStatus.dad === 'sick' || this.memberTempStatus.dad === 'cold' || this.memberTempStatus.dad === 'fever' || this.memberTempStatus.dad === 'gastro') {
+        if (dish.name.includes('炸锅') || dish.tag.includes('油腻')) {
+          warnings.push(`爸爸生病中，建议避开高脂食物。`);
+        }
+      }
+      return warnings;
+    },
+
+    parseRawText() {
+      let text = this.addRecipeModal.rawText;
+      if (!text) { alert("请先粘贴提取的文字"); return; }
+
+      let name = '';
+      let ingredientsArr = [];
+      let stepsArr = [];
+      
+      const nameMatch = text.match(/【菜名】(.*)/);
+      if (nameMatch) name = nameMatch[1].trim();
+      
+      const ingMatch = text.match(/【食材】(.*)/);
+      if (ingMatch) {
+        ingredientsArr = ingMatch[1].split(/[,，、]/).map(s => s.trim()).filter(s => s);
+      }
+
+      const stepMatch = text.match(/【做法】([\s\S]*?)(?=【|$)/);
+      if (stepMatch) {
+        stepsArr = stepMatch[1].split(/\n|\d+\./).map(s => s.trim()).filter(s => s.length > 2);
+      }
+
+      if (!name) name = text.split('\n')[0].substring(0, 20) || '新菜谱';
+      if (ingredientsArr.length === 0) {
+        let lines = text.split('\n');
+        lines.forEach(line => {
+           if (/克|g|ml|个|颗|勺|瓣|片|适量|少许|半/.test(line) && line.length < 20) {
+             let ingName = line.replace(/[0-9]/g, '').replace(/克|g|ml|个|颗|勺|瓣|片|适量|少许|半|、|,|，/g, '').trim();
+             if (ingName && !ingredientsArr.includes(ingName)) ingredientsArr.push(ingName);
+           }
+        });
+      }
+      if (stepsArr.length === 0) stepsArr = text.substring(text.length / 2).split('\n').filter(s=>s.trim().length>0);
+
+      this.addRecipeModal.name = name;
+      this.addRecipeModal.tool = text.match(/空气炸锅|微波炉|电饭煲|陶瓷锅|蒸锅|炒锅|平底锅|破壁机/)?.[0] || '炒锅';
+      this.addRecipeModal.time = text.match(/\d+分钟|\d+小时/)?.[0] || '约20分钟';
+      this.addRecipeModal.ingredientsText = ingredientsArr.length ? ingredientsArr.join('，') : '根据实际情况准备食材';
+      this.addRecipeModal.stepsText = stepsArr.length ? stepsArr.join('\n') : text;
+      
+      this.addRecipeModal.isHealthy = !/油炸|红烧|糖醋|五花肉|大量糖|高油/.test(text);
+
+      if (text.includes('早餐')) this.addRecipeModal.type = 'breakfast';
+      else if (text.includes('午餐') || text.includes('晚餐')) this.addRecipeModal.type = 'main';
+      else if (text.includes('汤') || text.includes('羹') || text.includes('茶')) this.addRecipeModal.type = 'sweets';
+      else this.addRecipeModal.type = 'main';
+    },
+
+    shuffleArray(array) {
+      let currentIndex = array.length, randomIndex;
+      while (currentIndex != 0) {
+        randomIndex = Math.floor(Math.random() * currentIndex);
+        currentIndex--;
+        [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+      }
+      return array;
+    },
+
+    generateWeekPlan(mode, isInit = false) {
+      let idCounter = 1;
+      let newWeekMenu = [];
+      
+      const filterHealthy = (arr) => arr.filter(item => item.isHealthy !== false);
+      
+      const expiringNames = [...this.rawIngList, ...this.fruitList, ...this.snackList, ...this.preIngList]
+        .filter(item => item.weight > 0 && this.getRemainingDays(item) <= 3)
+        .map(item => item.name);
+
+      const getPools = (lib) => {
+        const healthy = filterHealthy(lib);
+        const scoreRecipe = (recipe) => {
+          if (!recipe.ingredients || expiringNames.length === 0) return 0;
+          let score = 0;
+          recipe.ingredients.forEach(ing => {
+            if (expiringNames.some(name => ing.name.includes(name) || name.includes(ing.name))) {
+              score += 1; 
+            }
+          });
+          return score;
+        };
+        const sortedHealthy = [...healthy].sort((a, b) => scoreRecipe(b) - scoreRecipe(a));
+        const liked = this.shuffleArray(sortedHealthy.filter(i => !i.isDisliked));
+        const disliked = this.shuffleArray(sortedHealthy.filter(i => i.isDisliked));
+        return [...liked, ...disliked];
+      };
+
+      const bfPool = getPools([...this.recipeLibrary.breakfast]);
+      const lmPool = getPools([...this.recipeLibrary.lunchMeat]);
+      const lvPool = getPools([...this.recipeLibrary.lunchVeg]);
+      const dmPool = getPools([...this.recipeLibrary.dinnerMeat]);
+      const dvPool = getPools([...this.recipeLibrary.dinnerVeg]);
+      const sweetsPool = getPools([...this.recipeLibrary.sweets]);
+      const staplePool = getPools([...this.recipeLibrary.lunchStaple]); 
+      const dinnerStaplePool = getPools([...this.recipeLibrary.dinnerStaple]); 
+
+      for (let day = 0; day < 7; day++) {
+        let dayMenu = { breakfast: [], lunch: [], dinner: [], sweets: [] };
+        
+        let complexBreakfast = bfPool.find(r => {
+          let tags = r.tags || [];
+          return tags.includes('主食') && (tags.includes('肉') || tags.includes('蔬菜'));
+        });
+
+        if (complexBreakfast && day % 2 === 0) {
+          dayMenu.breakfast.push({ id: idCounter++, ...complexBreakfast, completed: false, skipped: false, feedback: '' });
+        } else {
+          const isLiquid = (dish) => /粥|奶|豆浆|糊|汤|汁|茶|咖啡/.test(dish.name) && !dish.name.includes('+');
+          const isSolid = (dish) => !isLiquid(dish) && !dish.name.includes('+');
+          
+          let liquidRecipe = bfPool.filter(isLiquid)[day % (bfPool.filter(isLiquid).length || 1)];
+          let solidRecipe = bfPool.filter(isSolid)[day % (bfPool.filter(isSolid).length || 1)];
+
+          if (solidRecipe) dayMenu.breakfast.push({ id: idCounter++, ...solidRecipe, completed: false, skipped: false, feedback: '' });
+          if (liquidRecipe) dayMenu.breakfast.push({ id: idCounter++, ...liquidRecipe, completed: false, skipped: false, feedback: '' });
+        }
+
+        let lunchDishes = [];
+        let complexLunch = lmPool.find(r => {
+          let tags = r.tags || [];
+          return (tags.includes('肉') && tags.includes('蔬菜')) || (tags.includes('主食') && tags.includes('肉'));
+        });
+
+        if (complexLunch) {
+          lunchDishes.push({ id: idCounter++, ...complexLunch, completed: false, skipped: false, feedback: '' });
+        } else {
+          let lStaple = staplePool.length > 0 ? staplePool[day % staplePool.length] : null;
+          let lMeatList = lmPool.length > 0 ? lmPool : [];
+          let lVegList = lvPool.length > 0 ? lvPool : [];
+          
+          let lMeat = lMeatList.length > 0 ? lMeatList[day % lMeatList.length] : null;
+          let lVeg = lVegList.length > 0 ? lVegList[day % lVegList.length] : null;
+
+          if (lStaple) lunchDishes.push({ id: idCounter++, ...lStaple, completed: false, skipped: false, feedback: '' });
+          if (lMeat) lunchDishes.push({ id: idCounter++, ...lMeat, completed: false, skipped: false, feedback: '' });
+          if (lVeg && lVeg.name !== (lMeat?.name || '')) lunchDishes.push({ id: idCounter++, ...lVeg, completed: false, skipped: false, feedback: '' });
+        }
+        dayMenu.lunch = lunchDishes;
+
+        let dinnerDishes = [];
+        let isNoodleDay = [0, 2, 4, 6].includes(day); 
+
+        if (isNoodleDay && dinnerStaplePool.length > 0) {
+           let dNoodle = dinnerStaplePool[day % dinnerStaplePool.length];
+           dinnerDishes.push({ id: idCounter++, ...dNoodle, completed: false, skipped: false, feedback: '' });
+        } else {
+           let complexDinner = dmPool.find(r => {
+             let tags = r.tags || [];
+             return (tags.includes('肉') && tags.includes('蔬菜')) || (tags.includes('主食') && tags.includes('肉'));
+           });
+
+           if (complexDinner) {
+             dinnerDishes.push({ id: idCounter++, ...complexDinner, completed: false, skipped: false, feedback: '' });
+           } else {
+             let dStaple = staplePool.length > 0 ? staplePool[day % staplePool.length] : null;
+             let dMeat = dmPool.length > 0 ? dmPool[(day+1) % dmPool.length] : null;
+             let dVeg = dvPool.length > 0 ? dvPool[(day+1) % dvPool.length] : null;
+
+             if (dStaple) dinnerDishes.push({ id: idCounter++, ...dStaple, completed: false, skipped: false, feedback: '' });
+             if (dMeat) dinnerDishes.push({ id: idCounter++, ...dMeat, completed: false, skipped: false, feedback: '' });
+             if (dVeg && dVeg.name !== (dMeat?.name || '')) dinnerDishes.push({ id: idCounter++, ...dVeg, completed: false, skipped: false, feedback: '' });
+           }
+        }
+        dayMenu.dinner = dinnerDishes;
+        
+        if (this.fruitList.length > 0) {
+          let sortedFruits = [...this.fruitList].sort((a,b) => this.getRemainingDays(a) - this.getRemainingDays(b));
+          let targetFruit = sortedFruits[day % sortedFruits.length];
+          if(targetFruit && targetFruit.weight > 0) {
+            dayMenu.breakfast.push({ 
+              id: idCounter++, name: "水果加餐：" + targetFruit.name, tag: "每日水果", tool: "直接生吃/切开", time: "1分钟", 
+              ingredients: [{name: targetFruit.name, weight: 150}], steps: ["洗净即食，补充每日维C"], 
+              portions: { dad: '适量', mom: '适量', sister: '适量', brother: '切小块防呛' }, 
+              isTakeout: true, completed: false, skipped: false, feedback: '' 
+            });
+          }
+        }
+        if (this.snackList.length > 0 && day % 2 === 0) { 
+          let sortedSnacks = [...this.snackList].sort((a,b) => this.getRemainingDays(a) - this.getRemainingDays(b));
+          let targetSnack = sortedSnacks[(day/2) % sortedSnacks.length];
+          if(targetSnack && targetSnack.weight > 0) {
+            dayMenu.breakfast.push({ 
+              id: idCounter++, name: "零食加餐：" + targetSnack.name, tag: "每日坚果/奶", tool: "直接吃", time: "1分钟", 
+              ingredients: [{name: targetSnack.name, weight: 50}], steps: ["作为上下午的加餐补充能量"], 
+              portions: { dad: '适量', mom: '适量', sister: '适量', brother: '适量' }, 
+              isTakeout: true, completed: false, skipped: false, feedback: '' 
+            });
+          }
+        }
+
+        if (this.preIngList.length > 0 && [0, 2, 4].includes(day)) { 
+          let targetPre = this.preIngList[day % this.preIngList.length];
+          let isAlreadyUsed = [...dayMenu.lunch, ...dayMenu.dinner].some(d => (d.ingredients||[]).some(i => i.name === targetPre.name));
+          if (targetPre && targetPre.weight > 0 && !isAlreadyUsed) {
+            dayMenu.dinner.push({ 
+              id: idCounter++, name: "快手预制：" + targetPre.name, tag: "快手·简易", tool: "奶锅/微波炉", time: "5分钟", 
+              ingredients: [{name: targetPre.name, weight: 200}], steps: ["取出适量加热熟透即可"], 
+              portions: { dad: '1份', mom: '1份', sister: '0.8份', brother: '0.5份' }, 
+              completed: false, skipped: false, feedback: '' 
+            });
+          }
+        }
+        
+        newWeekMenu.push(dayMenu);
+      }
+      
+      if (mode === 'current') {
+        this.weekMenuData.current = newWeekMenu;
+        if (!isInit) alert("✅ 本周食谱已重新生成！");
+        this.pushToCloud(); 
+      } else {
+        this.weekMenuData.next = newWeekMenu;
+        this.generatePrepTasks();
+        if (!isInit) alert("✅ 下周食谱已生成！");
+        this.pushToCloud(); 
+      }
+    },
+
+    generatePrepTasks() {
+      this.prepTasks = [];
+
+      this.prepTasks.push(
+        { title: "批量制作肉丸/肉饼 (周末)", desc: "取猪肉馅500g，加入切碎的菠菜50g、胡萝卜50g，打入1个鸡蛋，加少许盐和生抽。顺着一个方向搅拌上劲。搓成小丸子，水开上锅蒸15分钟，冷却后分装冷冻。", type: 'weekend' },
+        { title: "清洗焯水绿叶菜 (周末)", desc: "将买回来的绿叶菜洗净，切块或切段。水开后滴两滴油和少许盐，下锅焯水30秒捞出，过凉水沥干，装入保鲜袋冷藏，工作日直接炒。", type: 'weekend' }
+      );
+
+      const tomorrow = new Date(); 
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowIdx = (tomorrow.getDay() + 6) % 7;
+      const tomorrowMenu = this.weekMenuData.current[tomorrowIdx];
+
+      if (tomorrowMenu) {
+        const allDishes = [
+          ...(tomorrowMenu.breakfast || []), 
+          ...(tomorrowMenu.lunch || []), 
+          ...(tomorrowMenu.dinner || [])
+        ];
+        
+        let thawItems = [];
+        let soakItems = [];
+        let porridgeDishes = []; 
+        let fruitDishes = [];
+
+        allDishes.forEach(dish => {
+          if (dish.skipped || dish.completed) return;
+          
+          let type = dish.prepType;
+          if (!type) {
+            if (/米糊|豆浆|粥/.test(dish.name) && dish.tool.includes('破壁机')) type = 'porridge';
+            else if (/水果加餐/.test(dish.name)) type = 'fruit';
+            else if ((dish.ingredients || []).some(i => /肉|鱼|虾|鸡|鸭|牛|羊|排骨|翅|海鲜/.test(i.name))) type = 'thaw';
+            else if ((dish.ingredients || []).some(i => /红豆|绿豆|木耳|银耳|粉丝|腐竹/.test(i.name))) type = 'soak';
+          }
+
+          if (type === 'porridge') porridgeDishes.push(dish);
+          else if (type === 'fruit') fruitDishes.push(dish);
+          else if (type === 'thaw') (dish.ingredients || []).forEach(ing => thawItems.push(ing.name));
+          else if (type === 'soak') (dish.ingredients || []).forEach(ing => soakItems.push(ing.name)); 
+
+          (dish.ingredients || []).forEach(ing => {
+            if (/肉|鱼|虾|鸡|鸭|牛|羊|排骨|翅|海鲜|猪/.test(ing.name) && !/丸子|火腿|肠|培根|蛋/.test(ing.name)) {
+              thawItems.push(ing.name);
+            }
+            if (/红豆|绿豆|黄豆|黑米|糙米|薏米|干香菇|木耳|银耳|粉丝|腐竹|干贝|莲子/.test(ing.name)) {
+              soakItems.push(ing.name);
+            }
+          });
+        });
+
+        if (porridgeDishes.length > 0) {
+          let porridgeNames = porridgeDishes.map(d => d.name).join('、');
+          this.prepTasks.push({
+            title: "破壁机预约 / 食材准备 (前夜)",
+            desc: `明天要打【${porridgeNames}】。建议今晚把食材洗净切块（如有苹果、山药记得去皮切块），放入破壁机，加好水，设置“预约”功能，明早直接喝。`,
+            type: 'daily'
+          });
+        }
+
+        if (fruitDishes.length > 0) {
+          let fruitNames = fruitDishes.map(d => d.name.replace('水果加餐：', '')).join('、');
+          this.prepTasks.push({
+            title: "水果提前清洗切块 (前夜)",
+            desc: `明天有【${fruitNames}】。如果有需要去皮切块的水果（如橙子、苹果、芒果），建议今晚先洗净切好装盒冷藏，明早直接吃（如果是香蕉、葡萄等易氧化的，明早再弄即可）。`,
+            type: 'daily'
+          });
+        }
+
+        thawItems = [...new Set(thawItems)];
+        if (thawItems.length > 0) {
+          this.prepTasks.push({
+            title: "日常肉类解冻 (前夜)",
+            desc: `今晚睡前，把明天要用的【${thawItems.join('、')}】从冷冻室拿到冷藏室解冻。明早记得加调料腌制。`,
+            type: 'daily'
+          });
+        }
+
+        soakItems = [...new Set(soakItems)];
+        if (soakItems.length > 0) {
+          this.prepTasks.push({
+            title: "干货/粗粮提前浸泡 (前夜)",
+            desc: `今晚把明天要用的【${soakItems.join('、')}】洗净泡发（如香菇、木耳用温水，红豆黑米用冷水）。`,
+            type: 'daily'
+          });
+        }
+      }
+
+      if (!this.prepTasks.some(t => t.type === 'daily')) {
+        this.prepTasks.push({
+          title: "无需特殊前夜准备",
+          desc: "明天的菜单不需要提前解冻、浸泡或预约，今晚可以好好休息啦！",
+          type: 'daily'
+        });
+      }
+    },
+
+    recalculateShoppingList() {
+      let neededMap = {};
+      
+      const tomorrow = new Date(); 
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      for (let i = 0; i < 7; i++) {
+        const targetDate = new Date(tomorrow.getTime() + i * 86400000);
+        const isNextWeek = this.nextWeekDates.some(d => d.dateStr === this.formatDate(targetDate));
+        const dayIdx = (targetDate.getDay() + 6) % 7;
+        const dayMenu = isNextWeek ? this.weekMenuData.next[dayIdx] : this.weekMenuData.current[dayIdx];
+        
+        if (dayMenu) {
+          ['breakfast', 'lunch', 'dinner', 'sweets'].forEach(meal => {
+            (dayMenu[meal] || []).forEach(dish => {
+              if (!dish.skipped) {
+                (dish.ingredients || []).forEach(ing => {
+                  if (!neededMap[ing.name]) neededMap[ing.name] = 0;
+                  neededMap[ing.name] += ing.weight;
+                });
+              }
+            });
+          });
+        }
+      }
+      
+      let newShoppingList = [];
+      let itemId = 1;
+      
+      const oldBoughtItems = this.shoppingList.filter(i => i.bought);
+
+      for (let [name, totalWeight] of Object.entries(neededMap)) {
+        let stock = this.rawIngList.find(i => i.name === name) || 
+                    this.preIngList.find(i => i.name === name) ||
+                    this.fruitList.find(i => i.name === name) ||
+                    this.snackList.find(i => i.name === name);
+        
+        let stockWeight = stock ? stock.weight : 0;
+        let buyWeight = totalWeight - stockWeight;
+        
+        let oldBoughtItem = oldBoughtItems.find(i => i.name === name);
+
+        if (buyWeight > 0 || oldBoughtItem) {
+          let category = 'weekend';
+          const dailyKeywords = ['菜', '鱼', '虾', '豆腐', '水果', '番茄', '菌菇', '时蔬', '雪梨', '蕉', '莓', '葡萄', '菠菜', '生菜', '肉', '奶', '柿'];
+          if (dailyKeywords.some(k => name.includes(k))) category = 'daily';
+          
+          let area = '其他';
+          if (/油|盐|酱|醋|糖|椒|粉|料|酒|桂|角|生抽|老抽|蚝油|料酒|淀粉/.test(name)) area = '调料';
+          else if (/干|菇|菌|木耳|腐竹|豆皮|紫菜|海带|虾米|干贝|红枣|枸杞|花生|莲子|银耳|笋干/.test(name)) area = '干货';
+          else if (/米|面|馒头|面包|吐司|燕麦|杂粮|饼|包|饺|粉条|粉丝/.test(name)) area = '主食';
+          else if (/肉|鱼|虾|鸡(?!蛋)|鸭|牛|羊|排骨|翅|肠|培根|火腿|海鲜|蟹/.test(name)) area = '肉类';
+          else if (/菜|瓜|果|蕉|莓|葡萄|梨|桃|橙|柿|笋|藕|萝卜|西兰花|生菜|菠菜|番茄/.test(name)) area = '果蔬';
+          else if (/豆腐|蛋|葱|姜|蒜|奶|芝士/.test(name)) area = '配菜';
+
+          newShoppingList.push({ 
+            id: itemId++, 
+            name: name, 
+            weight: oldBoughtItem ? oldBoughtItem.weight : buyWeight, 
+            category: category, 
+            area: area, 
+            bought: !!oldBoughtItem,
+            isUrgent: false,
+            isExtra: false 
+          });
+        }
+      }
+
+      oldBoughtItems.forEach(oldItem => {
+        let isStillNeeded = newShoppingList.some(i => i.name === oldItem.name);
+        if (!isStillNeeded) {
+          newShoppingList.push({
+            id: itemId++,
+            name: oldItem.name,
+            weight: oldItem.weight,
+            category: 'weekend',
+            area: '其他',
+            bought: true, 
+            isUrgent: false,
+            isExtra: true
+          });
+        }
+      });
+      
+      this.shoppingList = newShoppingList;
+    },
+
+    getCurrentWeekDates() {
+      let now = new Date();
+      let day = now.getDay() || 7;
+      let monday = new Date(now.getTime() - (day - 1) * 86400000);
+      monday.setHours(0,0,0,0);
+
+      const formatDate = (date) => {
+        return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+      };
+
+      let thisWeek = [];
+      for (let i = 0; i < 7; i++) {
+        let d = new Date(monday.getTime() + i * 86400000);
+        thisWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: formatDate(d) });
+      }
+      this.thisWeekDates = thisWeek;
+
+      let nextWeek = [];
+      for (let i = 0; i < 7; i++) {
+        let d = new Date(monday.getTime() + (i + 7) * 86400000);
+        nextWeek.push({ idx: i, week: ['周日','周一','周二','周三','周四','周五','周六'][d.getDay()], day: d.getDate(), dateStr: formatDate(d) });
+      }
+      this.nextWeekDates = nextWeek;
+    },
+
+    openAddRecipeModal() {
+      this.addRecipeModal = { show: true, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '', rawText: '', isHealthy: true, prepType: '', tags: [] };
+    },
+
+    saveCustomRecipe() {
+      const { name, type, tool, time, ingredientsText, stepsText, isHealthy } = this.addRecipeModal;
+      if (!name || !tool || !time) { alert("请填写菜名、工具和时间"); return; }
+
+      const ingredients = ingredientsText.split(/[,，]/).map(s => ({ name: s.trim(), weight: 100 })).filter(i => i.name);
+      const steps = stepsText.split('\n').map(s => s.trim()).filter(s => s);
+
+      const newRecipe = {
+        name, tag: isHealthy ? '自定义·健康' : '自定义·解馋', tool, time, isHealthy,
+        prepType: this.addRecipeModal.prepType,
+        tags: this.addRecipeModal.tags || [], 
+        ingredients: ingredients.length ? ingredients : [{name:'自定义食材', weight:100}],
+        steps: steps.length ? steps : ['按自己习惯操作'],
+        portions: {} 
+      };
+
+      if(type === 'breakfast') this.recipeLibrary.breakfast.push(newRecipe);
+      else if(type === 'main') this.recipeLibrary.lunchMeat.push(newRecipe);
+      else if(type === 'sweets') this.recipeLibrary.sweets.push(newRecipe);
+
+      let customRecipes = JSON.parse(localStorage.getItem('customRecipes') || '{"breakfast":[],"main":[],"sweets":[]}');
+      customRecipes[type].push(newRecipe);
+      localStorage.setItem('customRecipes', JSON.stringify(customRecipes));
+
+      this.addRecipeModal.show = false;
+      alert("✅ 【" + name + "】已加入菜谱库！");
+      this.pushToCloud();
+    },
+
+    getMealName(type) {
+      return type === 'breakfast' ? '早餐' : (type === 'lunch' ? '午餐' : (type === 'dinner' ? '晚餐' : '甜汤/饮品'));
+    },
+
+    openDishDetail(mealType, idx) {
+      this.dishDetailModal.mealType = mealType;
+      this.dishDetailModal.dishIdx = idx;
+      this.dishDetailModal.dish = this.currentDayDishes[mealType][idx];
+      this.dishDetailModal.show = true;
+    },
+    openReplaceModalFromDetail() {
+      this.openReplaceModal(this.dishDetailModal.mealType, this.dishDetailModal.dishIdx);
+      this.dishDetailModal.show = false;
+    },
+    completeDishFromDetail() {
+      this.completeDish(this.dishDetailModal.dish);
+    },
+    skipDishFromDetail() {
+      if (this.dishDetailModal.dish.completed) return;
+      if (!confirm("确定要跳过这道菜吗？不会扣减库存。")) return;
+      this.dishDetailModal.dish.skipped = true;
+      this.dishDetailModal.show = false;
+      
+      this.pushToCloud();
+    },
+    deleteDishPermanently() {
+      if (!confirm("⚠️ 确定要删除【" + this.dishDetailModal.dish.name + "】吗？\n它将被移出当前菜单，且从菜谱库中彻底删除。")) return;
+      
+      const dishName = this.dishDetailModal.dish.name;
+      const mealType = this.dishDetailModal.mealType;
+
+      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      weekMenu[this.selDateIdx][mealType] = weekMenu[this.selDateIdx][mealType].filter(d => d.id !== this.dishDetailModal.dish.id);
+
+      const libs = [
+        this.recipeLibrary.breakfast, this.recipeLibrary.lunchStaple, 
+        this.recipeLibrary.lunchMeat, this.recipeLibrary.lunchVeg,
+        this.recipeLibrary.dinnerStaple, this.recipeLibrary.dinnerMeat, 
+        this.recipeLibrary.dinnerVeg, this.recipeLibrary.sweets
+      ];
+      libs.forEach(lib => {
+        const idx = lib.findIndex(r => r.name === dishName);
+        if (idx > -1) lib.splice(idx, 1);
+      });
+
+      let customRecipes = JSON.parse(localStorage.getItem('customRecipes') || '{"breakfast":[],"main":[],"sweets":[]}');
+      for (let type in customRecipes) {
+        customRecipes[type] = customRecipes[type].filter(r => r.name !== dishName);
+      }
+      localStorage.setItem('customRecipes', JSON.stringify(customRecipes));
+
+      this.dishDetailModal.show = false;
+      this.pushToCloud();
+      alert("✅ 【" + dishName + "】已彻底删除，以后不会再自动排餐了！");
+    },
+    openReplaceModal(mealType, dishIdx) {
+      const dish = this.currentDayDishes[mealType][dishIdx];
+      this.replaceModal = { show: true, mealType: mealType, dishIdx: dishIdx, currentName: dish.name };
+    },
+
+    doReplaceDish(newRecipe) {
+      const { mealType, dishIdx } = this.replaceModal;
+      const weekMenu = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      const dayMenu = weekMenu[this.selDateIdx];
+      
+      const oldDish = dayMenu[mealType][dishIdx];
+
+      dayMenu[mealType][dishIdx] = { id: Date.now(), ...newRecipe, completed: false, skipped: false, feedback: '' };
+      
+      this.replaceModal.show = false;
+  
+      if (this.pendingReplaceQueue.length > 0) {
+        this.pendingReplaceQueue.shift(); 
+        if (this.pendingReplaceQueue.length > 0) {
+           alert(`已替换为【${newRecipe.name}】。\n还有 ${this.pendingReplaceQueue.length} 道菜需要替换。`);
+           this.processNextPendingReplace();
+        } else {
+           this.processNextPendingReplace();
+        }
+      } else {
+        alert("已替换为【" + newRecipe.name + "】");
+      }
+      this.pushToCloud();
+    },
+    openTempStatusModal(key){ this.tempStatusModal.key = key; this.tempStatusModal.show = true; },
+    getStatusText(status, person){
+      if (person === 'mom') {
+        if (status === 'period') return '姨妈期';
+        if (status === 'cold') return '感冒';
+        if (status === 'fever') return '发烧';
+        if (status === 'gastro') return '肠胃炎';
+        return '正常';
+      }
+      if (status === 'cold') return '感冒';
+      if (status === 'fever') return '发烧';
+      if (status === 'gastro') return '肠胃炎';
+      return status === 'sick' ? '生病' : '正常';
+    },
+    getStatusClass(status){
+      if (status === 'sick' || status === 'period' || status === 'cold' || status === 'fever' || status === 'gastro') return 'status-sick';
+      return 'status-rest';
+    },
+    getTabooOptions(person){
+      const options = {
+        dad: ['生冷', '辛辣', '油腻', '海鲜'],
+        mom: ['生冷', '辛辣', '寒凉水果', '浓茶咖啡'],
+        sister: ['生冷', '油炸', '甜食', '海鲜'],
+        brother: ['生冷', '油炸', '甜食', '海鲜']
+      };
+      return options[person] || [];
+    },
+    
+    completeDish(dish) {
+      if (dish.completed || dish.skipped) return;
+      let deductedList = [];
+      let missingList = [];
+      
+      dish.ingredients.forEach(ing => {
+        let target = this.rawIngList.find(i => i.name === ing.name);
+        if (!target) target = this.fruitList.find(i => i.name === ing.name);
+        if (!target) target = this.snackList.find(i => i.name === ing.name);
+        if (!target) target = this.preIngList.find(i => i.name === ing.name);
+        
+        if (target) {
+          if (target.weight >= ing.weight) {
+            target.weight -= ing.weight;
+            deductedList.push(ing.name + " " + ing.weight + "g");
+          } else {
+            deductedList.push(ing.name + " 扣减了现有全部 " + target.weight + "g（需" + ing.weight + "g）");
+            target.weight = 0;
+          }
+        } else {
+          missingList.push(ing.name);
+        }
+      });
+      
+      dish.completed = true;
+      this.pushToCloud();
+      
+      let msg = "【" + dish.name + "】已完成制作！\n";
+      if (deductedList.length > 0) msg += "\n已自动扣减库存：\n" + deductedList.join('\n');
+      if (missingList.length > 0) msg += "\n\n注意：以下食材未在库中找到，未扣减：\n" + missingList.join('、');
+      
+      alert(msg);
+    },
+    
+    openStockModal(item, source){
+      this.stockModal.item = item;
+      this.stockModal.source = source;
+      this.stockModal.inputGram = null;
+      this.stockModal.show = true;
+    },
+    changeStockByModal(delta){
+      const gram = Number(this.stockModal.inputGram);
+      if(!gram || gram <= 0) return;
+      const newWeight = this.stockModal.item.weight + delta * gram;
+      if(newWeight >= 0){
+        this.stockModal.item.weight = newWeight;
+        this.stockModal.show = false;
+        this.pushToCloud(); 
+      }
+    },
+    openAddIngModal() { this.addIngModal = { show: true, name: '', type: 'raw', weight: null, expireDay: null }; },
+    saveNewIngredient() {
+      const { name, type, weight, expireDay } = this.addIngModal;
+      if (!name || !weight || !expireDay) { alert("请填写完整信息"); return; }
+      const todayStr = new Date().toISOString().split('T')[0];
+      const newItem = { name, weight: Number(weight), expireDay: Number(expireDay), buyDate: todayStr, icon: '🍽️' };
+      
+      if (type === 'raw') this.rawIngList.push(newItem); 
+      else if (type === 'fruit') this.fruitList.push(newItem); 
+      else if (type === 'snack') this.snackList.push(newItem); 
+      else this.preIngList.push(newItem);
+      
+      this.addIngModal.show = false;
+      alert("【" + name + "】已成功入库！");
+      this.pushToCloud(); 
+    },
+    addMomRestDay() {
+      const form = this.newMomRestForm;
+      if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
+      this.momRestDays.push({ name: '休息日', start: form.start, end: form.end });
+      this.newMomRestForm = { start: '', end: '' };
+      this.pushToCloud();
+    },
+    removeMomRestDay(index) { this.momRestDays.splice(index, 1); this.pushToCloud(); },
+    addHoliday(person) {
+      const form = this.newHolidayForm[person];
+      if (!form.start || !form.end) { alert("请选择开始和结束日期"); return; }
+      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
+      targetArray.push({ name: form.name || '假期/请假', start: form.start, end: form.end });
+      this.newHolidayForm[person] = { name: '', start: '', end: '' };
+      this.pushToCloud();
+    },
+    removeHoliday(person, index) {
+      const targetArray = person === 'sister' ? this.sisterHolidays : this.brotherHolidays;
+      targetArray.splice(index, 1);
+      this.pushToCloud();
+    },
+
+    loadCustomRecipes() {
+      try {
+        let customRecipes = JSON.parse(localStorage.getItem('customRecipes') || '{"breakfast":[],"main":[],"sweets":[]}');
+        if (customRecipes.breakfast) customRecipes.breakfast.forEach(r => { if(!this.recipeLibrary.breakfast.some(ex => ex.name === r.name)) this.recipeLibrary.breakfast.push(r); });
+        if (customRecipes.main) customRecipes.main.forEach(r => { if(!this.recipeLibrary.lunchMeat.some(ex => ex.name === r.name)) this.recipeLibrary.lunchMeat.push(r); });
+        if (customRecipes.sweets) customRecipes.sweets.forEach(r => { if(!this.recipeLibrary.sweets.some(ex => ex.name === r.name)) this.recipeLibrary.sweets.push(r); });
+      } catch(e) { console.error("加载自定义菜谱失败", e); }
+    },
+    setDishFeedback(dish, feedback) {
+      dish.feedback = feedback;
+      this.pushToCloud();
+    },
+    toggleTaboo(key, word) {
+      const arr = this.memberTaboo[key];
+      const idx = arr.indexOf(word);
+      if (idx > -1) arr.splice(idx, 1);
+      else arr.push(word);
+      this.pushToCloud();
+    },
+
+    getMemberName(key){ const map = { dad: '爸爸', mom: '妈妈', sister: '姐姐', brother: '弟弟' }; return map[key] || ''; },
+    openMemberEdit(key){ this.memberEditModal.key = key; this.memberEditModal.show = true; },
+    saveMemberEdit(){ 
+      alert(this.getMemberName(this.memberEditModal.key) + "的信息已保存！"); 
+      this.memberEditModal.show = false; 
+      this.pushToCloud();
+    },
+    clearOldLocalData() {
+      if (!confirm("确定要清理本地的历史菜单缓存吗？\n（只会清理不在本周和下周范围内的旧菜单，不影响你的食材库和云端数据）")) return;
+      
+      localStorage.removeItem('customRecipes');
+      localStorage.removeItem('hideAlertDate');
+      localStorage.removeItem('hideShoppingReminderDate');
+      
+      alert("✅ 本地历史缓存已清理完毕！\n页面即将刷新以释放内存。");
+      location.reload();
+    },
+    
+    openChartModal(personKey){
+      this.chartModal.target = personKey;
+      const nameMap = {
+        dad: '👨爸爸体重趋势',
+        mom: '👩妈妈体重趋势',
+        sister_height: '👧姐姐身高趋势',
+        sister_weight: '👧姐姐体重趋势',
+        brother_height: '👦弟弟身高趋势',
+        brother_weight: '👦弟弟体重趋势'
+      };
+      this.chartModal.title = nameMap[personKey];
+      this.chartModal.show = true;
+      
+      this.$nextTick(() => {
+        setTimeout(() => {
+          this.renderSingleChart(personKey);
+        }, 150);
+      });
+    },
+    
+    closeChartModal(){
+      this.chartModal.show = false;
+      if(this.currentChart) { this.currentChart.destroy(); this.currentChart = null; }
+    },
+    
+    renderSingleChart(personKey){
+      const canvas = this.$refs.chartCanvasRef;
+      if (!canvas) return;
+      
+      canvas.width = canvas.width; 
+      const ctx = canvas.getContext('2d');
+      
+      if(this.currentChart) { this.currentChart.destroy(); this.currentChart = null; }
+      
+      let dataObj = null;
+      let dataLabel = '';
+      let dataArr = [];
+      let color = '#e6703b';
+
+      if (personKey === 'dad') { dataObj = this.historyData.dad; dataLabel = '体重(kg)'; dataArr = dataObj.weight; color = '#e6703b'; }
+      else if (personKey === 'mom') { dataObj = this.historyData.mom; dataLabel = '体重(kg)'; dataArr = dataObj.weight; color = '#e6703b'; }
+      else if (personKey === 'sister_height') { dataObj = this.historyData.sister; dataLabel = '身高(cm)'; dataArr = dataObj.height; color = '#2b9954'; }
+      else if (personKey === 'sister_weight') { dataObj = this.historyData.sister; dataLabel = '体重(kg)'; dataArr = dataObj.weight; color = '#c46838'; }
+      else if (personKey === 'brother_height') { dataObj = this.historyData.brother; dataLabel = '身高(cm)'; dataArr = dataObj.height; color = '#2b9954'; }
+      else if (personKey === 'brother_weight') { dataObj = this.historyData.brother; dataLabel = '体重(kg)'; dataArr = dataObj.weight; color = '#c46838'; }
+
+      if(!dataObj || !dataArr) return;
+
+      let chartData = {
+        labels: dataObj.labels,
+        datasets: [{
+          label: dataLabel,
+          data: dataArr,
+          borderColor: color,
+          backgroundColor: color + '1A',
+          fill: true, tension: 0.3, pointRadius: 4, pointBackgroundColor: color, borderWidth: 2
+        }]
+      };
+
+      let chartOptions = {
+        responsive: true, maintainAspectRatio: false,
+        animation: false,
+        scales: {
+          x: { ticks: { maxRotation: 45, minRotation: 45, font: { size: 10 } } },
+          y: { beginAtZero: false, title: { display: true, text: dataLabel } }
+        }
+      };
+      
+      try {
+        this.currentChart = new Chart(ctx, { type: 'line', data: chartData, options: chartOptions });
+      } catch(e) {
+        console.error("图表渲染失败", e);
+      }
+    },
+    
+    openQuickStockModal(item) {
+      this.quickStockModal = {
+        show: true,
+        item: item,
+        weight: item.weight
+      };
+    },
+    saveQuickStock() {
+      if (this.quickStockModal.item) {
+        this.quickStockModal.item.weight = Math.max(0, this.quickStockModal.weight);
+        this.pushToCloud();
+      }
+      this.quickStockModal.show = false;
+    },
+    
+    openQuickWeightModal(item) {
+      this.quickWeightModal = {
+        show: true,
+        itemId: item.id,
+        name: item.name,
+        weight: item.weight
+      };
+    },
+    saveQuickWeight() {
+      const targetItem = this.shoppingList.find(i => i.id === this.quickWeightModal.itemId);
+      if (targetItem) {
+        targetItem.weight = Math.max(0, this.quickWeightModal.weight);
+        this.pushToCloud();
+      }
+      this.quickWeightModal.show = false;
+    },
+ 
+    removeExtraItem(item) {
+      const idx = this.shoppingList.indexOf(item);
+      if (idx > -1) this.shoppingList.splice(idx, 1);
+      this.pushToCloud();
+      if (this.extraItemsCount === 0) this.showExtraModal = false;
+    },
+    clearAllExtraItems() {
+      if (!confirm("确定要把所有多买的食材都清空吗？")) return;
+      this.shoppingList = this.shoppingList.filter(i => !i.isExtra);
+      this.pushToCloud();
+      this.showExtraModal = false;
+    },
+  
+    removeShoppingItem(item) {
+      let affectedDishes = [];
+      
+      this.weekMenuData.next.forEach((dayMenu, dayIdx) => {
+        ['breakfast', 'lunch', 'dinner', 'sweets'].forEach(meal => {
+          (dayMenu[meal] || []).forEach((dish, dishIdx) => {
+            if (!dish.skipped && !dish.completed) {
+              const hasIngredient = (dish.ingredients || []).some(ing => 
+                ing.name.includes(item.name) || item.name.includes(ing.name)
+              );
+              if (hasIngredient) {
+                affectedDishes.push({ dayIdx, meal, dishIdx, name: dish.name, week: 'next', dish: dish });
+              }
+            }
+          });
+        });
+      });
+
+      if (affectedDishes.length === 0) {
+        if (!confirm("确定不买【" + item.name + "】了吗？")) return;
+        const idx = this.shoppingList.indexOf(item);
+        if (idx > -1) this.shoppingList.splice(idx, 1);
+        this.pushToCloud();
+        return;
+      }
+
+      let relatedIngredients = [];
+      affectedDishes.forEach(task => {
+        (task.dish.ingredients || []).forEach(ing => {
+          if (ing.name !== item.name) {
+            let shopItem = this.shoppingList.find(s => s.name === ing.name && !s.bought);
+            if (shopItem && !relatedIngredients.some(r => r.name === ing.name)) {
+              relatedIngredients.push(shopItem);
+            }
+          }
+        });
+      });
+
+      let dishNames = [...new Set(affectedDishes.map(d => d.name))].join('、');
+      let extraMsg = "";
+      if (relatedIngredients.length > 0) {
+        extraMsg = `\n\n💡 智能检测：这道菜里的其他配菜（${relatedIngredients.map(r => r.name).join('、')}）你还没买，要一起从清单里删掉吗？`;
+      }
+
+      let msg = `⚠️ 你没有买【${item.name}】，影响了下周的 ${affectedDishes.length} 道菜：\n👉 ${dishNames}${extraMsg}\n\n接下来系统将依次引导你替换它们，是否继续？`;
+      
+      if (confirm(msg)) {
+        const idx = this.shoppingList.indexOf(item);
+        if (idx > -1) this.shoppingList.splice(idx, 1);
+        
+        relatedIngredients.forEach(relItem => {
+          const rIdx = this.shoppingList.indexOf(relItem);
+          if (rIdx > -1) this.shoppingList.splice(rIdx, 1);
+        });
+
+        this.pendingReplaceQueue = [...affectedDishes]; 
+        this.pendingReplaceReturnTab = 'weekend';
+        this.pushToCloud();
+        
+        this.processNextPendingReplace();
+      }
+    },
+
+    processNextPendingReplace() {
+      if (this.pendingReplaceQueue.length === 0) {
+        this.view = 'todo';
+        this.todoTab = this.pendingReplaceReturnTab || 'weekend';
+        this.pendingReplaceReturnTab = '';
+        alert("✅ 已全部替换完毕！采购清单已为您自动刷新。");
+        return;
+      }
+      
+      const task = this.pendingReplaceQueue[0]; 
+      
+      this.view = 'weekMenu';
+      this.viewWeekMode = task.week;
+      this.selDateIdx = task.dayIdx; 
+      
+      setTimeout(() => {
+        this.openReplaceModal(task.meal, task.dishIdx);
+      }, 300);
+    },
+
+    openAiPromptModal() {
+      this.aiPromptModal = {
+        show: true,
+        scope: 'week',
+        dayIdx: new Date().getDay() === 0 ? 6 : new Date().getDay() - 1,
+        targetMeal: 'lunch',
+        momStatus: this.memberTempStatus.mom,
+        dadStatus: this.memberTempStatus.dad,
+        sisterStatus: this.memberTempStatus.sister,
+        brotherStatus: this.memberTempStatus.brother,
+        extraNote: ''
+      };
+      this.showMoreActions = false;
+    },
+
+    openSingleDayPrompt() {
+      this.aiPromptModal = {
+        show: true,
+        scope: 'day',
+        dayIdx: this.selDateIdx,
+        targetMeal: 'lunch',
+        momStatus: this.memberTempStatus.mom,
+        dadStatus: this.memberTempStatus.dad,
+        sisterStatus: this.memberTempStatus.sister,
+        brotherStatus: this.memberTempStatus.brother,
+        extraNote: ''
+      };
+    },
+
+    generateAndCopyPrompt() {
+      const m = this.aiPromptModal;
+      const targetWeekText = this.viewWeekMode === 'current' ? '本周' : '下周';
+      
+      let prompt = "你现在是家庭高级营养师。请为我的家庭制定食谱。\n";
+      
+      prompt += "家庭情况：妈妈减脂（气血不足），需要高蛋白低脂；姐姐8岁长身体需补钙；弟弟5岁不爱吃青菜（需切碎隐藏）；爸爸有轻微脂肪肝和肾结石（需焯水高草酸蔬菜，不吃内脏）。\n";
+      
+      if (m.scope === 'week') {
+        prompt += "请制定【" + targetWeekText + "（周一至周日）】的食谱。\n";
+      } else if (m.scope === 'day') {
+        const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        prompt += "请制定【" + targetWeekText + days[m.dayIdx] + "】的单天食谱。\n";
+      } else if (m.scope === 'single_meal') {
+        const mealName = m.targetMeal === 'lunch' ? '午餐' : m.targetMeal === 'dinner' ? '晚餐' : m.targetMeal === 'breakfast' ? '早餐' : '饮品/甜汤';
+        prompt += "请专门制定【" + targetWeekText + " 的 单餐（" + mealName + "）】的食谱。只包含这一餐的内容。\n";
+      }
+      
+      let specialStatus = [];
+      if (m.momStatus === 'period') specialStatus.push("妈妈目前处于经期，需要温补，绝对不能吃寒凉生冷食物。");
+      if (m.momStatus === 'cold') specialStatus.push("妈妈目前感冒，需要清淡流食。");
+      if (m.momStatus === 'fever') specialStatus.push("妈妈目前发烧，需要补充电解质，吃流食。");
+      if (m.momStatus === 'gastro') specialStatus.push("妈妈目前肠胃炎，需要吃焦米汤、清汤面等养胃食物。");
+      
+      if (m.dadStatus === 'cold') specialStatus.push("爸爸目前感冒，需要清淡。");
+      if (m.dadStatus === 'fever') specialStatus.push("爸爸目前发烧，需要流食。");
+      if (m.dadStatus === 'gastro') specialStatus.push("爸爸目前肠胃炎，需要吃软烂养胃食物。");
+      
+      if (m.sisterStatus === 'cold') specialStatus.push("姐姐目前感冒，需要清淡。");
+      if (m.sisterStatus === 'fever') specialStatus.push("姐姐目前发烧，需要流食。");
+      if (m.sisterStatus === 'gastro') specialStatus.push("姐姐目前肠胃炎，需要养胃食物。");
+      
+      if (m.brotherStatus === 'cold') specialStatus.push("弟弟目前感冒，需要清淡。");
+      if (m.brotherStatus === 'fever') specialStatus.push("弟弟目前发烧，需要流食。");
+      if (m.brotherStatus === 'gastro') specialStatus.push("弟弟目前肠胃炎，需要养胃食物。");
+      
+      if (specialStatus.length > 0) {
+        prompt += "\n【特殊健康状况】：\n" + specialStatus.join("\n") + "\n请注意单独给出适合病人吃的变体做法或病号餐！\n";
+      }
+      
+      if (m.scope === 'week') {
+        prompt += "\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，千万不要包含任何解释文字，不要使用代码块标记。你必须严格按照以下结构输出（包含7个对象，dayIdx 0代表周一，6代表周日）：\n";
+        prompt += "你必须增加一个 \"prepType\" 字段，请根据做法自动判断这道菜的前夜预处理需求。可选值：\"thaw\"(需解冻肉类/海鲜), \"soak\"(需泡发干货/粗粮), \"porridge\"(米糊/豆浆需预约), \"fruit\"(需切水果), \"none\"(无需处理)。\n";
+        prompt += "[\n  {\n    \"dayIdx\": 0,\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"prepType\": \"none\", \"tags\": [\"主食\", \"肉\", \"蔬菜\"], \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"sweets\": []\n  }\n]\n";
+        prompt += "注意：每一餐可以包含多道菜。系统会根据 tags 来智能判断营养搭配（可选标签：主食、肉、蔬菜、饮品、水果、坚果）。一个三明治可以同时标记 主食、肉、蔬菜。请务必保证格式完全正确！";
+      } else if (m.scope === 'day') {
+        prompt += "\n【严格的输出格式要求】\n请直接输出一个 JSON 数组，仅包含1个对象。请增加一个 \"prepType\" 字段（thaw/soak/porridge/fruit/none）。结构如下：\n";
+        prompt += "[\n  {\n    \"dayIdx\": " + m.dayIdx + ",\n    \"breakfast\": [{\"name\": \"菜名\", \"tag\": \"高蛋白\", \"tool\": \"蒸锅\", \"time\": \"15分钟\", \"prepType\": \"none\", \"ingredients\": [{\"name\": \"鸡蛋\", \"weight\": 100}], \"steps\": [\"步骤1\"]}],\n    \"lunch\": [],\n    \"dinner\": [],\n    \"sweets\": []\n  }\n]\n";
+        prompt += "注意：weight 必须是纯数字。正餐的咸汤放在 lunch/dinner 中；甜汤放在 sweets 中。请务必保证格式完全正确！";
+      }
+
+      const textArea = document.createElement("textarea");
+      textArea.value = prompt;
+      document.body.appendChild(textArea);
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        alert("✅ 定制提示词已复制！\n本次目标：【" + targetWeekText + "】\n\n👉 请前往 DeepSeek 网页版粘贴发送。\n👉 生成 JSON 后，回到这里点击「批量导入」粘贴进去。");
+        this.aiPromptModal.show = false;
+      } catch (err) {
+        alert("复制失败，请长按手动复制");
+      }
+      document.body.removeChild(textArea);
+    },
+
+    doBatchImport() {
+      let rawText = this.batchImportModal.text.trim();
+      if (!rawText) { alert("请先粘贴内容"); return; }
+      
+      rawText = rawText.replace(/```json/ig, '').replace(/```/g, '').trim();
+      
+      const startIdx = rawText.indexOf('[');
+      const endIdx = rawText.lastIndexOf(']');
+      if (startIdx !== -1 && endIdx !== -1) {
+        rawText = rawText.substring(startIdx, endIdx + 1);
+      }
+
+      try {
+        const parsedData = JSON.parse(rawText);
+        if (!Array.isArray(parsedData)) throw new Error("数据格式必须是数组");
+
+        let idCounter = Date.now();
+        const targetWeekData = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+        const targetWeekText = this.viewWeekMode === 'current' ? '本周' : '下周';
+        
+        for (let day = 0; day < 7; day++) {
+          const dayData = parsedData.find(d => d.dayIdx === day);
+          
+          if (dayData) {
+             ['breakfast', 'lunch', 'dinner', 'sweets'].forEach(meal => {
+              if (dayData[meal] && dayData[meal].length > 0) {
+                targetWeekData[day][meal] = dayData[meal].map(dish => ({
+                  id: idCounter++,
+                  name: dish.name || '外部导入菜品',
+                  tag: dish.tag || 'AI推荐',
+                  tool: dish.tool || '炒锅',
+                  time: dish.time || '20分钟',
+                  prepType: dish.prepType || '',
+                  tags: dish.tags || [], 
+                  ingredients: (dish.ingredients || []).map(i => ({
+                    name: i.name,
+                    weight: parseFloat(String(i.weight).replace(/[^\d.]/g, '')) || 100
+                  })),
+                  steps: dish.steps || ['按照常规做法烹饪'],
+                  portions: {},
+                  completed: false,
+                  skipped: false,
+                  feedback: ''
+                }));
+              }
+            });
+          }
+        }
+        
+        parsedData.forEach(dayData => {
+          ['breakfast', 'lunch', 'dinner', 'sweets'].forEach(meal => {
+            if (dayData[meal] && dayData[meal].length > 0) {
+              dayData[meal].forEach(dish => {
+                let targetLib = this.recipeLibrary.breakfast;
+                if (meal === 'lunch') targetLib = this.recipeLibrary.lunchMeat;
+                else if (meal === 'dinner') targetLib = this.recipeLibrary.dinnerMeat;
+                else if (meal === 'sweets') targetLib = this.recipeLibrary.sweets;
+                
+                const exists = targetLib.some(r => r.name === dish.name);
+                if (!exists) {
+                  targetLib.push({
+                    name: dish.name,
+                    tag: dish.tag || 'AI推荐',
+                    tool: dish.tool || '炒锅',
+                    time: dish.time || '20分钟',
+                    prepType: dish.prepType || '',
+                    tags: dish.tags || [], 
+                    ingredients: (dish.ingredients || []).map(i => ({name: i.name, weight: parseFloat(String(i.weight).replace(/[^\d.]/g, '')) || 100})),
+                    steps: dish.steps || ['按照常规做法烹饪'],
+                    portions: {}
+                  });
+                }
+              });
+            }
+          });
+        });
+        
+        this.batchImportModal.show = false;
+        this.batchImportModal.text = '';
+        
+        if (this.viewWeekMode === 'next') {
+          this.recalculateShoppingList();
+        }
+        
+        alert("✅ 导入成功！已完美覆盖【" + targetWeekText + "】的菜单排期，并沉淀入库。");
+        this.pushToCloud(); 
+
+      } catch (e) {
+        alert("❌ 解析失败！\n\n可能原因：\n1. 复制不完整（请确保以 [ 开头，以 ] 结尾）\n2. 格式不是严格 JSON。\n\n系统报错：" + e.message);
+      }
+    },
+
+    async exportShoppingList() {
+      if (this.shoppingList.length === 0) {
+        alert("当前没有任何采购需求哦，请先排好下周菜单！");
+        return;
+      }
+
+      const printArea = document.getElementById('a4-print-area');
+      
+      let html = `
+        <div style="padding: 40px; box-sizing: border-box; height: 100%; display: flex; flex-direction: column; background: #fff;">
+          <div style="text-align: center; border-bottom: 3px solid #e6703b; padding-bottom: 20px; margin-bottom: 20px;">
+            <h1 style="font-size: 32px; color: #333; margin-bottom: 10px;">🛒 家庭大采购清单</h1>
+            <div style="font-size: 16px; color: #666;">生成日期：${new Date().toLocaleDateString()} | 仅包含可长期储存的物资</div>
+          </div>
+      `;
+
+      this.groupedShoppingList.forEach(group => {
+        if (group.items.length === 0) return;
+        
+        let areaColor = '#e6703b';
+        if (group.area === '生鲜区') areaColor = '#2b703b';
+        else if (group.area === '冷冻区') areaColor = '#4A90E2';
+        else if (group.area === '调料区') areaColor = '#b6862c';
+
+        html += `
+          <div style="margin-bottom: 30px;">
+            <h2 style="font-size: 22px; color: ${areaColor}; margin-bottom: 15px; border-left: 5px solid ${areaColor}; padding-left: 10px;">📍 ${group.area}</h2>
+            <div style="column-count: 2; column-gap: 40px;">
+        `;
+        group.items.forEach(item => {
+          html += `
+            <div style="display: flex; align-items: center; border-bottom: 1px dashed #ccc; padding: 10px 0; font-size: 18px; break-inside: avoid;">
+              <div style="width: 22px; height: 22px; border: 2px solid #333; border-radius: 4px; margin-right: 15px; flex-shrink: 0;"></div>
+              <div style="flex: 1; color: #333;">${item.name}</div>
+              <div style="font-weight: bold; color: ${areaColor}; width: 80px; text-align: right;">${item.weight}g</div>
+            </div>
+          `;
+        });
+        html += `</div></div>`;
+      });
+
+      html += `
+          <div style="text-align: center; color: #999; font-size: 14px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+            --- 家庭膳食工作台 自动生成 ---
+          </div>
+        </div>
+      `;
+
+      printArea.innerHTML = html;
+      printArea.style.display = 'block'; 
+
+      try {
+        const canvas = await html2canvas(printArea, { 
+          scale: 2, 
+          backgroundColor: '#ffffff',
+          useCORS: true,
+          height: printArea.scrollHeight,
+          windowHeight: printArea.scrollHeight
+        });
+        
+        this.exportedImageUrl = canvas.toDataURL('image/png');
+        this.showImagePreview = true;
+        
+      } catch (err) {
+        alert("生成图片失败，请重试。\n" + err.message);
+      } finally {
+        printArea.style.display = 'none'; 
+      }
+    }
+  }
+}).mount('#app')
+</script>
+</body>
+</html>
