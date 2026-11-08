@@ -350,7 +350,7 @@
         <div class="card" style="border: 2px solid #e6703b; padding: 16px;">
           <h2 style="color: #e6703b; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <span>🛒 明日备餐食材采购</span>
-            <span style="font-size: 13px; color: #666; font-weight: normal;">缺货才显示，勾选后点下方入库</span>
+            <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 12px;" @click="generatePrepTasks">🔄 刷新明细</button>
           </h2>
 
           <!-- 早餐 -->
@@ -414,7 +414,6 @@
         
         <div class="card" style="margin-top: 20px;">
           <h2>⏱️ 日常预处理（前夜准备）</h2>
-          <div class="section-title">📅 每天做饭前的小准备</div>
           <div v-if="dailyPrepTasks.length === 0" class="empty-text">暂无预处理任务。</div>
           <div v-for="(task, idx) in dailyPrepTasks" :key="idx" style="padding:10px 0;line-height:1.8;font-size:15px; border-bottom: 1px dashed #eee;">
             <span style="font-weight: 600; color: #e6703b;">📌 {{task.title}}</span><br/>
@@ -426,24 +425,22 @@
       <div v-if="todoTab === 'weekend'">
         <!-- 🌟 新增：生成清单操作区 -->
         <div class="card" style="background: #fffbf5; border: 1px dashed #e6703b; margin-bottom: 16px;">
-          <div style="font-size: 14px; color: #c46838; margin-bottom: 12px; line-height: 1.5;">
-            <b>💡 提示：</b>菜谱更新或日常消耗后，清单不会自动变。请在去买菜前点击下方按钮，系统会从<b>明天开始往后 7 天</b>，重新计算所需食材和库存差额。
-          </div>
-          <button class="btn" style="width: 100%; background: #e6703b; font-size: 15px; padding: 14px;" @click="recalculateShoppingList()">
-            🔄 一键生成/刷新采购清单
+          <button class="btn" style="width: 100%; background: #e6703b; font-size: 15px; padding: 14px; margin-bottom: 12px;" @click="recalculateShoppingList()">
+            🔄 刷新本周采购总清单
           </button>
           
           <!-- 切换分类视图的按钮 -->
-          <div class="tab-switch" style="margin-top: 16px; margin-bottom: 0; grid-template-columns: 1fr 1fr;">
+          <div class="tab-switch" style="margin-top: 12px; margin-bottom: 0; grid-template-columns: 1fr 1fr;">
             <div class="switch-btn" :class="{active: shoppingViewMode === 'category'}" @click="shoppingViewMode = 'category'">🛒 按种类合并 (全买)</div>
             <div class="switch-btn" :class="{active: shoppingViewMode === 'meal'}" @click="shoppingViewMode = 'meal'">🍱 按餐次分开 (单买)</div>
           </div>
 
-          <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
-            <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555; cursor: pointer;">
+          <div style="display: flex; justify-content: space-between; margin-top: 12px; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555; cursor: pointer; margin: 0;">
               <input type="checkbox" v-model="showOnlyUnbought" style="width: 18px; height: 18px; accent-color: #e6703b; margin: 0;" />
               只显示未购买
             </label>
+            <button class="btn small secondary" style="color: #e6703b; border: 1px solid #f7dcc8;" @click="exportShoppingList">🖨️ 导出A4清单</button>
           </div>
         </div>
 
@@ -452,9 +449,6 @@
           <template v-if="group.items.filter(i => !showOnlyUnbought || !i.bought || i.isExtra).length > 0">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <h2>{{ group.area }}</h2>
-              <div v-if="group.area === '生鲜区'" style="display: flex; gap: 8px;">
-                <button class="btn small secondary" style="color: #e6703b; border: 1px solid #f7dcc8;" @click="exportShoppingList">🖨️ 导出A4</button>
-              </div>
             </div>
             
             <!-- 🌟 过滤渲染 -->
@@ -2054,6 +2048,7 @@ createApp({
     if (localData) {
       try {
         const p = JSON.parse(localData);
+        // 注意：这里读取时，如果本地清空了，初始化为空数组
         if (p.rawIngList) this.rawIngList = p.rawIngList;
         if (p.fruitList) this.fruitList = p.fruitList;
         if (p.snackList) this.snackList = p.snackList;
@@ -2076,6 +2071,7 @@ createApp({
     this.loadCustomRecipes(); 
     this.generateWeekPlan('current', true);
     this.generateWeekPlan('next', true);
+    this.generatePrepTasks(); // 确保一开始显示
 
     if (this.supabaseConfig.url && this.supabaseConfig.key) {
       this.initSupabase(true);
