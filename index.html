@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
@@ -270,7 +270,6 @@
         </div>
       </div>
 
-      <!-- 💡 修改：早餐独立，午餐/晚餐合并，甜汤独立 -->
       <!-- 🌟 全新：区块网格布局 -->
       <div v-if="currentDayDishes" style="margin-top: 20px;">
         
@@ -433,6 +432,13 @@
           <button class="btn" style="width: 100%; background: #e6703b; font-size: 15px; padding: 14px;" @click="recalculateShoppingList()">
             🔄 一键生成/刷新采购清单
           </button>
+          
+          <!-- 切换分类视图的按钮 -->
+          <div class="tab-switch" style="margin-top: 16px; margin-bottom: 0; grid-template-columns: 1fr 1fr;">
+            <div class="switch-btn" :class="{active: shoppingViewMode === 'category'}" @click="shoppingViewMode = 'category'">🛒 按种类合并 (全买)</div>
+            <div class="switch-btn" :class="{active: shoppingViewMode === 'meal'}" @click="shoppingViewMode = 'meal'">🍱 按餐次分开 (单买)</div>
+          </div>
+
           <div style="display: flex; justify-content: flex-end; margin-top: 12px;">
             <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #555; cursor: pointer;">
               <input type="checkbox" v-model="showOnlyUnbought" style="width: 18px; height: 18px; accent-color: #e6703b; margin: 0;" />
@@ -746,7 +752,6 @@
         <input type="number" v-model.number="quickStockModal.weight" style="font-size: 24px; text-align: center; font-weight: bold; color: #e6703b; height: 60px;" />
       </div>
 
-      <!-- 快捷加减区 -->
       <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
         <button class="btn secondary" @click="quickStockModal.weight -= 100">-100g</button>
         <button class="btn secondary" @click="quickStockModal.weight -= 50">-50g</button>
@@ -760,8 +765,6 @@
       </div>
     </div>
   </div>
-
-
 
   <!-- 🌟 新增：日常修改重量弹窗 -->
   <div class="modal-mask" v-if="dailyWeightModal.show" @click.self="dailyWeightModal.show=false">
@@ -780,7 +783,6 @@
       </div>
     </div>
   </div>
-
 
   <!-- 🌟 新增：多买食材明细弹窗 -->
   <div class="modal-mask" v-if="showExtraModal" @click.self="showExtraModal=false">
@@ -811,7 +813,6 @@
         <input type="number" v-model.number="quickWeightModal.weight" style="font-size: 24px; text-align: center; font-weight: bold; color: #e6703b; height: 60px;" />
       </div>
 
-      <!-- 快捷加减区 -->
       <div style="display: flex; gap: 8px; justify-content: center; margin-top: 10px;">
         <button class="btn secondary" @click="quickWeightModal.weight -= 100">-100g</button>
         <button class="btn secondary" @click="quickWeightModal.weight -= 50">-50g</button>
@@ -965,7 +966,6 @@
         </select>
       </div>
 
-      <!-- 💡 新增：单餐选择 -->
       <div class="input-wrap" v-if="aiPromptModal.scope === 'single_meal'">
         <label>选择哪一餐</label>
         <select v-model="aiPromptModal.targetMeal">
@@ -1087,7 +1087,6 @@
         <label>核心食材 (用逗号分隔)</label>
         <input v-model="addRecipeModal.ingredientsText" placeholder="如：肥牛卷, 番茄, 金针菇" />
       </div>
-      <!-- 🌟 新增：预处理选项 -->
       <div class="input-wrap" style="background: #fff5ef; padding: 12px; border-radius: 12px; border: 1px solid #fce8df;">
         <label style="color: #c46838; font-weight: 600;">🌙 前夜预处理提醒（选填）</label>
         <select v-model="addRecipeModal.prepType">
@@ -1102,7 +1101,6 @@
         <label>做法步骤</label>
         <textarea v-model="addRecipeModal.stepsText" rows="3" placeholder="1. 肥牛焯水..."></textarea>
       </div>
-      <!-- 🌟 新增：营养分类标签 -->
       <div class="input-wrap" style="background: #f4f6fa; padding: 12px; border-radius: 12px; border: 1px solid #e6f0fa;">
         <label style="color: #2b579b; font-weight: 600;">🏷️ 营养标签（用于系统智能搭配）</label>
         <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;">
@@ -1132,8 +1130,6 @@
       </div>
     </div>
   </div>
-
-
 
   <!-- 🌟 新增：菜品详情弹窗 -->
   <div class="modal-mask" v-if="dishDetailModal.show && dishDetailModal.dish" @click.self="dishDetailModal.show=false">
@@ -1410,6 +1406,7 @@ createApp({
       expandedDishes: {}, 
       todoTab: 'weekend',
       showOnlyUnbought: false, 
+      shoppingViewMode: 'category', // 按种类 或 按餐次
       dailyBoughtItems: [], 
       dailyOverrides: {},   
       ingTab: 'raw',
@@ -1527,70 +1524,516 @@ createApp({
       
       recipeLibrary: {
         breakfast: [
-          { name: "全麦面包+无糖酸奶+坚果", tag: "极速·免煮", tool: "无", time: "2分钟", ingredients: [{name:'全麦面包', weight:300}, {name:'无糖酸奶', weight:400}, {name:'原味核桃', weight:50}], steps: ['全麦面包取出，直接装盘（若天冷可微波炉加热20秒）。', '将无糖酸奶倒入碗中。', '核桃剥壳，用刀背压碎，撒在酸奶表面增加口感。'], portions: { dad: '2片+100g酸奶', mom: '2片+100g酸奶', sister: '2片+100g酸奶', brother: '1片+100g酸奶' } },
-          { name: "小番茄芝士厚蛋烧+牛奶", tag: "极速·补钙", tool: "平底锅", time: "10分钟", ingredients: [{name:'小西红柿', weight:100}, {name:'鸡蛋', weight:150}, {name:'奶酪片', weight:20}, {name:'牛奶', weight:400}], steps: ['小番茄洗净切成小碎丁。', '鸡蛋打散，加入小番茄丁和少许盐搅匀。', '平底锅刷薄油，倒入一半蛋液，微微凝固时放上奶酪片。', '将蛋饼卷起推到锅边，再倒入剩余蛋液，重复卷起，出锅切段。'], portions: { dad: '1份+1杯奶', mom: '1份+1杯奶', sister: '1份+1杯奶', brother: '半份+半杯奶' } },
-          { name: "外买包子/馒头+水煮蛋+热牛奶", tag: "省事·外买搭配", tool: "蒸锅", time: "10分钟", ingredients: [{name:'外买包子', weight:300}, {name:'鸡蛋', weight:150}, {name:'牛奶', weight:400}], steps: ['外买包子放入蒸锅，水开后蒸5-8分钟热透（或微波炉洒水加热1分钟）。', '鸡蛋提前用煮蛋器煮好。', '牛奶微波炉加热1分钟。直接搭配食用。'], portions: { dad: '2个+1蛋+1杯奶', mom: '1个+1蛋+1杯奶', sister: '1个+1蛋+1杯奶', brother: '1个+1蛋+半杯奶' } },
-          { name: "经典五谷豆浆+全麦面包+白煮蛋", tag: "健脑益智·免看火", tool: "破壁机", time: "0分钟", ingredients: [{name:'黄豆', weight:50}, {name:'燕麦', weight:20}, {name:'原味核桃', weight:15}, {name:'全麦面包', weight:200}, {name:'鸡蛋', weight:150}], steps: ['前一晚睡前：黄豆洗净（无需提前泡），与燕麦、核桃一起放入破壁机。', '加入800ml清水，选择“豆浆”模式并设置“预约6-8小时”。', '早起豆浆自动打好。搭配微波炉热10秒的面包和煮蛋器做好的鸡蛋。'], portions: { dad: '1大杯+2片面包+1个蛋', mom: '1大杯+1片面包+1个蛋', sister: '1杯+1片面包+1个蛋', brother: '半杯+1片面包+1个蛋' } },
-          { name: "紫薯燕麦米糊", tag: "减脂饱腹·高纤维", tool: "破壁机", time: "0分钟", ingredients: [{name:'紫薯', weight:150}, {name:'燕麦', weight:40}, {name:'大米', weight:20}], steps: ['紫薯去皮切小丁。', '将紫薯丁、燕麦、大米洗净放入破壁机，加水800ml。', '选择米糊模式，预约6小时。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
-          { name: "苹果山药小米糊", tag: "消积健脾·第一阶段", tool: "破壁机", time: "0分钟", ingredients: [{name:'苹果', weight:100}, {name:'铁棍山药', weight:50}, {name:'小米', weight:30}], steps: ['苹果洗净去核切块，山药去皮切段，小米洗净。', '所有食材放入破壁机，加清水约600ml。', '选择“米糊”或“豆浆”模式。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
-          { name: "绿豆百合小米糊", tag: "清热润肺·第二阶段", tool: "破壁机", time: "0分钟", ingredients: [{name:'红豆', weight:20}, {name:'绿豆', weight:20}, {name:'干百合', weight:10}, {name:'小米', weight:20}], steps: ['红豆提前浸泡，所有食材洗净。', '放入破壁机，加清水约600ml。', '选择“米糊”或“豆浆”模式。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
-          { name: "南瓜红枣小米糊", tag: "健脾养胃·第三阶段", tool: "破壁机", time: "0分钟", ingredients: [{name:'老南瓜', weight:100}, {name:'红枣', weight:20}, {name:'小米', weight:40}], steps: ['老南瓜去皮切块，红枣去核，小米洗净。', '所有食材放入破壁机，加清水约600ml。', '选择“米糊”或“豆浆”模式。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
-          { name: "红豆小米花生糊", tag: "强体质·第四阶段", tool: "破壁机", time: "0分钟", ingredients: [{name:'红枣', weight:20}, {name:'红皮花生', weight:20}, {name:'枸杞', weight:10}, {name:'小米', weight:30}], steps: ['红枣去核，所有食材洗净。', '放入破壁机，加清水约600ml。', '选择“米糊”或“豆浆”模式。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' } },
-          { name: "山药小米粥", tag: "健脾养胃·易消化", tool: "奶锅", time: "30分钟", ingredients: [{name:'铁棍山药', weight:100}, {name:'小米', weight:50}, {name:'枸杞', weight:5}], steps: ['山药去皮切小块，小米洗净。', '一起放入锅中加水煮30分钟。', '出锅前撒上几颗枸杞点缀。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '1小碗' } },
-          { name: "蒸鸡蛋", tag: "嫩滑·优质蛋白", tool: "蒸锅", time: "10分钟", ingredients: [{name:'鸡蛋', weight:150}, {name:'温水', weight:200}, {name:'葱花', weight:5}], steps: ['鸡蛋打散，加入1.5倍温水和少许盐搅匀。', '撇去表面浮沫。', '盖上保鲜膜（扎几个孔），水开后上锅蒸8分钟。', '出锅滴几滴香油，撒上葱花。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '1碗(主力)' } },
-          { name: "南瓜蒸糕", tag: "香甜松软·护眼", tool: "蒸锅", time: "20分钟", ingredients: [{name:'老南瓜', weight:100}, {name:'面粉', weight:100}, {name:'酵母', weight:2}], steps: ['南瓜蒸熟压成泥，稍微放凉。', '加入面粉和酵母，揉成面团，发酵至两倍大。', '揉面排气，整成糕状，上锅蒸熟切块。'], portions: { dad: '2块', mom: '2块', sister: '2块', brother: '1块' } },
-          { name: "小米鸡蛋饼", tag: "松软细腻·高蛋白", tool: "平底锅", time: "10分钟", ingredients: [{name:'小米粉', weight:100}, {name:'鸡蛋', weight:100}, {name:'温水', weight:50}], steps: ['小米粉加入鸡蛋和温水调成面糊。', '平底锅小火，舀一勺面糊摊平。', '煎至两面金黄即可。'], portions: { dad: '3张', mom: '2张', sister: '2张', brother: '1张' } },
-          { name: "山药紫薯饼", tag: "膳食纤维·软糯", tool: "平底锅", time: "15分钟", ingredients: [{name:'铁棍山药', weight:100}, {name:'紫薯', weight:100}], steps: ['山药和紫薯分别蒸熟压成泥。', '混合揉匀，做成小饼状。', '小火煎至两面微黄即可。'], portions: { dad: '2个', mom: '2个', sister: '2个', brother: '1个' } },
-          { name: "鸡蛋软饼", tag: "营养均衡·极简", tool: "平底锅", time: "10分钟", ingredients: [{name:'鸡蛋', weight:100}, {name:'面粉', weight:100}], steps: ['鸡蛋加入面粉调成面糊。', '平底锅刷油，倒入面糊摊平。', '小火煎熟即可。'], portions: { dad: '1大张', mom: '1张', sister: '1张', brother: '半张' } },
-          { name: "蒸苹果", tag: "软糯果胶·收敛止泻", tool: "蒸锅", time: "15分钟", ingredients: [{name:'苹果', weight:150}], steps: ['苹果去皮去核切块。', '放入蒸锅大火蒸15分钟即可。'], portions: { dad: '适量', mom: '适量', sister: '适量', brother: '主力(好消化)' } },
-          { name: "蒸南瓜", tag: "香甜软糯·补维A", tool: "蒸锅", time: "15分钟", ingredients: [{name:'老南瓜', weight:200}], steps: ['南瓜去皮切块。', '放入蒸锅大火蒸15分钟即可。'], portions: { dad: '适量', mom: '适量', sister: '适量', brother: '适量(压成泥)' } },
-          { name: "玉米山药羹", tag: "细腻浓稠·粗粮", tool: "破壁机", time: "0分钟", ingredients: [{name:'玉米粒', weight:100}, {name:'铁棍山药', weight:50}], steps: ['玉米和山药蒸熟。', '加入适量温水，打成细腻浓稠的羹即可。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' } },
-          { name: "蒸玉米", tag: "粗粮·促进肠胃蠕动", tool: "蒸锅", time: "15分钟", ingredients: [{name:'甜玉米', weight:200}], steps: ['甜玉米洗净切小段。', '上锅大火蒸15分钟即可。'], portions: { dad: '1大段', mom: '1段', sister: '1段', brother: '半段(剥粒防呛)' } },
-          { name: "南瓜芡实软饼", tag: "中式养胃·健脾祛湿", tool: "平底锅", time: "15分钟", ingredients: [{name:'老南瓜', weight:70}, {name:'芡实粉', weight:15}, {name:'低筋面粉', weight:40}], steps: ['南瓜蒸熟压泥。', '加入芡实粉、面粉，少量温水调成稀面糊。', '平底锅少油，摊成小软饼即可。'], portions: { dad: '2张', mom: '2张', sister: '2张', brother: '1张' } },
-          { name: "羊肚菌鸡肉碎烂面条", tag: "高蛋白·鲜美养胃", tool: "炒锅", time: "15分钟", ingredients: [{name:'儿童面条', weight:60}, {name:'羊肚菌', weight:10}, {name:'鸡胸肉', weight:40}, {name:'青菜', weight:40}], steps: ['羊肚菌泡发洗净切碎，鸡胸肉剁成肉末。', '锅里少许油，炒香肉末和羊肚菌，加水煮开。', '下入面条煮软，最后放青菜碎，少许盐调味。'], portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '1小碗(面条剪短)' } },
-          { name: "红枣莲子杂粮饭团", tag: "健脾安神·粗粮细作", tool: "电饭煲", time: "30分钟", ingredients: [{name:'大米', weight:50}, {name:'小米', weight:20}, {name:'去芯莲子', weight:15}, {name:'红枣', weight:15}], steps: ['全部杂粮洗净，红枣去核。', '一起放入电饭煲焖熟。', '放温后，用保鲜膜捏成小饭团即可。'], portions: { dad: '2个', mom: '1个', sister: '1个', brother: '1个(小号)' } }
+          {
+            name: "健脾养胃长肉米糊", tag: "健脾养胃·儿童长肉 [⚠️弟弟专属，少量多次]", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'小米', weight:35}, {name:'大米', weight:15}, {name:'山药干', weight:10}, {name:'去芯莲子', weight:8}, {name:'去核红枣', weight:10}],
+            steps: ["所有食材洗净（莲子无需泡，破壁机可打碎；红枣剪碎）。", "放入破壁机，加清水至800ml，选择“米糊”模式并预约。", "早上直接倒出，【关键提醒】给弟弟喝半碗即可，不要过量，避免增加脾胃负担。"],
+            portions: { dad: '1大碗', mom: '1碗(温和补气)', sister: '1碗(易消化)', brother: '半碗(脾胃弱，少量多次，观察消化)' }
+          },
+          {
+            name: "基础小米养脾胃米糊", tag: "健脾养胃", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'小米', weight:40}, {name:'大米', weight:20}, {name:'山药干', weight:12}, {name:'去芯莲子', weight:10}],
+            steps: ["食材洗净放入破壁机（莲子无需泡，机器可打碎）。", "加清水至900ml，选择“米糊”模式并预约6-8小时。", "早起直接倒出饮用。"],
+            portions: { dad: '1大碗', mom: '1碗(主食少吃两口)', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "香甜玉米米糊", tag: "清甜无豆腥", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'小米', weight:30}, {name:'大米', weight:20}, {name:'玉米碴', weight:25}, {name:'去核红枣', weight:8}],
+            steps: ["玉米碴洗净，红枣去核剪碎。", "全部放入破壁机，加水至900ml，预约米糊模式。"],
+            portions: { dad: '1大碗', mom: '1碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "坚果益智米糊", tag: "益智补脑", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'小米', weight:28}, {name:'大米', weight:22}, {name:'生燕麦', weight:18}, {name:'核桃仁', weight:7}, {name:'红皮花生', weight:9}],
+            steps: ["所有食材洗净放入破壁机。", "加水至900ml，预约米糊模式。"],
+            portions: { dad: '1大碗', mom: '1碗', sister: '1碗', brother: '半碗(小班适量)' }
+          },
+          {
+            name: "五彩谷物米糊", tag: "补充膳食纤维", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'小米', weight:25}, {name:'大米', weight:20}, {name:'黑米', weight:15}, {name:'燕麦', weight:12}, {name:'山药干', weight:9}],
+            steps: ["食材洗净放入破壁机。", "加水至900ml，预约米糊模式。"],
+            portions: { dad: '1大碗', mom: '1碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "南瓜干香甜米糊", tag: "软糯香甜", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'小米', weight:32}, {name:'大米', weight:22}, {name:'南瓜干', weight:20}, {name:'去核红枣', weight:11}],
+            steps: ["南瓜干、红枣剪小碎块，与其它食材混合入破壁机。", "加水至900ml，预约米糊模式。"],
+            portions: { dad: '1大碗', mom: '1碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "经典五谷豆浆", tag: "健脑益智 [⚠️爸爸适量饮用]", tool: "破壁机", time: "0分钟", prepType: "soak", tags: ["饮品"],
+            ingredients: [{name:'黄豆', weight:50}, {name:'燕麦', weight:20}, {name:'原味核桃', weight:15}],
+            steps: ["【前夜提醒】黄豆需提前洗净，用冷水浸泡过夜。", "将泡好的黄豆与燕麦、核桃放入破壁机，加清水至800ml，预约豆浆模式。"],
+            portions: { dad: '1大杯(适量，豆类草酸偏高)', mom: '1大杯', sister: '1杯', brother: '半杯' }
+          },
+          {
+            name: "紫薯燕麦米糊", tag: "减脂饱腹", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'紫薯', weight:150}, {name:'燕麦', weight:40}, {name:'大米', weight:20}],
+            steps: ["紫薯去皮切小丁，与燕麦、大米放入破壁机。", "加水至800ml，预约米糊模式。"],
+            portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "苹果山药小米糊", tag: "消积健脾", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品", "水果"],
+            ingredients: [{name:'苹果', weight:100}, {name:'铁棍山药', weight:50}, {name:'小米', weight:30}],
+            steps: ["苹果去核切块，山药去皮切段，与小米放入破壁机。", "加清水约600ml，预约米糊模式。"],
+            portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "绿豆百合小米糊", tag: "清热润肺", tool: "破壁机", time: "0分钟", prepType: "soak", tags: ["饮品"],
+            ingredients: [{name:'红豆', weight:20}, {name:'绿豆', weight:20}, {name:'干百合', weight:10}, {name:'小米', weight:20}],
+            steps: ["【前夜提醒】红豆、绿豆、干百合需提前浸泡2小时以上（或放冰箱冷藏过夜）。", "所有食材洗净，放入破壁机加清水约600ml，预约米糊模式。"],
+            portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "南瓜红枣小米糊", tag: "健脾养胃", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'老南瓜', weight:100}, {name:'红枣', weight:20}, {name:'小米', weight:40}],
+            steps: ["老南瓜去皮切块，红枣去核，小米洗净。", "所有食材放入破壁机，加水约600ml，预约米糊模式。"],
+            portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "红豆小米花生糊", tag: "强体质", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'红枣', weight:20}, {name:'红皮花生', weight:20}, {name:'枸杞', weight:10}, {name:'小米', weight:30}],
+            steps: ["红枣去核，所有食材洗净。", "放入破壁机，加清水约600ml，预约米糊模式。"],
+            portions: { dad: '1大碗', mom: '1大碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "山药小米粥", tag: "健脾养胃·易消化", tool: "奶锅/电饭煲", time: "30分钟", prepType: "none", tags: ["饮品"],
+            ingredients: [{name:'铁棍山药', weight:100}, {name:'小米', weight:50}, {name:'枸杞', weight:5}],
+            steps: ["山药去皮切小块，小米洗净。", "一起放入锅中加水煮30分钟，出锅前撒上枸杞。"],
+            portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '1小碗' }
+          },
+          {
+            name: "玉米山药羹", tag: "粗粮细作", tool: "破壁机", time: "0分钟", prepType: "porridge", tags: ["饮品"],
+            ingredients: [{name:'玉米粒', weight:100}, {name:'铁棍山药', weight:50}],
+            steps: ["玉米和山药蒸熟（或直接生打加热）。", "加入适量温水，破壁机打成细腻浓稠的羹即可。"],
+            portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "温热纯牛奶", tag: "补钙·高蛋白 [⚠️如吃柿子请避开]", tool: "微波炉/奶锅", time: "2分钟", prepType: "none", tags: ["饮品"],
+            ingredients: [{name:'纯牛奶', weight:1000}],
+            steps: ["倒入杯子或奶锅，加热至温热即可。", "【关键提醒】如果家里吃柿子，牛奶和柿子千万不要空腹同食，易引发肠胃不适。"],
+            portions: { dad: '250ml', mom: '200ml', sister: '200ml', brother: '150ml' }
+          },
+          {
+            name: "红枣银耳羹", tag: "润燥补气血", tool: "电饭煲/炖锅", time: "30分钟", prepType: "soak", tags: ["饮品"],
+            ingredients: [{name:'干银耳', weight:10}, {name:'红枣', weight:15}, {name:'枸杞', weight:5}],
+            steps: ["【前夜提醒】干银耳需提前泡发，去黄蒂撕小朵。", "将银耳、红枣加水放入炖锅/电饭煲，煮30-40分钟至出胶。", "出锅前放枸杞。"],
+            portions: { dad: '1碗', mom: '1碗(补气血)', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "南瓜山药汤", tag: "健脾养胃·护眼", tool: "奶锅/炖锅", time: "20分钟", prepType: "none", tags: ["饮品"],
+            ingredients: [{name:'老南瓜', weight:200}, {name:'铁棍山药', weight:100}, {name:'去核红枣', weight:10}, {name:'燕麦片', weight:15}, {name:'枸杞', weight:5}],
+            steps: ["南瓜、山药去皮切块。", "与红枣同煮15分钟至软烂。", "加燕麦片煮2分钟，出锅前撒枸杞。"],
+            portions: { dad: '1碗(主食减半)', mom: '1碗(主食减半)', sister: '1碗', brother: '半碗(压成泥)' }
+          },
+          {
+            name: "南瓜燕麦银耳羹", tag: "润燥饱腹·健脾", tool: "炖锅", time: "30分钟", prepType: "soak", tags: ["饮品"],
+            ingredients: [{name:'老南瓜', weight:150}, {name:'干银耳', weight:10}, {name:'即食燕麦', weight:20}, {name:'去核红枣', weight:10}, {name:'枸杞', weight:5}],
+            steps: ["【前夜提醒】干银耳提前冷水泡发，去黄蒂撕小朵。", "银耳与红枣加水炖30分钟出胶。", "加南瓜丁煮15分钟，撒燕麦片煮2分钟，出锅前放枸杞。"],
+            portions: { dad: '1碗(主食减半)', mom: '1碗(主食减半)', sister: '1碗', brother: '半碗(燕麦煮烂防胀气)' }
+          },
+          {
+            name: "蒸花卷", tag: "快手主食", tool: "蒸锅", time: "10分钟", prepType: "thaw", tags: ["主食"],
+            ingredients: [{name:'冷冻花卷', weight:400}],
+            steps: ["【前夜提醒】冷冻花卷提前一晚从冷冻室移至冷藏室解冻。", "蒸锅加水烧开，放入花卷蒸8-10分钟至松软即可。"],
+            portions: { dad: '2个', mom: '1个', sister: '1个', brother: '1个(撕小块)' }
+          },
+          {
+            name: "肉末花卷", tag: "咸香饱腹", tool: "蒸锅", time: "15分钟", prepType: "thaw", tags: ["主食", "肉"],
+            ingredients: [{name:'冷冻肉末花卷', weight:400}],
+            steps: ["【前夜提醒】前夜放冷藏解冻。", "水开后蒸12-15分钟。"],
+            portions: { dad: '2个', mom: '1个', sister: '1个', brother: '半个' }
+          },
+          {
+            name: "蒸馒头", tag: "快手主食", tool: "蒸锅", time: "8分钟", prepType: "thaw", tags: ["主食"],
+            ingredients: [{name:'冷冻馒头', weight:400}],
+            steps: ["【前夜提醒】冷冻馒头提前放冷藏解冻（常温则无需）。", "水开后上锅蒸8分钟至软透。"],
+            portions: { dad: '1个', mom: '半个', sister: '1个', brother: '半个' }
+          },
+          {
+            name: "蒸豆沙包", tag: "香甜软糯", tool: "蒸锅", time: "10分钟", prepType: "none", tags: ["主食"],
+            ingredients: [{name:'冷冻豆沙包', weight:300}],
+            steps: ["无需解冻，水开后上锅蒸10分钟即可。"],
+            portions: { dad: '2个', mom: '1个', sister: '1个', brother: '1个(注意豆沙防烫)' }
+          },
+          {
+            name: "蒸烧卖", tag: "咸香可口", tool: "蒸锅", time: "12分钟", prepType: "thaw", tags: ["主食", "肉"],
+            ingredients: [{name:'冷冻烧卖', weight:300}],
+            steps: ["【前夜提醒】冷冻烧卖提前放冷藏解冻（或早上无需解冻直接蒸15分钟）。", "水开后上锅蒸10-12分钟至皮透明。"],
+            portions: { dad: '4个', mom: '3个', sister: '3个', brother: '2个' }
+          },
+          {
+            name: "虾仁烧卖", tag: "高蛋白补钙 [⚠️爸爸适量]", tool: "蒸锅", time: "12分钟", prepType: "thaw", tags: ["主食", "肉"],
+            ingredients: [{name:'冷冻虾仁烧卖', weight:300}],
+            steps: ["【前夜提醒】冷冻烧卖提前放冷藏解冻。", "水开后上锅蒸10-12分钟至熟透。"],
+            portions: { dad: '3个(海鲜适量)', mom: '3个', sister: '3个', brother: '2个' }
+          },
+          {
+            name: "蒸甜玉米", tag: "粗粮膳食纤维", tool: "蒸锅", time: "15分钟", prepType: "none", tags: ["主食", "蔬菜"],
+            ingredients: [{name:'甜玉米', weight:400}],
+            steps: ["玉米洗净切段。", "水开后上锅蒸15分钟。"],
+            portions: { dad: '半根', mom: '半根', sister: '半根', brother: '半根(剥粒防呛)' }
+          },
+          {
+            name: "蒸红薯", tag: "优质碳水", tool: "蒸锅", time: "20分钟", prepType: "none", tags: ["主食"],
+            ingredients: [{name:'蜜薯', weight:300}],
+            steps: ["洗净去皮切厚块。", "水开后上锅蒸15-20分钟至筷子轻松扎透。"],
+            portions: { dad: '1块', mom: '1块', sister: '1块', brother: '半块' }
+          },
+          {
+            name: "蒸南瓜", tag: "香甜护眼", tool: "蒸锅", time: "15分钟", prepType: "none", tags: ["主食", "蔬菜"],
+            ingredients: [{name:'老南瓜', weight:300}],
+            steps: ["去皮切块。", "上锅蒸15分钟至软烂。"],
+            portions: { dad: '1份', mom: '1份', sister: '1份', brother: '1份(压成泥)' }
+          },
+          {
+            name: "蒸山药", tag: "健脾养胃", tool: "蒸锅", time: "15分钟", prepType: "none", tags: ["主食"],
+            ingredients: [{name:'铁棍山药', weight:250}],
+            steps: ["洗净切长段（戴手套去皮防痒）。", "上锅蒸15分钟。"],
+            portions: { dad: '1段', mom: '1段', sister: '1段', brother: '半段' }
+          },
+          {
+            name: "蒸水饺", tag: "主食肉菜一锅出", tool: "蒸锅", time: "15分钟", prepType: "thaw", tags: ["主食", "肉", "蔬菜"],
+            ingredients: [{name:'冷冻水饺', weight:400}],
+            steps: ["蒸屉刷油，放入水饺（冷冻无需解冻）。", "水开后蒸10-15分钟至熟透。"],
+            portions: { dad: '6个', mom: '5个', sister: '5个', brother: '4个' }
+          },
+          {
+            name: "三明治", tag: "快手营养全包", tool: "平底锅", time: "10分钟", prepType: "none", tags: ["主食", "肉", "蔬菜", "蛋类"],
+            ingredients: [{name:'全麦吐司', weight:150}, {name:'鸡蛋', weight:100}, {name:'生菜', weight:50}, {name:'番茄', weight:100}, {name:'芝士片', weight:40}],
+            steps: ["鸡蛋煎熟；番茄切片。", "吐司微煎，依次铺上生菜、番茄、芝士、煎蛋，用保鲜膜压实对角切开。"],
+            portions: { dad: '1.5个', mom: '1个(去边)', sister: '1个', brother: '半个' }
+          },
+          {
+            name: "时蔬鸡蛋饼", tag: "营养全面全包(隐藏蔬菜)", tool: "平底锅", time: "10分钟", prepType: "none", tags: ["主食", "肉", "蔬菜", "蛋类"],
+            ingredients: [{name:'面粉', weight:100}, {name:'鸡蛋', weight:100}, {name:'西葫芦丝', weight:50}, {name:'胡萝卜丝', weight:30}],
+            steps: ["蔬菜切细丝（弟弟吃可切极细碎），加面粉鸡蛋和少许水调成面糊。", "平底锅刷油，倒入面糊摊平，煎至两面金黄。"],
+            portions: { dad: '1大张', mom: '1张', sister: '1张', brother: '半张(主力吃这个补蔬菜)' }
+          },
+          {
+            name: "鸡蛋泡泡饼", tag: "松软好消化", tool: "平底锅", time: "15分钟", prepType: "none", tags: ["主食", "肉", "蛋类"],
+            ingredients: [{name:'面粉', weight:100}, {name:'鸡蛋', weight:100}, {name:'酵母', weight:1}],
+            steps: ["面粉加鸡蛋、酵母、温水搅成无颗粒稠面糊，发酵半小时。", "平底锅刷油，舀入面糊，小火煎至两面金黄蓬松。"],
+            portions: { dad: '3块', mom: '2块', sister: '2块', brother: '1块' }
+          },
+          {
+            name: "自制香肠", tag: "高蛋白·解馋 [⚠️爸爸少吃加工肉]", tool: "蒸锅", time: "15分钟", prepType: "thaw", tags: ["肉"],
+            ingredients: [{name:'自制香肠', weight:200}],
+            steps: ["【前夜提醒】香肠前夜从冷冻拿到冷藏解冻。", "放入蒸锅蒸15分钟至熟透，取出切片。"],
+            portions: { dad: '半根(尽量少吃)', mom: '半根', sister: '1根', brother: '半根(切小丁防噎)' }
+          },
+          {
+            name: "水煮鸡蛋", tag: "极简高蛋白", tool: "煮锅", time: "8分钟", prepType: "none", tags: ["肉", "蛋类"],
+            ingredients: [{name:'鸡蛋', weight:200}],
+            steps: ["鸡蛋冷水下锅，水开后煮8分钟。", "捞出过凉水剥壳。"],
+            portions: { dad: '1个', mom: '1个', sister: '1个', brother: '1个' }
+          },
+          {
+            name: "自制虾滑", tag: "无添加高蛋白 [⚠️爸爸适量]", tool: "蒸锅", time: "10分钟", prepType: "thaw", tags: ["肉"],
+            ingredients: [{name:'鲜虾仁', weight:250}, {name:'蛋清', weight:30}, {name:'淀粉', weight:10}],
+            steps: ["【前夜提醒】虾仁前夜解冻。", "虾仁剁泥，加蛋清、淀粉、盐搅打上劲。", "挤入开水锅中煮浮起，或挤盘子里上锅蒸8分钟。"],
+            portions: { dad: '80g(适量)', mom: '80g', sister: '70g', brother: '50g' }
+          },
+          {
+            name: "鸡蛋羹", tag: "嫩滑易吸收", tool: "蒸锅", time: "10分钟", prepType: "none", tags: ["肉", "蛋类"],
+            ingredients: [{name:'鸡蛋', weight:150}, {name:'温水', weight:200}, {name:'生抽', weight:5}],
+            steps: ["鸡蛋打散加温水和少许盐搅匀，撇去浮沫。", "盖上保鲜膜扎孔，水开后中火蒸8-10分钟。", "出锅滴香油和生抽。"],
+            portions: { dad: '1份', mom: '1份', sister: '1份', brother: '1份(主力)' }
+          },
+          {
+            name: "自制肉丸子", tag: "隐藏蔬菜", tool: "蒸锅", time: "15分钟", prepType: "thaw", tags: ["肉", "蔬菜"],
+            ingredients: [{name:'猪肉末', weight:200}, {name:'胡萝卜碎', weight:30}, {name:'淀粉', weight:10}],
+            steps: ["【前夜提醒】肉末如冷冻需解冻。", "肉末与胡萝卜碎混合，加生抽调味搅打上劲，搓成小丸子。", "上锅大火蒸15分钟。"],
+            portions: { dad: '3个', mom: '3个', sister: '2个', brother: '2个(必须切小/小号防呛)' }
+          },
+          {
+            name: "羊肚菌虾滑", tag: "鲜美补脑 [⚠️爸爸适量]", tool: "蒸锅", time: "10分钟", prepType: "soak", tags: ["肉", "蔬菜"],
+            ingredients: [{name:'羊肚菌', weight:50}, {name:'自制虾滑', weight:150}],
+            steps: ["【前夜提醒】羊肚菌需前夜用温水泡发，洗净剪开。", "将虾滑酿入羊肚菌中。", "摆盘上锅蒸8-10分钟。"],
+            portions: { dad: '3个(适量)', mom: '3个', sister: '2个', brother: '2个' }
+          },
+          {
+            name: "蒸虾仁鸡蛋", tag: "双重补钙 [⚠️爸爸适量]", tool: "蒸锅", time: "12分钟", prepType: "thaw", tags: ["肉", "蛋类"],
+            ingredients: [{name:'鸡蛋', weight:100}, {name:'虾仁', weight:50}, {name:'温水', weight:150}],
+            steps: ["【前夜提醒】虾仁前夜解冻。", "鸡蛋加水打散撇沫倒入浅盘，盖保鲜膜蒸8分钟。", "待蛋液微凝固时，表面铺上虾仁，再蒸3分钟。"],
+            portions: { dad: '1份(适量)', mom: '1份', sister: '1份', brother: '1份(虾仁剪小)' }
+          },
+          {
+            name: "自制牛肉饼", tag: "补铁高蛋白", tool: "平底锅", time: "15分钟", prepType: "thaw", tags: ["肉"],
+            ingredients: [{name:'牛肉末', weight:200}, {name:'洋葱碎', weight:30}, {name:'鸡蛋清', weight:30}, {name:'淀粉', weight:10}],
+            steps: ["【前夜提醒】牛肉末解冻。", "牛肉末加洋葱碎、蛋清、淀粉、盐搅打上劲，做成肉饼。", "平底锅少油小火慢煎至两面金黄熟透。"],
+            portions: { dad: '2块', mom: '1块', sister: '1块', brother: '1块(切条防噎)' }
+          },
+          {
+            name: "自制猪肉饼", tag: "隐藏蔬菜", tool: "平底锅", time: "15分钟", prepType: "thaw", tags: ["肉", "蔬菜"],
+            ingredients: [{name:'猪肉末', weight:200}, {name:'菠菜碎', weight:30}, {name:'淀粉', weight:10}],
+            steps: ["【前夜提醒】菠菜碎需提前焯水切碎（去草酸）；猪肉末解冻。", "肉末加菠菜碎、生抽、淀粉拌匀压成饼。", "平底锅刷少许油，小火煎熟。"],
+            portions: { dad: '2块(菠菜已焯水可吃)', mom: '1块', sister: '1块', brother: '1块(隐藏蔬菜极佳)' }
+          },
+          {
+            name: "自制虾饼", tag: "鲜香补钙 [⚠️爸爸适量]", tool: "平底锅", time: "15分钟", prepType: "thaw", tags: ["肉"],
+            ingredients: [{name:'虾仁', weight:200}, {name:'胡萝卜碎', weight:20}, {name:'面粉', weight:20}],
+            steps: ["【前夜提醒】虾仁前夜解冻。", "虾仁剁泥，混合胡萝卜碎和面粉，加少许盐。", "捏成小饼，平底锅小火两面煎熟。"],
+            portions: { dad: '2个(适量)', mom: '2个', sister: '2个', brother: '1个' }
+          },
+          {
+            name: "厚蛋烧", tag: "高蛋白", tool: "平底锅", time: "10分钟", prepType: "none", tags: ["肉", "蛋类"],
+            ingredients: [{name:'鸡蛋', weight:150}, {name:'纯牛奶', weight:20}, {name:'葱花', weight:5}],
+            steps: ["鸡蛋加牛奶和盐打散。", "平底锅刷油，倒入三分之一蛋液，半凝固时卷起；再倒入蛋液重复卷起，定型后切段。"],
+            portions: { dad: '3段', mom: '2段', sister: '2段', brother: '2段(切开易嚼)' }
+          },
+          {
+            name: "牛肉滑蛋", tag: "补铁易嚼", tool: "平底锅", time: "10分钟", prepType: "thaw", tags: ["肉", "蛋类"],
+            ingredients: [{name:'瘦牛肉片', weight:100}, {name:'鸡蛋', weight:150}, {name:'牛奶', weight:20}],
+            steps: ["【前夜提醒】牛肉片前夜解冻，加生抽和淀粉腌制。", "热油快炒牛肉至变色盛出。", "蛋液加牛奶打散倒入锅中，半凝固时加入牛肉，轻轻推熟。"],
+            portions: { dad: '1份', mom: '1份', sister: '1份', brother: '1份(牛肉切极碎拌饭)' }
+          },
+          {
+            name: "虾皮炒鸡蛋", tag: "极速补钙 [⚠️爸爸适量]", tool: "平底锅", time: "5分钟", prepType: "none", tags: ["肉", "蛋类"],
+            ingredients: [{name:'鸡蛋', weight:150}, {name:'虾皮', weight:10}, {name:'葱花', weight:5}],
+            steps: ["鸡蛋打散加入洗净的虾皮。", "热锅温油，倒入蛋液快速划散炒熟，撒葱花出锅。"],
+            portions: { dad: '1份(适量)', mom: '1份', sister: '1份', brother: '1份(补钙极好)' }
+          },
+          {
+            name: "生菜拼盘", tag: "补充维C", tool: "无", time: "2分钟", prepType: "none", tags: ["蔬菜"],
+            ingredients: [{name:'球生菜/奶油生菜', weight:100}],
+            steps: ["生菜掰开洗净，沥干水分。", "直接搭配三明治或肉饼食用。"],
+            portions: { dad: '3片', mom: '3片', sister: '2片', brother: '1片(撕成极小块防噎)' }
+          },
+          {
+            name: "西红柿拼盘", tag: "补充番茄红素", tool: "刀", time: "3分钟", prepType: "none", tags: ["蔬菜", "水果"],
+            ingredients: [{name:'草莓西红柿/大红番茄', weight:200}],
+            steps: ["洗净去蒂，切成月牙块。", "弟弟吃可去皮切小丁。"],
+            portions: { dad: '半颗', mom: '半颗', sister: '半颗', brother: '几小块(去皮切小丁)' }
+          },
+          {
+            name: "快手蔬菜沙拉", tag: "清爽解腻", tool: "碗", time: "5分钟", prepType: "none", tags: ["蔬菜"],
+            ingredients: [{name:'生菜', weight:100}, {name:'小番茄', weight:50}, {name:'甜玉米粒', weight:30}, {name:'水煮蛋', weight:50}, {name:'油醋汁', weight:10}],
+            steps: ["生菜手撕成小块，小番茄对半切开。", "加入玉米粒和水煮蛋碎，淋少许油醋汁拌匀。"],
+            portions: { dad: '1小碗', mom: '1小碗', sister: '1小碗', brother: '1小碗(不加酱，小番茄对半切防呛)' }
+          },
+          {
+            name: "每日水果坚果拼盘", tag: "维生素与优质脂肪", tool: "刀", time: "5分钟", prepType: "fruit", tags: ["水果", "坚果"],
+            ingredients: [{name:'当季水果(苹果/香蕉/蓝莓等)', weight:150}, {name:'混合坚果(罐装)', weight:30}],
+            steps: ["水果洗净切小块（葡萄对半切去籽，小番茄切开）。", "混合坚果倒出装盘。"],
+            portions: { dad: '水果50g+坚果10g', mom: '水果50g+坚果8g', sister: '水果30g+坚果7g', brother: '水果20g(切极小块)+坚果5g(必须碾碎拌入防呛)' }
+          }
         ],
         lunchStaple: [
-          { name: "白米饭", tag: "碳水·基础主食", tool: "电饭煲", time: "30分钟", ingredients: [{name:'大米', weight:200}], steps: ['大米洗净，加水放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗' } },
-          { name: "杂粮饭", tag: "粗粮·高纤维", tool: "电饭煲", time: "40分钟", ingredients: [{name:'杂粮米', weight:200}], steps: ['杂粮米提前浸泡2小时，放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗' } },
-          { name: "南瓜蒸饭", tag: "香甜软糯·护眼", tool: "电饭煲", time: "30分钟", ingredients: [{name:'大米', weight:150}, {name:'老南瓜', weight:100}], steps: ['南瓜去皮切小块，与洗净的大米一同放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗(南瓜压泥)' } },
-          { name: "地瓜蒸饭", tag: "润肠通便·粗粮", tool: "电饭煲", time: "30分钟", ingredients: [{name:'大米', weight:150}, {name:'红薯', weight:100}], steps: ['红薯去皮切块，与洗净的大米一同放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗' } }
+          { name: "白米饭", tag: "碳水·基础主食", tool: "电饭煲", time: "30分钟", prepType: "none", tags: ["主食"], ingredients: [{name:'大米', weight:200}], steps: ['大米洗净，加水放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗' } },
+          { name: "杂粮饭", tag: "粗粮·高纤维", tool: "电饭煲", time: "40分钟", prepType: "soak", tags: ["主食"], ingredients: [{name:'杂粮米', weight:200}], steps: ['杂粮米提前浸泡2小时，放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗' } },
+          { name: "南瓜蒸饭", tag: "香甜软糯·护眼", tool: "电饭煲", time: "30分钟", prepType: "none", tags: ["主食"], ingredients: [{name:'大米', weight:150}, {name:'老南瓜', weight:100}], steps: ['南瓜去皮切小块，与洗净的大米一同放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗(南瓜压泥)' } },
+          { name: "地瓜蒸饭", tag: "润肠通便·粗粮", tool: "电饭煲", time: "30分钟", prepType: "none", tags: ["主食"], ingredients: [{name:'大米', weight:150}, {name:'红薯', weight:100}], steps: ['红薯去皮切块，与洗净的大米一同放入电饭煲煮熟。'], portions: { dad: '1碗', mom: '半碗', sister: '1小碗', brother: '半碗' } }
         ],
         dinnerStaple: [
-          { name: "番茄鸡蛋肉丝面", tag: "一锅出·快手", tool: "炒锅/奶锅", time: "15分钟", ingredients: [{name:'面条', weight:150}, {name:'番茄', weight:100}, {name:'鸡蛋', weight:50}, {name:'瘦肉', weight:50}, {name:'青菜', weight:50}], steps: ['番茄炒出汁，加水烧开。', '下肉丝和面条煮熟。', '打入蛋花，放入青菜，加盐调味。'], portions: { dad: '1大碗', mom: '1小碗', sister: '1小碗', brother: '半碗(剪短)' } },
-          { name: "青菜肉丝炒面", tag: "干香·饱腹", tool: "炒锅", time: "15分钟", ingredients: [{name:'面条', weight:150}, {name:'瘦肉', weight:50}, {name:'青菜', weight:100}], steps: ['面条煮熟捞出过凉水。', '肉丝滑熟，下青菜炒软。', '倒入面条，加生抽老抽大火翻炒均匀。'], portions: { dad: '1大碗', mom: '1小碗', sister: '1小碗', brother: '半碗(剪短)' } }
+          {
+            name: "香菇滑鸡焖饭", tag: "鲜香滑嫩·低脂", tool: "电饭煲", time: "40分钟", prepType: "thaw", tags: ["主食", "肉", "蔬菜"],
+            ingredients: [{name:'大米', weight:150}, {name:'杂粮米', weight:50}, {name:'鸡腿肉', weight:150}, {name:'干香菇', weight:15}, {name:'胡萝卜', weight:50}],
+            steps: ["【前夜提醒】干香菇前夜泡发切丝。鸡腿肉前夜解冻。", "【关键】鸡腿肉去皮去骨切小块，加生抽、淀粉腌制10分钟。", "大米洗净入锅，水少一点。铺上鸡肉、香菇、胡萝卜丁。按煮饭键。跳闸后焖5分钟拌匀。"],
+            portions: { dad: '1碗', mom: '大半碗', sister: '1碗', brother: '半碗(鸡肉切碎，香菇切末)' }
+          },
+          {
+            name: "南瓜鸡肉焖饭", tag: "健脾护眼·自带香甜", tool: "电饭煲", time: "35分钟", prepType: "thaw", tags: ["主食", "肉", "蔬菜"],
+            ingredients: [{name:'大米', weight:150}, {name:'鸡胸肉', weight:120}, {name:'老南瓜', weight:150}, {name:'玉米粒', weight:30}],
+            steps: ["【前夜提醒】鸡胸肉前夜解冻。", "鸡胸肉切丁加淀粉生抽腌。南瓜去皮切块。", "大米洗净入锅，水略少。铺上南瓜、鸡丁、玉米粒按煮饭键。跳闸后把南瓜压碎拌匀。"],
+            portions: { dad: '1碗', mom: '大半碗(南瓜算主食，米饭少装)', sister: '1碗', brother: '半碗(南瓜压泥)' }
+          },
+          {
+            name: "排骨土豆焖饭", tag: "周末硬菜·咸香软糯", tool: "电饭煲", time: "50分钟", prepType: "thaw", tags: ["主食", "肉", "蔬菜"],
+            ingredients: [{name:'大米', weight:150}, {name:'猪肋排', weight:200}, {name:'土豆', weight:100}, {name:'胡萝卜', weight:50}],
+            steps: ["【前夜提醒】排骨前夜解冻。", "排骨冷水下锅焯水洗净。土豆、胡萝卜切丁。排骨加生抽腌制。", "大米洗净入锅，铺上所有食材按煮饭键，跳闸后焖10分钟拌匀。"],
+            portions: { dad: '1碗(少吃汤汁)', mom: '大半碗(土豆算主食)', sister: '1碗(补钙)', brother: '半碗(排骨肉剔下切碎)' }
+          },
+          {
+            name: "番茄牛肉焖饭", tag: "酸甜开胃·补铁", tool: "电饭煲", time: "45分钟", prepType: "thaw", tags: ["主食", "肉", "蔬菜"],
+            ingredients: [{name:'大米', weight:150}, {name:'瘦牛肉', weight:120}, {name:'番茄', weight:150}, {name:'青豆', weight:30}],
+            steps: ["【前夜提醒】牛肉前夜解冻。", "牛肉切小丁加淀粉腌。番茄切块。", "大米洗净入锅，铺上番茄、牛肉丁、青豆。按煮饭键，跳闸后拌匀压出番茄汁。"],
+            portions: { dad: '1碗', mom: '大半碗', sister: '1碗(补铁好)', brother: '半碗(牛肉极碎，番茄压烂)' }
+          },
+          { name: "番茄鸡蛋肉丝面", tag: "一锅出·快手汤面", tool: "炒锅/奶锅", time: "15分钟", prepType: "none", tags: ["主食", "肉", "蔬菜"], ingredients: [{name:'面条', weight:150}, {name:'番茄', weight:100}, {name:'鸡蛋', weight:50}, {name:'瘦肉', weight:50}, {name:'青菜', weight:50}], steps: ['番茄炒出汁加水烧开。', '下肉丝和面条煮熟。', '打入蛋花，放青菜加盐。'], portions: { dad: '1大碗', mom: '1小碗', sister: '1小碗', brother: '半碗(剪短)' } }
         ],        
         lunchMeat: [
-          { name: "番茄炖瘦牛腩", tag: "补铁·高蛋白", tool: "陶瓷锅", time: "50分钟", ingredients: [{name:'瘦牛腩', weight:500}, {name:'番茄', weight:400}], steps: ['牛腩切块，冷水下锅加姜片焯水，捞出洗净浮沫。', '番茄顶部划十字，开水烫去皮，切小块。', '锅中少油，下番茄块炒出浓郁红汁，加入牛腩翻炒。', '加开水没过食材，转小火炖煮40分钟至牛腩软烂，加盐调味。'], portions: { dad: '80g', mom: '100g', sister: '60g', brother: '50g(切极碎)' } },
-          { name: "清蒸溪鱼（如黄骨鱼/鲫鱼）", tag: "闽北特产·健脑", tool: "蒸锅", time: "15分钟", ingredients: [{name:'溪鱼', weight:600}, {name:'姜葱', weight:20}], steps: ['鱼杀好洗净，盘底铺姜片，鱼身放葱段。', '水开后上锅大火蒸8分钟（视鱼大小调整）。', '出锅倒掉蒸出的腥水，挑去葱姜。', '淋上蒸鱼豉油，撒上新鲜葱丝，泼少许热油激发香味。'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g(大人仔细挑刺后喂)' } },
-          { name: "香菇蒸土鸡", tag: "补气血·高蛋白", tool: "蒸锅", time: "25分钟", ingredients: [{name:'鸡腿肉/土鸡块', weight:400}, {name:'干香菇', weight:30}], steps: ['干香菇提前温水泡发，切片。', '鸡肉切块，加生抽、少许淀粉、姜丝抓匀腌制10分钟。', '香菇铺在盘底，上面放鸡肉。', '水开上锅蒸15-20分钟，至鸡肉熟透。'], portions: { dad: '100g', mom: '100g', sister: '80g', brother: '50g(鸡肉撕碎，香菇切碎)' } },
-          { name: "芹菜炒肉丝", tag: "膳食纤维·下饭", tool: "炒锅", time: "15分钟", ingredients: [{name:'芹菜', weight:200}, {name:'瘦猪肉', weight:200}], steps: ['瘦肉切丝，加生抽、淀粉抓匀；芹菜切段。', '热锅凉油，下肉丝滑熟盛出。', '锅留底油，下芹菜大火快炒至断生。', '倒入肉丝，加少许盐翻炒均匀出锅。'], portions: { dad: '80g肉+菜', mom: '80g肉+菜', sister: '50g肉+菜', brother: '50g(切极碎拌饭)' } },
-          { name: "鲫鱼豆腐汤", tag: "补钙·下火·正餐汤", tool: "陶瓷锅", time: "30分钟", ingredients: [{name:'鲫鱼', weight:400}, {name:'嫩豆腐', weight:200}], steps: ['鲫鱼洗净擦干，热锅少油煎至两面微黄。', '关键：一定要加开水！大火煮10分钟至汤色变白。', '加入豆腐块，转中火再煮10分钟，加盐、葱花出锅。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗(注意挑刺)' } }
+          {
+            name: "口蘑蒸牛肉", tag: "补铁高蛋白·鲜嫩", tool: "蒸锅", time: "15分钟", prepType: "thaw", tags: ["肉", "蔬菜"],
+            ingredients: [{name:'牛里脊', weight:250}, {name:'口蘑', weight:150}, {name:'淀粉', weight:10}],
+            steps: ["【前夜提醒】牛里脊前夜解冻。", "牛肉逆纹理切薄片，加淀粉、酱油和油腌制。口蘑切片铺底。", "铺上牛肉，水开后大火蒸8-10分钟。"],
+            portions: { dad: '80g', mom: '80g', sister: '60g', brother: '50g(剪小碎拌饭)' }
+          },
+          {
+            name: "时蔬蒸鸡腿", tag: "低脂健脾·不上火", tool: "蒸锅", time: "30分钟", prepType: "thaw", tags: ["肉", "蔬菜", "主食"],
+            ingredients: [{name:'鸡腿', weight:300}, {name:'土豆', weight:100}, {name:'胡萝卜', weight:50}, {name:'玉米', weight:50}],
+            steps: ["【前夜提醒】鸡腿前夜解冻。", "【关键】鸡腿去皮，划刀加酱油腌制20分钟。", "土豆、胡萝卜切块铺底。放上鸡腿，水开大火蒸25-30分钟。"],
+            portions: { dad: '1个鸡腿+蔬菜', mom: '1个鸡腿(去皮)+蔬菜(代主食)', sister: '1个鸡腿+蔬菜', brother: '半个(撕碎)+土豆泥' }
+          },
+          {
+            name: "山药蒸排骨", tag: "健脾补钙·软糯", tool: "蒸锅", time: "40分钟", prepType: "thaw", tags: ["肉", "蔬菜"],
+            ingredients: [{name:'猪小排', weight:300}, {name:'铁棍山药', weight:150}, {name:'胡萝卜', weight:50}],
+            steps: ["【前夜提醒】排骨前夜解冻。", "排骨洗净加姜葱水、酱油、淀粉腌制半小时。", "山药切块铺碗底，放上排骨和胡萝卜片。中大火蒸35-40分钟。"],
+            portions: { dad: '挑瘦排骨+山药', mom: '少吃排骨多吃山药', sister: '60g排骨+山药', brother: '剔肉切碎，山药泥' }
+          },
+          {
+            name: "虾仁豆腐蒸蛋", tag: "双重补钙·极嫩滑", tool: "蒸锅", time: "15分钟", prepType: "thaw", tags: ["肉", "蛋类", "蔬菜"],
+            ingredients: [{name:'鲜虾仁', weight:100}, {name:'嫩豆腐', weight:150}, {name:'鸡蛋', weight:100}, {name:'温水', weight:150}],
+            steps: ["【前夜提醒】虾仁前夜解冻。", "虾仁剁泥。豆腐切小块铺碗底。", "鸡蛋加温水打散过筛入豆腐中，盖保鲜膜蒸8分钟。表面放虾泥再蒸3分钟。"],
+            portions: { dad: '1份(适量)', mom: '1份', sister: '1份', brother: '半份(好消化，补钙长高)' }
+          },
+          {
+            name: "口蘑虾仁西兰花胡萝卜", tag: "高营养密度·补钙", tool: "炒锅", time: "15分钟", prepType: "thaw", tags: ["肉", "蔬菜"],
+            ingredients: [{name:'鲜虾仁', weight:150}, {name:'口蘑', weight:100}, {name:'西兰花', weight:100}, {name:'胡萝卜', weight:50}],
+            steps: ["【前夜提醒】虾仁前夜解冻。", "西兰花、胡萝卜切丁，水开下锅焯水1分钟捞出。", "热锅炒虾仁变色。底油炒软口蘑，加入蔬菜和虾仁大火快炒加盐。"],
+            portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(虾仁切丁，西兰花取花冠切碎)' }
+          },
+          {
+            name: "番茄炒蛋", tag: "酸甜开胃·家常", tool: "炒锅", time: "10分钟", prepType: "none", tags: ["肉", "蔬菜", "蛋类"],
+            ingredients: [{name:'番茄', weight:300}, {name:'鸡蛋', weight:200}],
+            steps: ["番茄去皮切小块。鸡蛋打散加清水。", "中火炒蛋至七成熟盛出。", "锅底留油炒番茄出汁。倒回鸡蛋加盐翻炒。"],
+            portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(拌饭极佳)' }
+          },
+          {
+            name: "玉米虾仁", tag: "颜色鲜艳·健脾", tool: "炒锅", time: "15分钟", prepType: "thaw", tags: ["肉", "蔬菜", "主食"],
+            ingredients: [{name:'鲜虾仁', weight:200}, {name:'甜玉米粒', weight:150}, {name:'黄瓜', weight:60}, {name:'胡萝卜', weight:40}],
+            steps: ["【前夜提醒】虾仁前夜解冻。", "虾仁加姜片、淀粉腌制。黄瓜和胡萝卜切丁。玉米和胡萝卜焯水1分钟。", "热锅炒虾仁变色，加入蔬菜丁大火快炒1分钟加盐。"],
+            portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(虾仁切小丁，玉米切开防呛)' }
+          },
+          {
+            name: "萝卜排骨汤", tag: "秋冬滋补·顺气利尿", tool: "陶瓷锅", time: "50分钟", prepType: "thaw", tags: ["肉", "蔬菜", "饮品"],
+            ingredients: [{name:'猪排骨', weight:400}, {name:'白萝卜', weight:300}],
+            steps: ["【前夜提醒】排骨前夜解冻。", "排骨冷水下锅焯水洗净。加姜片炖30分钟。", "加入白萝卜块炖20分钟。加盐出锅（撇去浮油）。"],
+            portions: { dad: '1碗(撇油)+萝卜', mom: '1碗(撇油)+萝卜', sister: '1碗', brother: '半碗(萝卜压泥，肉剔碎)' }
+          },
+          {
+            name: "鲫鱼豆腐汤", tag: "双重补钙·健脾下火", tool: "陶瓷锅", time: "30分钟", prepType: "none", tags: ["肉", "蔬菜", "饮品"],
+            ingredients: [{name:'鲫鱼', weight:400}, {name:'嫩豆腐', weight:200}],
+            steps: ["鲫鱼洗净煎至两面微黄。", "【关键】加入足量开水大火煮10分钟变奶白。", "加入豆腐块中火煮10分钟加盐。"],
+            portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗(用滤网过滤两遍确保无鱼刺)' }
+          },
+          {
+            name: "番茄金针菇肥牛汤", tag: "酸甜开胃·快手", tool: "炒锅/奶锅", time: "15分钟", prepType: "thaw", tags: ["肉", "蔬菜", "饮品"],
+            ingredients: [{name:'番茄', weight:200}, {name:'金针菇', weight:100}, {name:'肥牛卷', weight:150}],
+            steps: ["【前夜提醒】肥牛前夜冷藏解冻。", "番茄去皮切块炒出汁，加水烧开。", "下金针菇煮3分钟。下肥牛卷变色关火加盐。"],
+            portions: { dad: '1碗(多吃金针菇少吃肥牛)', mom: '1碗(少吃肥牛)', sister: '1碗', brother: '半碗(金针菇切碎，肥牛切小丁)' }
+          }
         ],
         lunchVeg: [
-          { name: "清炒地瓜叶", tag: "时令绿叶·润肠", tool: "炒锅", time: "5分钟", ingredients: [{name:'地瓜叶', weight:300}, {name:'蒜', weight:10}], steps: ['地瓜叶洗净，摘下嫩叶和茎。', '蒜切末，热锅凉油爆香蒜末。', '下地瓜叶大火快炒，变软后加盐出锅。'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(切极碎)' } },
-          { name: "蒜蓉空心菜", tag: "夏季时蔬", tool: "炒锅", time: "5分钟", ingredients: [{name:'空心菜', weight:300}], steps: ['空心菜洗净，切长段，梗和叶分开放。', '蒜末爆香，先下梗炒半分钟，再下叶子。', '大火翻炒变软，加少许盐调味。'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(切极碎)' } },
-          { name: "凉拌黄瓜木耳", tag: "爽口·低卡", tool: "无", time: "10分钟", ingredients: [{name:'黄瓜', weight:200}, {name:'干木耳', weight:20}], steps: ['木耳提前泡发，下开水锅焯水2分钟，捞出过凉水。', '黄瓜洗净拍碎切块。', '混合木耳黄瓜，加蒜末、生抽、陈醋、少许香油拌匀。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '少量(木耳切小)' } },
-          { name: "胡萝卜炒鸡蛋", tag: "护眼·优质蛋白", tool: "炒锅", time: "10分钟", ingredients: [{name:'胡萝卜', weight:200}, {name:'鸡蛋', weight:150}], steps: ['胡萝卜去皮擦细丝，鸡蛋打散。', '热油炒熟鸡蛋盛出。', '底油下胡萝卜丝炒软（胡萝卜素需油脂才能释放）。', '倒入鸡蛋混合翻炒，加盐出锅。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } }
+          {
+            name: "清炒小白菜", tag: "时令绿叶·低草酸", tool: "炒锅", time: "5分钟", prepType: "none", tags: ["蔬菜"],
+            ingredients: [{name:'小白菜', weight:300}, {name:'蒜末', weight:10}],
+            steps: ["小白菜洗净切段。", "热油爆香蒜末，大火快炒变软，加盐出锅。"],
+            portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(切极碎拌饭)' }
+          },
+          {
+            name: "蒜蓉西蓝花", tag: "补钙补维C·防癌", tool: "炒锅", time: "8分钟", prepType: "none", tags: ["蔬菜"],
+            ingredients: [{name:'西蓝花', weight:300}, {name:'蒜末', weight:15}],
+            steps: ["【关键】西蓝花切小朵盐水浸泡后，下开水锅焯水1分钟。", "热油爆香蒜末，下西蓝花快炒，加少许蚝油出锅。"],
+            portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(取花冠切极碎防噎)' }
+          },
+          {
+            name: "荷塘小炒", tag: "润燥清脆·健脾", tool: "炒锅", time: "10分钟", prepType: "soak", tags: ["蔬菜"],
+            ingredients: [{name:'莲藕', weight:200}, {name:'荷兰豆', weight:100}, {name:'干木耳', weight:10}],
+            steps: ["【前夜提醒】干木耳前夜温水泡发。", "莲藕切片，荷兰豆撕筋。依次下开水锅焯水1分钟。", "热油快炒，加少许盐和鸡精出锅。"],
+            portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(木耳切丝，莲藕切小丁)' }
+          },
+          {
+            name: "胡萝卜炒花菜", tag: "护眼维C·高纤维", tool: "炒锅", time: "10分钟", prepType: "none", tags: ["蔬菜"],
+            ingredients: [{name:'花菜', weight:250}, {name:'胡萝卜', weight:100}],
+            steps: ["花菜掰小朵，胡萝卜切片，焯水1分钟。", "热油下锅翻炒，加生抽和盐，加一勺水焖2分钟收汁。"],
+            portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(花菜切极碎煮至软烂)' }
+          },
+          {
+            name: "上汤娃娃菜", tag: "清甜多汁·利尿", tool: "炒锅", time: "10分钟", prepType: "none", tags: ["蔬菜"],
+            ingredients: [{name:'娃娃菜', weight:300}, {name:'皮蛋', weight:50}, {name:'蒜末', weight:10}, {name:'枸杞', weight:3}],
+            steps: ["娃娃菜洗净切长条。", "热锅少油下蒜末和皮蛋丁炒香。加开水煮沸。", "下娃娃菜煮3-5分钟变软，加少许盐和枸杞出锅。"],
+            portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(⚠️只吃菜喝汤，不吃皮蛋)' }
+          },
+          {
+            name: "芹菜炒香干", tag: "高纤维·高植物蛋白", tool: "炒锅", time: "10分钟", prepType: "none", tags: ["蔬菜"],
+            ingredients: [{name:'芹菜', weight:200}, {name:'香干', weight:150}],
+            steps: ["【关键】芹菜切段，下开水锅焯水1分钟去草酸。", "香干切条。热油下香干煸炒微黄。", "下芹菜大火快炒，加盐和生抽出锅。"],
+            portions: { dad: '1份(焯水后适量)', mom: '1份', sister: '1份', brother: '半份(芹菜切极细的末防卡喉)' }
+          }
         ],
-        dinnerMeat: [
-          { name: "空气炸锅鸡翅", tag: "少油·解馋", tool: "空气炸锅", time: "20分钟", ingredients: [{name:'鸡翅', weight:500}], steps: ['鸡翅正反面划两刀，加生抽、蚝油、姜蒜腌制半小时。', '空气炸锅200度预热3分钟。', '铺入鸡翅，200度烤15分钟。', '翻面，再烤5分钟至表皮焦脆。'], portions: { dad: '2个', mom: '2个', sister: '2个', brother: '1个(去皮撕碎)' } },
-          { name: "芋头蒸排骨", tag: "秋季时令·软糯", tool: "蒸锅", time: "40分钟", ingredients: [{name:'排骨', weight:400}, {name:'小芋头', weight:300}], steps: ['排骨洗净，加豆豉、生抽、蒜末、淀粉抓匀腌制15分钟。', '芋头去皮切滚刀块，铺在深盘底部。', '腌好的排骨铺在芋头上。', '上锅大火蒸35分钟，至排骨脱骨软烂。'], portions: { dad: '80g', mom: '80g', sister: '60g', brother: '多给芋头，排骨肉剔碎' } },
-          { name: "洋葱炒牛肉", tag: "强体·补铁", tool: "炒锅", time: "15分钟", ingredients: [{name:'洋葱', weight:150}, {name:'牛肉', weight:250}], steps: ['牛肉逆纹理切片，加生抽、黑胡椒、淀粉腌10分钟。', '洋葱切丝。', '热油大火快炒牛肉至变色盛出。', '下洋葱炒香变软，倒回牛肉，翻炒均匀。'], portions: { dad: '80g', mom: '80g', sister: '60g', brother: '50g(切极碎)' } },
-          { name: "肉末蒸豆腐", tag: "补钙·好消化", tool: "蒸锅", time: "15分钟", ingredients: [{name:'嫩豆腐', weight:300}, {name:'瘦猪肉', weight:100}], steps: ['嫩豆腐切小块，放入碗中。', '瘦肉剁成末，热油炒香，加生抽调味。', '将炒好的肉末连汁铺在豆腐上。', '上锅蒸10分钟，出锅撒葱花。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '1份(拌饭极佳)' } },
-          { name: "番茄龙利鱼（或巴沙鱼）", tag: "无刺·酸甜开胃", tool: "炒锅", time: "20分钟", ingredients: [{name:'龙利鱼柳', weight:300}, {name:'番茄', weight:200}], steps: ['龙利鱼解冻切块，加盐、淀粉抓匀。', '番茄去皮切小丁，下锅炒出汁。', '加一碗水煮开。', '下鱼块煮3分钟，汤汁浓稠加盐出锅。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '1份(鱼块无刺放心吃)' } },
-          { name: "茶树菇老鸭汤", tag: "滋阴润燥·正餐汤", tool: "陶瓷锅", time: "60分钟", ingredients: [{name:'干茶树菇', weight:30}, {name:'老鸭', weight:400}], steps: ['茶树菇剪去根部，温水泡发。', '老鸭斩块，冷水下锅焯水去血沫。', '将鸭肉、茶树菇、姜片放入砂锅，加足量水。', '大火烧开转小火炖煮50分钟，加盐调味。'], portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' } }
-        ],
-        dinnerVeg: [
-          { name: "上汤娃娃菜", tag: "清淡好消化", tool: "炒锅", time: "10分钟", ingredients: [{name:'娃娃菜', weight:300}, {name:'皮蛋', weight:50}], steps: ['娃娃菜洗净切长条。', '蒜末和皮蛋丁下锅炒香。', '加入一碗开水煮开，下娃娃菜煮3-5分钟变软。', '加少许盐和枸杞出锅。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(切碎)' } },
-          { name: "荷塘小炒", tag: "清脆爽口", tool: "炒锅", time: "15分钟", ingredients: [{name:'莲藕', weight:200}, {name:'荷兰豆', weight:100}], steps: ['莲藕切片泡水，荷兰豆撕去老筋。', '两者下开水锅焯水1分钟捞出。', '热油下锅大火快炒，加盐和少许鸡精出锅。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } },
-          { name: "番茄炒菜花", tag: "酸甜开胃", tool: "炒锅", time: "10分钟", ingredients: [{name:'番茄', weight:150}, {name:'菜花', weight:250}], steps: ['菜花掰小朵焯水。', '番茄去皮切块炒出汁。', '倒入菜花翻炒均匀，煮2分钟入味。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(切碎)' } },
-          { name: "南瓜蒸百合", tag: "秋日润燥·微甜", tool: "蒸锅", time: "20分钟", ingredients: [{name:'老南瓜', weight:300}, {name:'鲜百合', weight:50}], steps: ['老南瓜去皮切厚片，摆盘。', '鲜百合洗净掰开，铺在南瓜上。', '上锅蒸15分钟，至南瓜软烂即可（南瓜本身有甜味，无需加糖）。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(压成泥)' } }
-        ],
+        dinnerMeat: [],
+        dinnerVeg: [],
         sweets: [
-          { name: "儿童冰糖炖雪梨", tag: "润肺止咳·下午茶", tool: "陶瓷锅", time: "30分钟", ingredients: [{name:'雪梨', weight:200}, {name:'冰糖', weight:10}], steps: ['雪梨洗净去核（可带皮）切块。', '放入炖盅或小锅中，加冰糖和少许水。', '小火慢炖30分钟至梨肉透明。'], portions: {} },
-          { name: "妈妈专属五红汤", tag: "补气血·暖宫", tool: "电饭煲", time: "40分钟", ingredients: [{name:'红枣', weight:30}, {name:'红豆', weight:50}, {name:'红皮花生', weight:30}, {name:'枸杞', weight:10}], steps: ['红豆和花生提前浸泡2小时。', '所有食材（除枸杞外）放入电饭煲，加足量水。', '按煮粥键炖40分钟。', '出锅前5分钟加入枸杞。'], portions: {} },
-          { name: "苹果热橙茶", tag: "补充维C·果茶", tool: "养生壶/奶锅", time: "15分钟", ingredients: [{name:'苹果', weight:100}, {name:'橙子', weight:100}, {name:'红茶包', weight:5}], steps: ['苹果和橙子用盐搓洗干净，切片。', '放入锅中加适量清水，煮10分钟出果香。', '放入红茶包泡2分钟，可加少许冰糖。'], portions: {} }
+          // ================= 【周一、周五：妈妈专属】 =================
+          {
+            name: "【周一排】当归鸡蛋汤(补气血)", tag: "活血调经 [⚠️仅限妈妈，经后喝]", tool: "炖锅", time: "25分钟", prepType: "none", tags: ["饮品"],
+            ingredients: [{name:'当归', weight:5}, {name:'去核红枣', weight:15}, {name:'桂圆肉', weight:5}, {name:'鸡蛋', weight:100}, {name:'枸杞', weight:5}],
+            steps: ["当归、红枣、桂圆加水煮20分钟。", "放入煮熟剥壳的鸡蛋和枸杞再煮5分钟。", "【提醒】月经干净后连喝2-3天最佳，经期不喝。"],
+            portions: { dad: '不吃', mom: '1碗', sister: '不吃', brother: '不吃' }
+          },
+          {
+            name: "【周五排】五红养颜汤(补气血)", tag: "养颜健脾 [⚠️仅限妈妈，不加糖]", tool: "炖锅", time: "40分钟", prepType: "soak", tags: ["饮品", "坚果"],
+            ingredients: [{name:'红豆', weight:30}, {name:'红皮花生', weight:20}, {name:'去核红枣', weight:20}, {name:'枸杞', weight:5}, {name:'红糖', weight:0}],
+            steps: ["【前夜提醒】红豆、花生前夜泡发。", "所有食材同煮40分钟软烂即可。", "【提醒】不加糖，这碗代替妈妈当天的部分主食。"],
+            portions: { dad: '不吃', mom: '1碗', sister: '不吃', brother: '不吃' }
+          },
+
+          // ================= 【周二、周四、周六：全家共享】 =================
+          {
+            name: "【周二排】雪梨莲子银耳羹(润肺安神)", tag: "安神健脾", tool: "炖锅", time: "40分钟", prepType: "soak", tags: ["饮品", "水果"],
+            ingredients: [{name:'雪梨', weight:200}, {name:'干银耳', weight:10}, {name:'去芯莲子', weight:15}, {name:'去核红枣', weight:15}, {name:'干百合', weight:10}, {name:'枸杞', weight:5}],
+            steps: ["【前夜提醒】银耳、百合前夜泡发。", "银耳、莲子、百合、红枣炖40分钟出胶。", "加雪梨块煮15分钟，出锅前放枸杞。"],
+            portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗(⚠️莲子压碎，红枣去核防噎)' }
+          },
+          {
+            name: "【周四排】苹果红枣炖奶(暖胃热饮)", tag: "补气血·润燥 [⚠️牛奶勿久煮]", tool: "奶锅", time: "15分钟", prepType: "fruit", tags: ["饮品", "水果"],
+            ingredients: [{name:'苹果', weight:200}, {name:'去核红枣', weight:15}, {name:'枸杞', weight:5}, {name:'纯牛奶', weight:500}],
+            steps: ["【前夜提醒】苹果洗净切块。", "苹果、红枣加少许水煮10分钟。", "倒入牛奶微沸立刻关火，放枸杞。"],
+            portions: { dad: '小半碗(同餐不吃菠菜等高草酸)', mom: '1碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "【周六排】苹果四神茶(消积健脾)", tag: "温和调养", tool: "养生壶", time: "25分钟", prepType: "none", tags: ["饮品", "水果"],
+            ingredients: [{name:'苹果', weight:200}, {name:'芡实', weight:5}, {name:'去芯莲子', weight:5}, {name:'山药干', weight:5}, {name:'茯苓', weight:5}],
+            steps: ["苹果切块，所有食材洗净放入养生壶。", "加清水煮20-30分钟。"],
+            portions: { dad: '1碗(利尿)', mom: '1碗', sister: '1碗', brother: '半碗(喝汤为主)' }
+          },
+
+          // ================= 【周三、周日：大人桃胶/茶饮轮换】 =================
+          {
+            name: "【周三排】桃胶银耳雪梨羹(润肤清燥)", tag: "补充胶质 [⚠️小孩不吃桃胶]", tool: "炖锅", time: "50分钟", prepType: "soak", tags: ["饮品", "水果"],
+            ingredients: [{name:'桃胶', weight:10}, {name:'干银耳', weight:5}, {name:'雪梨', weight:150}, {name:'去核红枣', weight:10}, {name:'枸杞', weight:3}],
+            steps: ["【前夜提醒】桃胶提前冷水泡发挑去杂质；银耳泡发撕小朵。", "银耳加水炖30分钟出胶。", "加雪梨、红枣、桃胶炖20分钟，放枸杞。"],
+            portions: { dad: '1碗(无糖)', mom: '1碗', sister: '不建议吃桃胶', brother: '不建议吃桃胶' }
+          },
+          {
+            name: "【周日排】苹果山楂消食茶(饭后刮油)", tag: "消食开胃", tool: "养生壶", time: "20分钟", prepType: "none", tags: ["饮品", "水果"],
+            ingredients: [{name:'苹果', weight:200}, {name:'去核红枣', weight:10}, {name:'干山楂', weight:5}],
+            steps: ["苹果切块，所有食材加水煮20分钟。", "【提醒】饭后半小时饮用。"],
+            portions: { dad: '1杯', mom: '1杯', sister: '1杯(喝完漱口防蛀牙)', brother: '半杯' }
+          },
+          
+          // ================= 【备用库】 =================
+          {
+            name: "木瓜银耳汤(润燥润肤)", tag: "健脾润肤", tool: "炖锅", time: "40分钟", prepType: "soak", tags: ["饮品", "水果"],
+            ingredients: [{name:'熟木瓜', weight:150}, {name:'干银耳', weight:10}, {name:'去核红枣', weight:10}, {name:'枸杞', weight:5}],
+            steps: ["【前夜提醒】干银耳提前泡发，撕小朵。", "银耳加水炖30分钟出胶。", "放入木瓜块和红枣再煮10分钟，出锅前放枸杞。"],
+            portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗(吃熟透的木瓜)' }
+          },
+          {
+            name: "芋头红豆汤(利水消肿)", tag: "利尿健脾", tool: "炖锅", time: "45分钟", prepType: "soak", tags: ["饮品"],
+            ingredients: [{name:'小芋头', weight:100}, {name:'红豆', weight:30}, {name:'陈皮', weight:3}],
+            steps: ["【前夜提醒】红豆需前夜泡发。", "红豆加水煮30分钟至开花。", "加入芋头块和陈皮继续煮15分钟至软烂。"],
+            portions: { dad: '1碗(利尿防结石)', mom: '1碗(代主食)', sister: '1碗', brother: '半碗(⚠️芋头易胀气少吃)' }
+          },
+          {
+            name: "银耳桂圆汤(安神润肺)", tag: "安神助眠 [⚠️桂圆少放]", tool: "炖锅", time: "40分钟", prepType: "soak", tags: ["饮品"],
+            ingredients: [{name:'干银耳', weight:10}, {name:'干百合', weight:5}, {name:'桂圆肉', weight:10}, {name:'去核红枣', weight:10}],
+            steps: ["【前夜提醒】银耳、百合前夜泡发。", "银耳、百合、桂圆、红枣同煮40分钟出胶。", "【提醒】桂圆只放几颗提味，防上火。"],
+            portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗' }
+          },
+          {
+            name: "雪梨百合玉竹茶(秋燥润肺)", tag: "润燥生津", tool: "养生壶", time: "20分钟", prepType: "none", tags: ["饮品", "水果"],
+            ingredients: [{name:'雪梨', weight:200}, {name:'干百合', weight:5}, {name:'玉竹', weight:5}, {name:'枸杞', weight:5}, {name:'无花果', weight:5}],
+            steps: ["雪梨切块，所有食材（除枸杞外）加水煮20分钟。", "出锅前放枸杞。"],
+            portions: { dad: '1碗', mom: '1碗', sister: '1碗', brother: '半碗(⚠️脾胃虚寒少喝)' }
+          },
+          {
+            name: "桃胶木瓜炖奶(大人专属)", tag: "养颜健脾", tool: "奶锅", time: "20分钟", prepType: "soak", tags: ["饮品", "水果"],
+            ingredients: [{name:'桃胶', weight:10}, {name:'熟木瓜', weight:150}, {name:'去核红枣', weight:10}, {name:'纯牛奶', weight:400}],
+            steps: ["【前夜提醒】桃胶提前冷水泡发挑去杂质。", "木瓜切块与红枣加少许水煮10分钟。", "加桃胶煮5分钟，倒牛奶微沸立刻关火。"],
+            portions: { dad: '1碗', mom: '1碗', sister: '不建议吃桃胶', brother: '不建议吃桃胶' }
+          }
         ]
       },
       
@@ -1704,19 +2147,75 @@ createApp({
     },
 
     groupedShoppingList() {
-      const groups = { '肉类': [], '果蔬': [], '配菜': [], '主食': [], '干货': [], '调料': [], '其他': [] };
+      const groups = {}; // 动态生成分组
       
-      this.shoppingList.filter(i => i.category === 'weekend').forEach(item => {
-        if (!item.area || !groups[item.area]) {
-          item.area = '其他';
+      this.shoppingList.filter(i => i.category === 'weekend' || i.isUrgent).forEach(item => {
+        
+        // --- 模式一：按种类合并（全买） ---
+        if (this.shoppingViewMode === 'category') {
+          let area = item.area || '其他';
+          if (!groups[area]) groups[area] = [];
+          groups[area].push(item);
+        } 
+        
+        // --- 模式二：按餐次分开（单买/只买某一餐） ---
+        else if (this.shoppingViewMode === 'meal') {
+          // 遍历未来7天，找出这个食材到底用在哪一餐
+          let usedInMeals = new Set();
+          
+          const tomorrow = new Date(); 
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          
+          for (let i = 0; i < 7; i++) {
+            const targetDate = new Date(tomorrow.getTime() + i * 86400000);
+            const isNextWeek = this.nextWeekDates.some(d => d.dateStr === this.formatDate(targetDate));
+            const dayIdx = (targetDate.getDay() + 6) % 7;
+            const dayMenu = isNextWeek ? this.weekMenuData.next[dayIdx] : this.weekMenuData.current[dayIdx];
+            
+            if (dayMenu) {
+              ['breakfast', 'lunch', 'dinner'].forEach(mealType => {
+                (dayMenu[mealType] || []).forEach(dish => {
+                  if (!dish.skipped && (dish.ingredients || []).some(ing => ing.name === item.name)) {
+                     const mealName = mealType === 'breakfast' ? '🌅 早餐食材' : (mealType === 'lunch' ? '☀️ 午餐食材' : '🌙 晚餐食材');
+                     usedInMeals.add(mealName);
+                  }
+                });
+              });
+            }
+          }
+
+          // 如果这个食材是周一到周日某餐里用到的，就放进对应的分组
+          if (usedInMeals.size === 0) {
+            // 兜底：如果没找到，放“其他”
+            if (!groups['其他']) groups['其他'] = [];
+            groups['其他'].push(item);
+          } else {
+            usedInMeals.forEach(mealName => {
+              if (!groups[mealName]) groups[mealName] = [];
+              // 深拷贝一下，防止重复渲染出问题
+              groups[mealName].push({ ...item, id: item.id + '_' + mealName });
+            });
+          }
         }
-        groups[item.area].push(item);
       });
       
+      // 把对象转成数组给 Vue 渲染
       const result = [];
-      for (const [area, items] of Object.entries(groups)) {
-        if (items.length > 0) result.push({ area, items });
-      }
+      const order = ['肉类', '果蔬', '配菜', '主食', '干货', '调料', '其他', '🌅 早餐食材', '☀️ 午餐食材', '🌙 晚餐食材'];
+      
+      // 按照预设顺序排序（好看的排版）
+      order.forEach(key => {
+        if (groups[key] && groups[key].length > 0) {
+          result.push({ area: key, items: groups[key] });
+        }
+      });
+      // 补充可能漏掉的杂项
+      Object.keys(groups).forEach(key => {
+        if (!order.includes(key) && groups[key].length > 0) {
+          result.push({ area: key, items: groups[key] });
+        }
+      });
+      
       return result;
     },
 
@@ -1791,6 +2290,7 @@ createApp({
       if (!this.replaceModal.mealType) return [];
       let pool = [];
       
+      // 1. 获取当前餐次的全量菜谱池
       if (this.replaceModal.mealType === 'lunch' || this.replaceModal.mealType === 'dinner') {
         pool = [
           ...this.recipeLibrary.lunchStaple, 
@@ -1802,25 +2302,51 @@ createApp({
         pool = this.recipeLibrary[this.replaceModal.mealType] || [];
       }
       
+      // 2. 剔除自己
       pool = pool.filter(r => r.name !== this.replaceModal.currentName);
 
+      // 3. 获取当前菜的标签，进行精准匹配
       const currentDish = this.currentDayDishes[this.replaceModal.mealType][this.replaceModal.dishIdx];
+      
       if (currentDish) {
-         const isMeat = (dish) => /肉|鱼|虾|鸡|鸭|牛|羊|排骨|翅|蛋|肠|海鲜/.test(dish.name);
-         const isStaple = (dish) => /饭|面|粉|粥|包|馒头|饺|饼|红薯|玉米|土豆|燕麦|吐司/.test(dish.name);
-         
-         const isCurrentMeat = isMeat(currentDish);
-         const isCurrentStaple = isStaple(currentDish);
-         
+         // 如果当前菜有标签，就按标签来；如果没有（老菜谱），就用菜名兜底猜测
+         let currentTags = currentDish.tags || [];
+         if (currentTags.length === 0) {
+           if (/肉|鱼|虾|鸡|鸭|牛|羊|排骨|翅|蛋|肠|海鲜/.test(currentDish.name)) currentTags.push('肉');
+           if (/饭|面|粉|粥|包|馒头|饺|饼|红薯|玉米|土豆|燕麦|吐司/.test(currentDish.name)) currentTags.push('主食');
+           if (/菜|瓜|果|豆|菇|木耳/.test(currentDish.name) && !currentTags.includes('肉')) currentTags.push('蔬菜');
+         }
+
+         // 核心排序算法：
          pool.sort((a, b) => {
-             let scoreA = 0, scoreB = 0;
-             if (isCurrentMeat && isMeat(a)) scoreA += 10;
-             if (isCurrentMeat && isMeat(b)) scoreB += 10;
-             if (!isCurrentMeat && !isCurrentStaple && !isMeat(a) && !isStaple(a)) scoreA += 10; 
-             if (!isCurrentMeat && !isCurrentStaple && !isMeat(b) && !isStaple(b)) scoreB += 10;
-             if (isCurrentStaple && isStaple(a)) scoreA += 10;
-             if (isCurrentStaple && isStaple(b)) scoreB += 10;
-             return scoreB - scoreA; 
+             let aTags = a.tags || [];
+             let bTags = b.tags || [];
+             
+             // 计算重合度分数（重合的标签越多，分数越高）
+             let aScore = 0;
+             let bScore = 0;
+             
+             currentTags.forEach(t => {
+                 if (aTags.includes(t)) aScore += 10;
+                 if (bTags.includes(t)) bScore += 10;
+             });
+
+             // 如果是“全包型”焖饭（同时有主食+肉+蔬菜），系统优先推荐同类焖饭
+             if (currentTags.includes('主食') && currentTags.includes('肉') && currentTags.includes('蔬菜')) {
+                 if (aTags.includes('主食') && aTags.includes('肉') && aTags.includes('蔬菜')) aScore += 20;
+                 if (bTags.includes('主食') && bTags.includes('肉') && bTags.includes('蔬菜')) bScore += 20;
+             }
+
+             // 如果分数一样，带“汤/羹/面”的排一起，带“蒸/炒”的排一起（简单归一）
+             if (aScore === bScore) {
+                 const aIsSoup = /汤|羹|面/.test(a.name) ? 1 : 0;
+                 const bIsSoup = /汤|羹|面/.test(b.name) ? 1 : 0;
+                 const currentIsSoup = /汤|羹|面/.test(currentDish.name) ? 1 : 0;
+                 if (aIsSoup === currentIsSoup && bIsSoup !== currentIsSoup) return -1;
+                 if (bIsSoup === currentIsSoup && aIsSoup !== currentIsSoup) return 1;
+             }
+
+             return bScore - aScore; // 分数高的排前面
          });
       }
       return pool;
@@ -2705,7 +3231,16 @@ createApp({
         return [...liked, ...disliked];
       };
 
+      // ================= 全新智能早餐分类池 =================
       const bfPool = getPools([...this.recipeLibrary.breakfast]);
+      
+      const bfDrinks = bfPool.filter(r => r.tags && r.tags.includes('饮品'));
+      const bfAllInOne = bfPool.filter(r => r.tags && r.tags.includes('主食') && r.tags.includes('肉') && (r.tags.includes('蔬菜') || r.tags.includes('水果')));
+      const bfStaples = bfPool.filter(r => r.tags && r.tags.includes('主食') && !bfAllInOne.includes(r));
+      const bfMeats = bfPool.filter(r => r.tags && r.tags.includes('肉') && !r.tags.includes('主食'));
+      const bfVegFruits = bfPool.filter(r => (r.tags && (r.tags.includes('蔬菜') || r.tags.includes('水果') || r.tags.includes('坚果'))) && !r.tags.includes('主食'));
+      // =======================================================
+
       const lmPool = getPools([...this.recipeLibrary.lunchMeat]);
       const lvPool = getPools([...this.recipeLibrary.lunchVeg]);
       const dmPool = getPools([...this.recipeLibrary.dinnerMeat]);
@@ -2714,52 +3249,78 @@ createApp({
       const staplePool = getPools([...this.recipeLibrary.lunchStaple]); 
       const dinnerStaplePool = getPools([...this.recipeLibrary.dinnerStaple]); 
 
+      let usedBfStaples = [];
+      let usedBfDrinks = [];
+      let usedBfMeats = [];
+      let usedBfAllInOne = [];
+
       for (let day = 0; day < 7; day++) {
         let dayMenu = { breakfast: [], lunch: [], dinner: [], sweets: [] };
         
-        let complexBreakfast = bfPool.find(r => {
-          let tags = r.tags || [];
-          return tags.includes('主食') && (tags.includes('肉') || tags.includes('蔬菜'));
-        });
+        // --- 智能防重复早餐排餐逻辑 ---
+        let bfDishes = [];
+        let useAllInOne = false;
 
-        if (complexBreakfast && day % 2 === 0) {
-          dayMenu.breakfast.push({ id: idCounter++, ...complexBreakfast, completed: false, skipped: false, feedback: '' });
-        } else {
-          const isLiquid = (dish) => /粥|奶|豆浆|糊|汤|汁|茶|咖啡/.test(dish.name) && !dish.name.includes('+');
-          const isSolid = (dish) => !isLiquid(dish) && !dish.name.includes('+');
-          
-          let liquidRecipe = bfPool.filter(isLiquid)[day % (bfPool.filter(isLiquid).length || 1)];
-          let solidRecipe = bfPool.filter(isSolid)[day % (bfPool.filter(isSolid).length || 1)];
-
-          if (solidRecipe) dayMenu.breakfast.push({ id: idCounter++, ...solidRecipe, completed: false, skipped: false, feedback: '' });
-          if (liquidRecipe) dayMenu.breakfast.push({ id: idCounter++, ...liquidRecipe, completed: false, skipped: false, feedback: '' });
+        if (bfAllInOne.length > 0 && usedBfAllInOne.length < bfAllInOne.length) {
+          if (day === 0 || day === 3) useAllInOne = true;
         }
 
+        if (useAllInOne) {
+           let allInOne = bfAllInOne.find(r => !usedBfAllInOne.includes(r.name)) || bfAllInOne[0];
+           usedBfAllInOne.push(allInOne.name);
+           bfDishes.push({ id: idCounter++, ...allInOne, completed: false, skipped: false, feedback: '' });
+        } else {
+           if (bfStaples.length > 0) {
+              let staple = bfStaples.find(r => !usedBfStaples.includes(r.name)) || bfStaples[day % bfStaples.length];
+              usedBfStaples.push(staple.name);
+              bfDishes.push({ id: idCounter++, ...staple, completed: false, skipped: false, feedback: '' });
+           }
+           if (bfMeats.length > 0) {
+              let meat = bfMeats.find(r => !usedBfMeats.includes(r.name)) || bfMeats[(day + 2) % bfMeats.length];
+              usedBfMeats.push(meat.name);
+              if (!bfDishes.some(d => d.name === meat.name)) {
+                 bfDishes.push({ id: idCounter++, ...meat, completed: false, skipped: false, feedback: '' });
+              }
+           }
+           if (bfVegFruits.length > 0) {
+              let vf = bfVegFruits[(day + 1) % bfVegFruits.length];
+              if (!bfDishes.some(d => d.name === vf.name)) {
+                 bfDishes.push({ id: idCounter++, ...vf, completed: false, skipped: false, feedback: '' });
+              }
+           }
+        }
+
+        if (bfDrinks.length > 0) {
+           let drink = bfDrinks.find(r => !usedBfDrinks.includes(r.name)) || bfDrinks[day % bfDrinks.length];
+           usedBfDrinks.push(drink.name);
+           if (!bfDishes.some(d => d.name === drink.name)) {
+              bfDishes.push({ id: idCounter++, ...drink, completed: false, skipped: false, feedback: '' });
+           }
+        }
+        dayMenu.breakfast = bfDishes;
+        // --- 早餐逻辑结束 ---
+
+        // 午餐
         let lunchDishes = [];
         let complexLunch = lmPool.find(r => {
           let tags = r.tags || [];
           return (tags.includes('肉') && tags.includes('蔬菜')) || (tags.includes('主食') && tags.includes('肉'));
         });
-
         if (complexLunch) {
           lunchDishes.push({ id: idCounter++, ...complexLunch, completed: false, skipped: false, feedback: '' });
         } else {
           let lStaple = staplePool.length > 0 ? staplePool[day % staplePool.length] : null;
-          let lMeatList = lmPool.length > 0 ? lmPool : [];
-          let lVegList = lvPool.length > 0 ? lvPool : [];
-          
-          let lMeat = lMeatList.length > 0 ? lMeatList[day % lMeatList.length] : null;
-          let lVeg = lVegList.length > 0 ? lVegList[day % lVegList.length] : null;
-
+          let lMeat = lmPool.length > 0 ? lmPool[day % lmPool.length] : null;
+          let lVeg = lvPool.length > 0 ? lvPool[day % lvPool.length] : null;
           if (lStaple) lunchDishes.push({ id: idCounter++, ...lStaple, completed: false, skipped: false, feedback: '' });
           if (lMeat) lunchDishes.push({ id: idCounter++, ...lMeat, completed: false, skipped: false, feedback: '' });
           if (lVeg && lVeg.name !== (lMeat?.name || '')) lunchDishes.push({ id: idCounter++, ...lVeg, completed: false, skipped: false, feedback: '' });
         }
         dayMenu.lunch = lunchDishes;
 
+        // 晚餐
         let dinnerDishes = [];
         let isNoodleDay = [0, 2, 4, 6].includes(day); 
-
         if (isNoodleDay && dinnerStaplePool.length > 0) {
            let dNoodle = dinnerStaplePool[day % dinnerStaplePool.length];
            dinnerDishes.push({ id: idCounter++, ...dNoodle, completed: false, skipped: false, feedback: '' });
@@ -2768,14 +3329,12 @@ createApp({
              let tags = r.tags || [];
              return (tags.includes('肉') && tags.includes('蔬菜')) || (tags.includes('主食') && tags.includes('肉'));
            });
-
            if (complexDinner) {
              dinnerDishes.push({ id: idCounter++, ...complexDinner, completed: false, skipped: false, feedback: '' });
            } else {
              let dStaple = staplePool.length > 0 ? staplePool[day % staplePool.length] : null;
              let dMeat = dmPool.length > 0 ? dmPool[(day+1) % dmPool.length] : null;
              let dVeg = dvPool.length > 0 ? dvPool[(day+1) % dvPool.length] : null;
-
              if (dStaple) dinnerDishes.push({ id: idCounter++, ...dStaple, completed: false, skipped: false, feedback: '' });
              if (dMeat) dinnerDishes.push({ id: idCounter++, ...dMeat, completed: false, skipped: false, feedback: '' });
              if (dVeg && dVeg.name !== (dMeat?.name || '')) dinnerDishes.push({ id: idCounter++, ...dVeg, completed: false, skipped: false, feedback: '' });
@@ -2826,12 +3385,12 @@ createApp({
       
       if (mode === 'current') {
         this.weekMenuData.current = newWeekMenu;
-        if (!isInit) alert("✅ 本周食谱已重新生成！");
+        if (!isInit) alert("✅ 本周食谱已重新生成！（已开启智能防重复排餐）");
         this.pushToCloud(); 
       } else {
         this.weekMenuData.next = newWeekMenu;
         this.generatePrepTasks();
-        if (!isInit) alert("✅ 下周食谱已生成！");
+        if (!isInit) alert("✅ 下周食谱已生成！（已开启智能防重复排餐）");
         this.pushToCloud(); 
       }
     },
@@ -2919,6 +3478,44 @@ createApp({
           this.prepTasks.push({
             title: "干货/粗粮提前浸泡 (前夜)",
             desc: `今晚把明天要用的【${soakItems.join('、')}】洗净泡发（如香菇、木耳用温水，红豆黑米用冷水）。`,
+            type: 'daily'
+          });
+        }
+      }
+
+      // 🌟 新增：明日晚餐统筹时间线（提取有炖煮/快炒的菜）
+      if (tomorrowMenu) {
+        const allDishes = [...(tomorrowMenu.lunch || []), ...(tomorrowMenu.dinner || [])];
+        let hasLongCook = false;
+        let hasFry = false;
+        let hasPrep = false;
+        
+        allDishes.forEach(dish => {
+          if (dish.skipped || dish.completed) return;
+          const timeStr = dish.time || '';
+          const timeNum = parseInt(timeStr) || 0;
+          // 如果时间超过30分钟，判定为“长耗时（炖煮/焖饭）”
+          if (timeNum >= 30) hasLongCook = true;
+          // 如果用炒锅或平底锅，判定为需要现炒
+          if (dish.tool.includes('炒锅') || dish.tool.includes('平底锅')) hasFry = true;
+          // 如果有需要提前腌制的肉类
+          if (dish.steps.some(s => s.includes('腌制'))) hasPrep = true;
+        });
+
+        if (hasLongCook || hasFry) {
+          let timelineDesc = "";
+          if (hasLongCook) {
+            timelineDesc += "① 先处理汤/焖饭/炖菜：开火下锅，利用炖煮的时间去做其他事。 ";
+          }
+          if (hasPrep) {
+            timelineDesc += "② 趁着炖煮，赶紧把肉类加调料腌制上。 ";
+          }
+          if (hasFry) {
+            timelineDesc += "③ 最后洗切蔬菜，起锅大火快炒。 ";
+          }
+          this.prepTasks.push({
+            title: "👨‍🍳 明日开火统筹建议",
+            desc: timelineDesc,
             type: 'daily'
           });
         }
