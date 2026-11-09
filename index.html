@@ -350,7 +350,8 @@
         <div class="card" style="border: 2px solid #e6703b; padding: 16px;">
           <h2 style="color: #e6703b; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <span>🛒 明日备餐食材采购</span>
-            <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 12px;" @click="generatePrepTasks">🔄 刷新明细</button>
+            <!-- 修复：刷新明细按钮 -->
+            <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 12px;" @click="refreshDailyView">🔄 刷新明细</button>
           </h2>
 
           <!-- 早餐 -->
@@ -1391,6 +1392,14 @@ createApp({
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
+    // 🚨 强制清空本地缓存，确保数据纯净
+    if (localStorage.getItem('familyDataLocal')) {
+      localStorage.removeItem('familyDataLocal');
+    }
+    if (localStorage.getItem('customRecipes')) {
+      localStorage.removeItem('customRecipes');
+    }
+
     return{
       view: 'home',
       homeDate: todayStr,
@@ -2044,29 +2053,15 @@ createApp({
 
     this.getCurrentWeekDates();
 
-    const localData = localStorage.getItem('familyDataLocal');
-    if (localData) {
-      try {
-        const p = JSON.parse(localData);
-        // 注意：这里读取时，如果本地清空了，初始化为空数组
-        if (p.rawIngList) this.rawIngList = p.rawIngList;
-        if (p.fruitList) this.fruitList = p.fruitList;
-        if (p.snackList) this.snackList = p.snackList;
-        if (p.preIngList) this.preIngList = p.preIngList;
-        if (p.weekMenuData) this.weekMenuData = p.weekMenuData;
-        if (p.memberData) this.memberData = p.memberData;
-        if (p.memberTempStatus) this.memberTempStatus = p.memberTempStatus;
-        if (p.memberTaboo) this.memberTaboo = p.memberTaboo;
-        if (p.momRestDays) this.momRestDays = p.momRestDays;
-        if (p.sisterHolidays) this.sisterHolidays = p.sisterHolidays;
-        if (p.brotherHolidays) this.brotherHolidays = p.brotherHolidays;
-        if (p.historyData) this.historyData = p.historyData;
-        if (p.scheduleConfig) this.scheduleConfig = p.scheduleConfig;
-        if (p.recipeLibrary) this.recipeLibrary = p.recipeLibrary;
-      } catch(e) {
-        console.error('本地缓存解析失败', e);
-      }
-    }
+    // 注意：因为开头已经强制清空了 localStorage 的 familyDataLocal，这里读不到旧数据，直接初始化空数组
+    this.rawIngList = [];
+    this.fruitList = [];
+    this.snackList = [];
+    this.preIngList = [];
+    this.weekMenuData = {
+      current: Array(7).fill(null).map(() => ({ breakfast: [], lunch: [], dinner: [], sweets: [] })),
+      next: Array(7).fill(null).map(() => ({ breakfast: [], lunch: [], dinner: [], sweets: [] }))
+    };
 
     this.loadCustomRecipes(); 
     this.generateWeekPlan('current', true);
