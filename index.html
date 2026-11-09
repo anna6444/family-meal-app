@@ -11,6 +11,12 @@
   <link rel="apple-touch-icon" href="icon-192x192.png">
   <meta name="theme-color" content="#f9f6ef">
 
+  <!-- 🚨 极度暴力的本地缓存清理，防止旧数据影响 -->
+  <script>
+    localStorage.removeItem('familyDataLocal');
+    localStorage.removeItem('customRecipes');
+  </script>
+
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -350,7 +356,6 @@
         <div class="card" style="border: 2px solid #e6703b; padding: 16px;">
           <h2 style="color: #e6703b; display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
             <span>🛒 明日备餐食材采购</span>
-            <!-- 修复：刷新明细按钮 -->
             <button class="btn small" style="background: #fff8f0; color: #e6703b; border: 1px solid #f7dcc8; padding: 6px 12px;" @click="refreshDailyView">🔄 刷新明细</button>
           </h2>
 
@@ -1392,13 +1397,9 @@ createApp({
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;
 
-    // 🚨 强制清空本地缓存，确保数据纯净
-    if (localStorage.getItem('familyDataLocal')) {
-      localStorage.removeItem('familyDataLocal');
-    }
-    if (localStorage.getItem('customRecipes')) {
-      localStorage.removeItem('customRecipes');
-    }
+    // 🚨 强制清理多余的缓存，防止旧数据干扰
+    localStorage.removeItem('familyDataLocal');
+    localStorage.removeItem('customRecipes');
 
     return{
       view: 'home',
@@ -2053,7 +2054,7 @@ createApp({
 
     this.getCurrentWeekDates();
 
-    // 注意：因为开头已经强制清空了 localStorage 的 familyDataLocal，这里读不到旧数据，直接初始化空数组
+    // 🚨 因为开头已经强制清空了 localStorage 的 familyDataLocal，这里直接初始化空数组
     this.rawIngList = [];
     this.fruitList = [];
     this.snackList = [];
