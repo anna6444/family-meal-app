@@ -11,12 +11,6 @@
   <link rel="apple-touch-icon" href="icon-192x192.png">
   <meta name="theme-color" content="#f9f6ef">
 
-  <!-- 🚨 极度暴力的本地缓存清理，防止旧数据影响 -->
-  <script>
-    localStorage.removeItem('familyDataLocal');
-    localStorage.removeItem('customRecipes');
-  </script>
-
   <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
@@ -276,6 +270,12 @@
         </div>
       </div>
 
+      <!-- 🌟 新增：全周菜单总览与导出按钮 -->
+      <div style="display: flex; gap: 10px; margin-bottom: 16px; margin-top: 10px;">
+        <button class="btn small" style="flex: 1; background: #4A90E2;" @click="showWeekOverview = true">📊 查看整周预览表</button>
+        <button class="btn small" style="flex: 1; background: #2b703b;" @click="exportWeekToImage">🖨️ 生成本周菜单图片</button>
+      </div>
+
       <!-- 🌟 全新：区块网格布局 -->
       <div v-if="currentDayDishes" style="margin-top: 20px;">
         
@@ -342,6 +342,67 @@
         </div>
 
       </div>
+    </div>
+
+    <!-- 🌟 全新：全屏周菜单预览表 -->
+    <div v-if="showWeekOverview" style="background: #f9f6ef; height: 100vh; padding: 18px; position: fixed; inset: 0; z-index: 999; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h2 style="margin: 0; font-size: 20px;">📅 {{ viewWeekMode === 'current' ? '本周' : '下周' }}菜单总览</h2>
+        <button class="btn small" style="background: #4A90E2;" @click="exportWeekToImage">🖨️ 生成图片</button>
+      </div>
+      <p style="font-size: 13px; color: #666; margin-bottom: 12px;">👉 点击表格里的任意菜品，即可直接替换或删除。</p>
+
+      <div style="background: #fff; border-radius: 12px; overflow: auto; max-height: calc(100vh - 150px); border: 1px solid #e8e2d6;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px; min-width: 600px;">
+          <thead style="position: sticky; top: 0; background: #fcf9f5; z-index: 10; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            <tr>
+              <th style="padding: 12px; border-bottom: 2px solid #f0ebe2; width: 60px; text-align: center;">星期</th>
+              <th style="padding: 12px; border-bottom: 2px solid #f0ebe2; text-align: left; color: #c46838;">🌅 早餐</th>
+              <th style="padding: 12px; border-bottom: 2px solid #f0ebe2; text-align: left; color: #2b703b;">☀️ 午餐</th>
+              <th style="padding: 12px; border-bottom: 2px solid #f0ebe2; text-align: left; color: #4A90E2;">🌙 晚餐</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="(dayMenu, dIdx) in (viewWeekMode === 'current' ? weekMenuData.current : weekMenuData.next)" :key="dIdx" style="border-bottom: 1px solid #f0ebe2;">
+              <td style="padding: 12px 8px; text-align: center; font-weight: bold; background: #fdfaf6; border-right: 1px solid #f0ebe2;">
+                {{ ['周一','周二','周三','周四','周五','周六','周日'][dIdx] }}
+              </td>
+              
+              <!-- 早餐列 -->
+              <td style="padding: 8px; vertical-align: top; border-right: 1px solid #f0ebe2;">
+                <div v-for="(dish, idx) in dayMenu.breakfast" :key="dish.id" 
+                     style="margin-bottom: 6px; background: #fff5ef; border: 1px solid #fce8df; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: #c46838; display: flex; justify-content: space-between; align-items: center;"
+                     @click="openQuickReplace('breakfast', dIdx, idx)">
+                  <span style="font-size: 13px;">{{ dish.name }}</span>
+                  <span style="font-size: 11px; color: #d1a58a;">🔄</span>
+                </div>
+              </td>
+
+              <!-- 午餐列 -->
+              <td style="padding: 8px; vertical-align: top; border-right: 1px solid #f0ebe2;">
+                <div v-for="(dish, idx) in dayMenu.lunch" :key="dish.id" 
+                     style="margin-bottom: 6px; background: #f4fcf6; border: 1px solid #d1ead7; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: #2b703b; display: flex; justify-content: space-between; align-items: center;"
+                     @click="openQuickReplace('lunch', dIdx, idx)">
+                  <span style="font-size: 13px;">{{ dish.name }}</span>
+                  <span style="font-size: 11px; color: #82b88e;">🔄</span>
+                </div>
+              </td>
+
+              <!-- 晚餐列 -->
+              <td style="padding: 8px; vertical-align: top;">
+                <div v-for="(dish, idx) in dayMenu.dinner" :key="dish.id" 
+                     style="margin-bottom: 6px; background: #f4f6fa; border: 1px solid #d0dceb; padding: 6px 8px; border-radius: 6px; cursor: pointer; color: #4A90E2; display: flex; justify-content: space-between; align-items: center;"
+                     @click="openQuickReplace('dinner', dIdx, idx)">
+                  <span style="font-size: 13px;">{{ dish.name }}</span>
+                  <span style="font-size: 11px; color: #98b4d9;">🔄</span>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      
+      <button class="btn secondary" style="width: 100%; margin-top: 20px; padding: 14px;" @click="showWeekOverview=false">返回正常视图</button>
     </div>
 
     <!-- 待操作 -->
@@ -703,7 +764,7 @@
   </div>
 
   <!-- 底部导航 -->
-  <div class="tab-bar" v-if="view !== 'ai'">
+  <div class="tab-bar" v-if="view !== 'ai' && !showWeekOverview">
     <div class="tab-item" :class="{active:view==='home'}" @click="view='home'">
       <span class="tab-icon">🏠</span>
       <span class="tab-label">首页</span>
@@ -740,6 +801,34 @@
         <button class="btn" style="padding: 16px 0; background: #2b703b;" @click="batchImportModal.show = true; showMoreActions = false;">📥 批量导入菜单</button>
       </div>
       <button class="btn secondary" style="width: 100%; margin-top: 16px; background: #f1ede4;" @click="showMoreActions = false">取消</button>
+    </div>
+  </div>
+
+  <!-- 🌟 新增：全屏表格内的快捷替换弹窗 -->
+  <div class="modal-mask" v-if="quickReplaceModal.show" @click.self="quickReplaceModal.show=false" style="z-index: 9999;">
+    <div class="modal-box" style="max-height: 80vh; display: flex; flex-direction: column;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <h3 style="margin: 0; font-size: 17px;">替换菜品</h3>
+        <button class="btn small" style="background: #fff0f0; color: #d14a4a; border: 1px solid #fce8e8;" @click="deleteQuickDish">🗑️ 删除此菜</button>
+      </div>
+      
+      <div style="font-size: 14px; color: #666; margin-bottom: 12px; background: #f9f6ef; padding: 8px; border-radius: 8px;">
+        当前：<b>{{quickReplaceModal.currentName}}</b>
+      </div>
+      
+      <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px;">
+        <div v-for="recipe in quickReplaceModal.availableRecipes" :key="recipe.name" 
+             style="border: 1px solid #eee; padding: 12px; border-radius: 12px; cursor: pointer; background: #fff;"
+             @click="doQuickReplace(recipe)">
+          <div style="font-weight: 600; color: #c46838; margin-bottom: 4px;">
+            {{recipe.name}} 
+            <span v-if="recipe.isHealthy === false" style="font-size: 11px; background: #fce8e8; color: #d14a4a; padding: 2px 4px; border-radius: 4px;">高油解馋</span>
+          </div>
+          <div style="font-size: 13px; color: #888;">{{recipe.tag}} | {{recipe.tool}}</div>
+        </div>
+      </div>
+      
+      <button class="btn secondary" style="width:100%; margin-top:16px; flex-shrink: 0;" @click="quickReplaceModal.show=false">取消</button>
     </div>
   </div>
 
@@ -1190,7 +1279,7 @@
     </div>
   </div>
 
-  <!-- 替换菜品弹窗 -->
+  <!-- 替换菜品弹窗 (用于非全屏模式) -->
   <div class="modal-mask" v-if="replaceModal.show" @click.self="replaceModal.show=false">
     <div class="modal-box">
       <h3 style="margin-bottom:14px">替换菜品</h3>
@@ -1503,11 +1592,13 @@ createApp({
       dayNutritionTags: [],
       addRecipeModal: { show: false, name: '', type: 'dinner', tool: '', time: '', ingredientsText: '', stepsText: '', rawText: '', isHealthy: true, prepType: '', tags: [] },
       replaceModal: { show: false, mealType: '', dishIdx: -1, currentName: '' },
+      quickReplaceModal: { show: false, mealType: '', dayIdx: -1, dishIdx: -1, currentName: '', availableRecipes: [] },
       dishDetailModal: { show: false, dish: null, mealType: '', dishIdx: -1 },
       pendingReplaceQueue: [], 
       pendingReplaceReturnTab: '', 
       exportedImageUrl: '',
       showImagePreview: false,
+      showWeekOverview: false,
 
       historyData: {
         dad: { labels: ['2026-05-01', '2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01'], weight: [92, 91.5, 91, 90.5, 90, 90] },
@@ -1956,8 +2047,18 @@ createApp({
             portions: { dad: '1份(焯水后适量)', mom: '1份', sister: '1份', brother: '半份(芹菜切极细的末防卡喉)' }
           }
         ],
-        dinnerMeat: [],
-        dinnerVeg: [],
+        dinnerMeat: [
+          { name: "香菇滑鸡", tag: "低脂健脾", tool: "蒸锅", time: "25分钟", prepType: "thaw", tags: ["肉", "蔬菜"], ingredients: [{name:'鸡腿肉', weight:200}, {name:'干香菇', weight:15}], steps: ['鸡肉去皮切块加生抽淀粉腌制。香菇泡发。上锅蒸20分钟。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(鸡肉撕碎)' } },
+          { name: "香煎龙利鱼柳", tag: "无刺易消化", tool: "平底锅", time: "15分钟", prepType: "thaw", tags: ["肉"], ingredients: [{name:'龙利鱼', weight:200}], steps: ['龙利鱼解冻吸干水分。少油小火煎至两面微黄，撒少许盐和黑胡椒。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份' } },
+          { name: "白灼虾", tag: "高蛋白低脂", tool: "煮锅", time: "10分钟", prepType: "thaw", tags: ["肉"], ingredients: [{name:'鲜虾', weight:250}], steps: ['水开下姜片和虾，煮3分钟捞出。可蘸少许生抽。'], portions: { dad: '6只', mom: '6只', sister: '5只', brother: '3只(剥壳切小)' } },
+          { name: "洋葱炒牛肉", tag: "强体补铁", tool: "炒锅", time: "15分钟", prepType: "thaw", tags: ["肉", "蔬菜"], ingredients: [{name:'瘦牛肉', weight:200}, {name:'洋葱', weight:100}], steps: ['牛肉切薄片加生抽淀粉腌。热油炒牛肉变色盛出。底油炒软洋葱，倒回牛肉翻炒。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(牛肉极碎)' } }
+        ],
+        dinnerVeg: [
+          { name: "清炒小白菜", tag: "时令绿叶", tool: "炒锅", time: "5分钟", prepType: "none", tags: ["蔬菜"], ingredients: [{name:'小白菜', weight:300}], steps: ['洗净切段，热油爆香蒜末大火快炒，加盐出锅。'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(切极碎)' } },
+          { name: "蒜蓉西蓝花", tag: "补钙防癌", tool: "炒锅", time: "8分钟", prepType: "none", tags: ["蔬菜"], ingredients: [{name:'西蓝花', weight:300}], steps: ['西蓝花切小朵焯水1分钟。热油爆香蒜末快炒。'], portions: { dad: '150g', mom: '150g', sister: '100g', brother: '50g(取花冠切碎)' } },
+          { name: "上汤娃娃菜", tag: "清甜利尿", tool: "炒锅", time: "10分钟", prepType: "none", tags: ["蔬菜"], ingredients: [{name:'娃娃菜', weight:300}, {name:'皮蛋', weight:30}], steps: ['蒜末和皮蛋丁炒香，加开水煮沸下娃娃菜煮软。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(只吃菜喝汤)' } },
+          { name: "清炒南瓜丝", tag: "健脾护眼", tool: "炒锅", time: "8分钟", prepType: "none", tags: ["蔬菜"], ingredients: [{name:'老南瓜', weight:200}], steps: ['南瓜切细丝。热油下锅大火快炒，加少许盐和水焖2分钟。'], portions: { dad: '1份', mom: '1份', sister: '1份', brother: '半份(南瓜软烂好嚼)' } }
+        ],
         sweets: [
           // ================= 【周一、周五：妈妈专属】 =================
           {
@@ -3377,12 +3478,12 @@ createApp({
       
       if (mode === 'current') {
         this.weekMenuData.current = newWeekMenu;
-        if (!isInit) alert("✅ 本周食谱已重新生成！（已开启智能防重复排餐）");
+        if (!isInit) alert("✅ 本周食谱已重新生成！（已开启正餐强制配齐模式）");
         this.pushToCloud(); 
       } else {
         this.weekMenuData.next = newWeekMenu;
         this.generatePrepTasks();
-        if (!isInit) alert("✅ 下周食谱已生成！（已开启智能防重复排餐）");
+        if (!isInit) alert("✅ 下周食谱已生成！（已开启正餐强制配齐模式）");
         this.pushToCloud(); 
       }
     },
@@ -3470,44 +3571,6 @@ createApp({
           this.prepTasks.push({
             title: "干货/粗粮提前浸泡 (前夜)",
             desc: `今晚把明天要用的【${soakItems.join('、')}】洗净泡发（如香菇、木耳用温水，红豆黑米用冷水）。`,
-            type: 'daily'
-          });
-        }
-      }
-
-      // 🌟 新增：明日晚餐统筹时间线（提取有炖煮/快炒的菜）
-      if (tomorrowMenu) {
-        const allDishes = [...(tomorrowMenu.lunch || []), ...(tomorrowMenu.dinner || [])];
-        let hasLongCook = false;
-        let hasFry = false;
-        let hasPrep = false;
-        
-        allDishes.forEach(dish => {
-          if (dish.skipped || dish.completed) return;
-          const timeStr = dish.time || '';
-          const timeNum = parseInt(timeStr) || 0;
-          // 如果时间超过30分钟，判定为“长耗时（炖煮/焖饭）”
-          if (timeNum >= 30) hasLongCook = true;
-          // 如果用炒锅或平底锅，判定为需要现炒
-          if (dish.tool.includes('炒锅') || dish.tool.includes('平底锅')) hasFry = true;
-          // 如果有需要提前腌制的肉类
-          if (dish.steps.some(s => s.includes('腌制'))) hasPrep = true;
-        });
-
-        if (hasLongCook || hasFry) {
-          let timelineDesc = "";
-          if (hasLongCook) {
-            timelineDesc += "① 先处理汤/焖饭/炖菜：开火下锅，利用炖煮的时间去做其他事。 ";
-          }
-          if (hasPrep) {
-            timelineDesc += "② 趁着炖煮，赶紧把肉类加调料腌制上。 ";
-          }
-          if (hasFry) {
-            timelineDesc += "③ 最后洗切蔬菜，起锅大火快炒。 ";
-          }
-          this.prepTasks.push({
-            title: "👨‍🍳 明日开火统筹建议",
-            desc: timelineDesc,
             type: 'daily'
           });
         }
@@ -3669,6 +3732,86 @@ createApp({
 
     getMealName(type) {
       return type === 'breakfast' ? '早餐' : (type === 'lunch' ? '午餐' : (type === 'dinner' ? '晚餐' : '甜汤/饮品'));
+    },
+
+    openWeekOverviewModal() {
+      this.showWeekOverview = true;
+    },
+
+    openQuickReplace(mealType, dayIdx, dishIdx) {
+      const targetData = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      const dayMenu = targetData[dayIdx];
+      const currentDish = dayMenu[mealType][dishIdx];
+      
+      let pool = [];
+      if (mealType === 'lunch' || mealType === 'dinner') {
+        pool = [
+          ...this.recipeLibrary.lunchStaple, 
+          ...this.recipeLibrary.dinnerStaple,
+          ...this.recipeLibrary.lunchMeat, ...this.recipeLibrary.lunchVeg, 
+          ...this.recipeLibrary.dinnerMeat, ...this.recipeLibrary.dinnerVeg
+        ];
+      } else {
+        pool = this.recipeLibrary[mealType] || [];
+      }
+
+      const isMeat = (dish) => /肉|鱼|虾|鸡|鸭|牛|羊|排骨|翅|蛋|肠|海鲜/.test(dish.name);
+      const isStaple = (dish) => /饭|面|粉|粥|包|馒头|饺|饼|红薯|玉米|土豆|燕麦|吐司/.test(dish.name);
+      
+      const isCurrentMeat = isMeat(currentDish);
+      const isCurrentStaple = isStaple(currentDish);
+
+      pool.sort((a, b) => {
+          let scoreA = 0, scoreB = 0;
+          if (isCurrentMeat && isMeat(a)) scoreA += 10;
+          if (isCurrentMeat && isMeat(b)) scoreB += 10;
+          if (!isCurrentMeat && !isCurrentStaple && !isMeat(a) && !isStaple(a)) scoreA += 10; 
+          if (!isCurrentMeat && !isCurrentStaple && !isMeat(b) && !isStaple(b)) scoreB += 10;
+          if (isCurrentStaple && isStaple(a)) scoreA += 10;
+          if (isCurrentStaple && isStaple(b)) scoreB += 10;
+          return scoreB - scoreA; 
+      });
+
+      this.quickReplaceModal = {
+        show: true,
+        mealType: mealType,
+        dayIdx: dayIdx,
+        dishIdx: dishIdx,
+        currentName: currentDish.name,
+        availableRecipes: pool
+      };
+    },
+
+    doQuickReplace(newRecipe) {
+      const { mealType, dayIdx, dishIdx } = this.quickReplaceModal;
+      const targetData = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      
+      targetData[dayIdx][mealType][dishIdx] = { 
+        id: Date.now(), 
+        ...newRecipe, 
+        completed: false, 
+        skipped: false, 
+        feedback: '' 
+      };
+      
+      this.quickReplaceModal.show = false;
+      this.showWeekOverview = true;
+      
+      this.pushToCloud();
+    },
+
+    deleteQuickDish() {
+      if (!confirm("确定要直接删除【" + this.quickReplaceModal.currentName + "】吗？")) return;
+      
+      const { mealType, dayIdx, dishIdx } = this.quickReplaceModal;
+      const targetData = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      
+      targetData[dayIdx][mealType].splice(dishIdx, 1);
+      
+      this.quickReplaceModal.show = false;
+      this.showWeekOverview = true;
+      
+      this.pushToCloud();
     },
 
     openDishDetail(mealType, idx) {
@@ -4294,49 +4437,53 @@ createApp({
       }
     },
 
-    async exportShoppingList() {
-      if (this.shoppingList.length === 0) {
-        alert("当前没有任何采购需求哦，请先排好下周菜单！");
-        return;
-      }
-
+    async exportWeekToImage() {
       const printArea = document.getElementById('a4-print-area');
-      
+      const targetData = this.viewWeekMode === 'current' ? this.weekMenuData.current : this.weekMenuData.next;
+      const targetWeekText = this.viewWeekMode === 'current' ? '本周' : '下周';
+
       let html = `
-        <div style="padding: 40px; box-sizing: border-box; height: 100%; display: flex; flex-direction: column; background: #fff;">
+        <div style="padding: 40px; box-sizing: border-box; background: #fff; width: 100%;">
           <div style="text-align: center; border-bottom: 3px solid #e6703b; padding-bottom: 20px; margin-bottom: 20px;">
-            <h1 style="font-size: 32px; color: #333; margin-bottom: 10px;">🛒 家庭大采购清单</h1>
-            <div style="font-size: 16px; color: #666;">生成日期：${new Date().toLocaleDateString()} | 仅包含可长期储存的物资</div>
+            <h1 style="font-size: 32px; color: #333; margin-bottom: 10px;">🍽️ 家庭${targetWeekText}膳食安排表</h1>
+            <div style="font-size: 16px; color: #666;">生成日期：${new Date().toLocaleDateString()}</div>
           </div>
+          <table style="width: 100%; border-collapse: collapse; font-size: 15px;">
+            <thead>
+              <tr style="background: #f9f6ef;">
+                <th style="border: 1px solid #ddd; padding: 12px; width: 10%; text-align: center;">星期</th>
+                <th style="border: 1px solid #ddd; padding: 12px; width: 25%; text-align: center; color: #c46838;">🌅 早餐</th>
+                <th style="border: 1px solid #ddd; padding: 12px; width: 35%; text-align: center; color: #2b703b;">☀️ 午餐</th>
+                <th style="border: 1px solid #ddd; padding: 12px; width: 30%; text-align: center; color: #4A90E2;">🌙 晚餐</th>
+              </tr>
+            </thead>
+            <tbody>
       `;
 
-      this.groupedShoppingList.forEach(group => {
-        if (group.items.length === 0) return;
-        
-        let areaColor = '#e6703b';
-        if (group.area === '生鲜区') areaColor = '#2b703b';
-        else if (group.area === '冷冻区') areaColor = '#4A90E2';
-        else if (group.area === '调料区') areaColor = '#b6862c';
-
+      const days = ['周一','周二','周三','周四','周五','周六','周日'];
+      
+      for (let i = 0; i < 7; i++) {
+        const dayMenu = targetData[i];
         html += `
-          <div style="margin-bottom: 30px;">
-            <h2 style="font-size: 22px; color: ${areaColor}; margin-bottom: 15px; border-left: 5px solid ${areaColor}; padding-left: 10px;">📍 ${group.area}</h2>
-            <div style="column-count: 2; column-gap: 40px;">
+          <tr>
+            <td style="border: 1px solid #ddd; padding: 12px; text-align: center; font-weight: bold; background: #fafafa;">${days[i]}</td>
+            <td style="border: 1px solid #ddd; padding: 12px; line-height: 1.6; vertical-align: top;">
+              ${dayMenu.breakfast.map(d => `▪ ${d.name}`).join('<br>') || '-'}
+            </td>
+            <td style="border: 1px solid #ddd; padding: 12px; line-height: 1.6; vertical-align: top;">
+              ${dayMenu.lunch.map(d => `▪ ${d.name}`).join('<br>') || '-'}
+            </td>
+            <td style="border: 1px solid #ddd; padding: 12px; line-height: 1.6; vertical-align: top;">
+              ${dayMenu.dinner.map(d => `▪ ${d.name}`).join('<br>') || '-'}
+            </td>
+          </tr>
         `;
-        group.items.forEach(item => {
-          html += `
-            <div style="display: flex; align-items: center; border-bottom: 1px dashed #ccc; padding: 10px 0; font-size: 18px; break-inside: avoid;">
-              <div style="width: 22px; height: 22px; border: 2px solid #333; border-radius: 4px; margin-right: 15px; flex-shrink: 0;"></div>
-              <div style="flex: 1; color: #333;">${item.name}</div>
-              <div style="font-weight: bold; color: ${areaColor}; width: 80px; text-align: right;">${item.weight}g</div>
-            </div>
-          `;
-        });
-        html += `</div></div>`;
-      });
+      }
 
       html += `
-          <div style="text-align: center; color: #999; font-size: 14px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+            </tbody>
+          </table>
+          <div style="text-align: center; color: #999; font-size: 12px; margin-top: 30px;">
             --- 家庭膳食工作台 自动生成 ---
           </div>
         </div>
@@ -4349,16 +4496,14 @@ createApp({
         const canvas = await html2canvas(printArea, { 
           scale: 2, 
           backgroundColor: '#ffffff',
-          useCORS: true,
+          useCors: true,
           height: printArea.scrollHeight,
           windowHeight: printArea.scrollHeight
         });
-        
         this.exportedImageUrl = canvas.toDataURL('image/png');
         this.showImagePreview = true;
-        
       } catch (err) {
-        alert("生成图片失败，请重试。\n" + err.message);
+        alert("生成图片失败：" + err.message);
       } finally {
         printArea.style.display = 'none'; 
       }
