@@ -3301,175 +3301,124 @@ createApp({
       let newWeekMenu = [];
       
       const filterHealthy = (arr) => arr.filter(item => item.isHealthy !== false);
-      
-      const expiringNames = [...this.rawIngList, ...this.fruitList, ...this.snackList, ...this.preIngList]
-        .filter(item => item.weight > 0 && this.getRemainingDays(item) <= 3)
-        .map(item => item.name);
-
-      const getPools = (lib) => {
-        const healthy = filterHealthy(lib);
-        const scoreRecipe = (recipe) => {
-          if (!recipe.ingredients || expiringNames.length === 0) return 0;
-          let score = 0;
-          recipe.ingredients.forEach(ing => {
-            if (expiringNames.some(name => ing.name.includes(name) || name.includes(ing.name))) {
-              score += 1; 
-            }
-          });
-          return score;
-        };
-        const sortedHealthy = [...healthy].sort((a, b) => scoreRecipe(b) - scoreRecipe(a));
-        const liked = this.shuffleArray(sortedHealthy.filter(i => !i.isDisliked));
-        const disliked = this.shuffleArray(sortedHealthy.filter(i => i.isDisliked));
-        return [...liked, ...disliked];
+      const shuffleArray = (array) => {
+        let currentIndex = array.length, randomIndex;
+        while (currentIndex != 0) {
+          randomIndex = Math.floor(Math.random() * currentIndex);
+          currentIndex--;
+          [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+        }
+        return array;
       };
 
-      // ================= 全新智能早餐分类池 =================
+      const getPools = (lib) => shuffleArray([...filterHealthy(lib)]);
+
+      // 1. 初始化池子
       const bfPool = getPools([...this.recipeLibrary.breakfast]);
-      
       const bfDrinks = bfPool.filter(r => r.tags && r.tags.includes('饮品'));
       const bfAllInOne = bfPool.filter(r => r.tags && r.tags.includes('主食') && r.tags.includes('肉') && (r.tags.includes('蔬菜') || r.tags.includes('水果')));
       const bfStaples = bfPool.filter(r => r.tags && r.tags.includes('主食') && !bfAllInOne.includes(r));
       const bfMeats = bfPool.filter(r => r.tags && r.tags.includes('肉') && !r.tags.includes('主食'));
       const bfVegFruits = bfPool.filter(r => (r.tags && (r.tags.includes('蔬菜') || r.tags.includes('水果') || r.tags.includes('坚果'))) && !r.tags.includes('主食'));
-      // =======================================================
 
-      const lmPool = getPools([...this.recipeLibrary.lunchMeat]);
-      const lvPool = getPools([...this.recipeLibrary.lunchVeg]);
-      const dmPool = getPools([...this.recipeLibrary.dinnerMeat]);
-      const dvPool = getPools([...this.recipeLibrary.dinnerVeg]);
-      const sweetsPool = getPools([...this.recipeLibrary.sweets]);
-      const staplePool = getPools([...this.recipeLibrary.lunchStaple]); 
+      const allMeatPool = getPools([...this.recipeLibrary.lunchMeat, ...this.recipeLibrary.dinnerMeat]);
+      const allVegPool = getPools([...this.recipeLibrary.lunchVeg, ...this.recipeLibrary.dinnerVeg]);
+      
+      const lunchStaplePool = getPools([...this.recipeLibrary.lunchStaple]); 
       const dinnerStaplePool = getPools([...this.recipeLibrary.dinnerStaple]); 
 
-      let usedBfStaples = [];
-      let usedBfDrinks = [];
-      let usedBfMeats = [];
-      let usedBfAllInOne = [];
+      // 甜汤池拆分
+      const allSweets = getPools([...this.recipeLibrary.sweets]);
+      const adultSweets = allSweets.filter(r => /桃胶|当归|五红/.test(r.name));
+      const familySweets = allSweets.filter(r => /雪梨|苹果|木瓜|银耳|山楂/.test(r.name));
+
+      let usedLunchMeat = [];
+      let usedLunchVeg = [];
+      let usedDinnerMeat = [];
+      let usedDinnerVeg = [];
 
       for (let day = 0; day < 7; day++) {
         let dayMenu = { breakfast: [], lunch: [], dinner: [], sweets: [] };
         
-        // --- 智能防重复早餐排餐逻辑 ---
+        // --- 1. 早餐逻辑 ---
         let bfDishes = [];
-        let useAllInOne = false;
-
-        if (bfAllInOne.length > 0 && usedBfAllInOne.length < bfAllInOne.length) {
-          if (day === 0 || day === 3) useAllInOne = true;
-        }
-
-        if (useAllInOne) {
-           let allInOne = bfAllInOne.find(r => !usedBfAllInOne.includes(r.name)) || bfAllInOne[0];
-           usedBfAllInOne.push(allInOne.name);
-           bfDishes.push({ id: idCounter++, ...allInOne, completed: false, skipped: false, feedback: '' });
+        if (bfAllInOne.length > 0 && day % 2 === 0) {
+           bfDishes.push({ id: idCounter++, ...bfAllInOne[day % bfAllInOne.length], completed: false, skipped: false, feedback: '' });
         } else {
-           if (bfStaples.length > 0) {
-              let staple = bfStaples.find(r => !usedBfStaples.includes(r.name)) || bfStaples[day % bfStaples.length];
-              usedBfStaples.push(staple.name);
-              bfDishes.push({ id: idCounter++, ...staple, completed: false, skipped: false, feedback: '' });
-           }
-           if (bfMeats.length > 0) {
-              let meat = bfMeats.find(r => !usedBfMeats.includes(r.name)) || bfMeats[(day + 2) % bfMeats.length];
-              usedBfMeats.push(meat.name);
-              if (!bfDishes.some(d => d.name === meat.name)) {
-                 bfDishes.push({ id: idCounter++, ...meat, completed: false, skipped: false, feedback: '' });
-              }
-           }
-           if (bfVegFruits.length > 0) {
-              let vf = bfVegFruits[(day + 1) % bfVegFruits.length];
-              if (!bfDishes.some(d => d.name === vf.name)) {
-                 bfDishes.push({ id: idCounter++, ...vf, completed: false, skipped: false, feedback: '' });
-              }
-           }
+           if (bfStaples.length > 0) bfDishes.push({ id: idCounter++, ...bfStaples[day % bfStaples.length], completed: false, skipped: false, feedback: '' });
+           if (bfMeats.length > 0) bfDishes.push({ id: idCounter++, ...bfMeats[day % bfMeats.length], completed: false, skipped: false, feedback: '' });
         }
-
-        if (bfDrinks.length > 0) {
-           let drink = bfDrinks.find(r => !usedBfDrinks.includes(r.name)) || bfDrinks[day % bfDrinks.length];
-           usedBfDrinks.push(drink.name);
-           if (!bfDishes.some(d => d.name === drink.name)) {
-              bfDishes.push({ id: idCounter++, ...drink, completed: false, skipped: false, feedback: '' });
-           }
-        }
+        if (bfDrinks.length > 0) bfDishes.push({ id: idCounter++, ...bfDrinks[day % bfDrinks.length], completed: false, skipped: false, feedback: '' });
+        if (bfVegFruits.length > 0) bfDishes.push({ id: idCounter++, ...bfVegFruits[day % bfVegFruits.length], completed: false, skipped: false, feedback: '' });
         dayMenu.breakfast = bfDishes;
-        // --- 早餐逻辑结束 ---
-
-        // 午餐
+        
+        // --- 2. 午餐逻辑（1饭 + 1荤 + 1素） ---
         let lunchDishes = [];
-        let complexLunch = lmPool.find(r => {
-          let tags = r.tags || [];
-          return (tags.includes('肉') && tags.includes('蔬菜')) || (tags.includes('主食') && tags.includes('肉'));
-        });
-        if (complexLunch) {
-          lunchDishes.push({ id: idCounter++, ...complexLunch, completed: false, skipped: false, feedback: '' });
-        } else {
-          let lStaple = staplePool.length > 0 ? staplePool[day % staplePool.length] : null;
-          let lMeat = lmPool.length > 0 ? lmPool[day % lmPool.length] : null;
-          let lVeg = lvPool.length > 0 ? lvPool[day % lvPool.length] : null;
-          if (lStaple) lunchDishes.push({ id: idCounter++, ...lStaple, completed: false, skipped: false, feedback: '' });
-          if (lMeat) lunchDishes.push({ id: idCounter++, ...lMeat, completed: false, skipped: false, feedback: '' });
-          if (lVeg && lVeg.name !== (lMeat?.name || '')) lunchDishes.push({ id: idCounter++, ...lVeg, completed: false, skipped: false, feedback: '' });
+        if (lunchStaplePool.length > 0) {
+          let s = lunchStaplePool[day % lunchStaplePool.length];
+          lunchDishes.push({ id: idCounter++, ...s, completed: false, skipped: false, feedback: '' });
+        }
+        if (allMeatPool.length > 0) {
+          let m = allMeatPool.find(r => !usedLunchMeat.includes(r.name)) || allMeatPool[0];
+          usedLunchMeat.push(m.name);
+          lunchDishes.push({ id: idCounter++, ...m, completed: false, skipped: false, feedback: '' });
+        }
+        if (allVegPool.length > 0) {
+          let v = allVegPool.find(r => !usedLunchVeg.includes(r.name)) || allVegPool[1];
+          usedLunchVeg.push(v.name);
+          lunchDishes.push({ id: idCounter++, ...v, completed: false, skipped: false, feedback: '' });
         }
         dayMenu.lunch = lunchDishes;
 
-        // 晚餐
+        // --- 3. 晚餐逻辑（周二四六吃焖饭，其他满编，防积食） ---
         let dinnerDishes = [];
-        let isNoodleDay = [0, 2, 4, 6].includes(day); 
+        let isNoodleDay = [1, 3, 5].includes(day); 
+        
         if (isNoodleDay && dinnerStaplePool.length > 0) {
            let dNoodle = dinnerStaplePool[day % dinnerStaplePool.length];
            dinnerDishes.push({ id: idCounter++, ...dNoodle, completed: false, skipped: false, feedback: '' });
+           
+           if (allVegPool.length > 0) {
+             let v = allVegPool.find(r => r.name.includes('菜') || r.name.includes('瓜')) || allVegPool[2];
+             dinnerDishes.push({ id: idCounter++, ...v, completed: false, skipped: false, feedback: '' });
+           }
         } else {
-           let complexDinner = dmPool.find(r => {
-             let tags = r.tags || [];
-             return (tags.includes('肉') && tags.includes('蔬菜')) || (tags.includes('主食') && tags.includes('肉'));
-           });
-           if (complexDinner) {
-             dinnerDishes.push({ id: idCounter++, ...complexDinner, completed: false, skipped: false, feedback: '' });
-           } else {
-             let dStaple = staplePool.length > 0 ? staplePool[day % staplePool.length] : null;
-             let dMeat = dmPool.length > 0 ? dmPool[(day+1) % dmPool.length] : null;
-             let dVeg = dvPool.length > 0 ? dvPool[(day+1) % dvPool.length] : null;
-             if (dStaple) dinnerDishes.push({ id: idCounter++, ...dStaple, completed: false, skipped: false, feedback: '' });
-             if (dMeat) dinnerDishes.push({ id: idCounter++, ...dMeat, completed: false, skipped: false, feedback: '' });
-             if (dVeg && dVeg.name !== (dMeat?.name || '')) dinnerDishes.push({ id: idCounter++, ...dVeg, completed: false, skipped: false, feedback: '' });
+           if (lunchStaplePool.length > 0) {
+             dinnerDishes.push({ id: idCounter++, ...lunchStaplePool[(day+3) % lunchStaplePool.length], completed: false, skipped: false, feedback: '' });
+           }
+           if (allMeatPool.length > 0) {
+             let m = allMeatPool.find(r => !usedDinnerMeat.includes(r.name) && !r.name.includes('排骨') && !r.name.includes('牛腩')) || allMeatPool[3];
+             usedDinnerMeat.push(m.name);
+             dinnerDishes.push({ id: idCounter++, ...m, completed: false, skipped: false, feedback: '' });
+           }
+           if (allVegPool.length > 0) {
+             let v = allVegPool.find(r => !usedDinnerVeg.includes(r.name)) || allVegPool[4];
+             usedDinnerVeg.push(v.name);
+             dinnerDishes.push({ id: idCounter++, ...v, completed: false, skipped: false, feedback: '' });
            }
         }
         dayMenu.dinner = dinnerDishes;
+
+        // --- 4. 甜汤逻辑（严格按您的时间规则：一、五大人；二、四、六全家；周日自由） ---
+        // day: 0=周一, 1=周二, 2=周三, 3=周四, 4=周五, 5=周六, 6=周日
+        let targetSweets = [];
+        if (day === 0 || day === 4) {
+           targetSweets = adultSweets; // 一、五：大人
+        } else if (day === 1 || day === 3 || day === 5) {
+           targetSweets = familySweets; // 二、四、六：小孩/全家
+        }
         
+        if (targetSweets.length > 0) {
+           let sweet = targetSweets[Math.floor(day / 2) % targetSweets.length];
+           dayMenu.sweets.push({ id: idCounter++, ...sweet, completed: false, skipped: false, feedback: '' });
+        }
+
+        // 附加水果加餐
         if (this.fruitList.length > 0) {
           let sortedFruits = [...this.fruitList].sort((a,b) => this.getRemainingDays(a) - this.getRemainingDays(b));
           let targetFruit = sortedFruits[day % sortedFruits.length];
           if(targetFruit && targetFruit.weight > 0) {
-            dayMenu.breakfast.push({ 
-              id: idCounter++, name: "水果加餐：" + targetFruit.name, tag: "每日水果", tool: "直接生吃/切开", time: "1分钟", 
-              ingredients: [{name: targetFruit.name, weight: 150}], steps: ["洗净即食，补充每日维C"], 
-              portions: { dad: '适量', mom: '适量', sister: '适量', brother: '切小块防呛' }, 
-              isTakeout: true, completed: false, skipped: false, feedback: '' 
-            });
-          }
-        }
-        if (this.snackList.length > 0 && day % 2 === 0) { 
-          let sortedSnacks = [...this.snackList].sort((a,b) => this.getRemainingDays(a) - this.getRemainingDays(b));
-          let targetSnack = sortedSnacks[(day/2) % sortedSnacks.length];
-          if(targetSnack && targetSnack.weight > 0) {
-            dayMenu.breakfast.push({ 
-              id: idCounter++, name: "零食加餐：" + targetSnack.name, tag: "每日坚果/奶", tool: "直接吃", time: "1分钟", 
-              ingredients: [{name: targetSnack.name, weight: 50}], steps: ["作为上下午的加餐补充能量"], 
-              portions: { dad: '适量', mom: '适量', sister: '适量', brother: '适量' }, 
-              isTakeout: true, completed: false, skipped: false, feedback: '' 
-            });
-          }
-        }
-
-        if (this.preIngList.length > 0 && [0, 2, 4].includes(day)) { 
-          let targetPre = this.preIngList[day % this.preIngList.length];
-          let isAlreadyUsed = [...dayMenu.lunch, ...dayMenu.dinner].some(d => (d.ingredients||[]).some(i => i.name === targetPre.name));
-          if (targetPre && targetPre.weight > 0 && !isAlreadyUsed) {
-            dayMenu.dinner.push({ 
-              id: idCounter++, name: "快手预制：" + targetPre.name, tag: "快手·简易", tool: "奶锅/微波炉", time: "5分钟", 
-              ingredients: [{name: targetPre.name, weight: 200}], steps: ["取出适量加热熟透即可"], 
-              portions: { dad: '1份', mom: '1份', sister: '0.8份', brother: '0.5份' }, 
-              completed: false, skipped: false, feedback: '' 
-            });
+            dayMenu.breakfast.push({ id: idCounter++, name: "水果加餐：" + targetFruit.name, tag: "每日水果", tool: "直接生吃/切开", time: "1分钟", ingredients: [{name: targetFruit.name, weight: 150}], steps: ["洗净即食，补充每日维C"], portions: { dad: '适量', mom: '适量', sister: '适量', brother: '切小块防呛' }, isTakeout: true, completed: false, skipped: false, feedback: '' });
           }
         }
         
@@ -3478,12 +3427,12 @@ createApp({
       
       if (mode === 'current') {
         this.weekMenuData.current = newWeekMenu;
-        if (!isInit) alert("✅ 本周食谱已重新生成！（已开启正餐强制配齐模式）");
+        if (!isInit) alert("✅ 本周食谱已重新生成！");
         this.pushToCloud(); 
       } else {
         this.weekMenuData.next = newWeekMenu;
         this.generatePrepTasks();
-        if (!isInit) alert("✅ 下周食谱已生成！（已开启正餐强制配齐模式）");
+        if (!isInit) alert("✅ 下周食谱已生成！");
         this.pushToCloud(); 
       }
     },
